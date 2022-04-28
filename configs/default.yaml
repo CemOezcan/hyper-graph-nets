@@ -1,0 +1,54 @@
+name: "SLURM"   # MUST BE "SLURM"
+
+# Required
+partition: "single"
+job-name: "ALRProject"    # this will be the experiments name in slurm
+
+# Required - Cluster Specific
+num_parallel_jobs: 99
+ntasks: 1
+cpus-per-task: 16
+mem-per-cpu: 8000
+time: 1440  # in minutes
+
+sbatch_args: # Dictionary of SBATCH keywords and arguments
+  distribution: cyclic  # To have repetitions of the same exp be distributed to different nodes
+
+slurm_log: "/home/kit/anthropomatik/ca9551/irl_eim/I2RL/experiments/slurmlog" # optional. dir in which slurm output and error logs will be saved.
+---
+name: "DEFAULT"   # MUST BE DEFAULT
+
+
+# Implementation default parameters
+path: "./reports/"   # location to save reports in
+repetitions: 1   # number of times one set of parameters is run
+reps_per_job: 1 # number of repetitions in each job. useful for paralellization. defaults to 1.
+reps_in_parallel: 1 # number of repetitions in each job that are executed in parallel. defaults to 1.
+
+iterations: 100  # number of iterations of the algorithm
+optuna:
+    # will be passed to study constructor / load
+    study_name: null  # will be set to the current experiment_name if either None or missing
+    storage_path: "reports/optuna"
+    load_if_exists: true
+    direction: "maximize"
+    sampler: [ "TPESampler", { prior_weight: 1.0 } ]
+    pruner: [ "HyperbandPruner", [ 10 ] ]  # only with iterative experiment (optional, default is the NopPruner (i.e. no pruning))
+    loss_key: "test_accuracy"
+    loss_mode: "last"
+
+params:
+  random_seeds:
+    numpy: default  # can be null for no random seed, "default" for numpy_seed==repetition, or an integer value
+    pytorch: tied  # can be null for no random seed, "tied" for pytorch_seed==numpy_seed, or an integer value
+  recording:
+    plot_frequency: 5  # some loggers will also plot or visualize parts of the task or algorithm.
+    # Since this is expensive, we may only want to do this every n-th iteration.
+    # setting this value to 0 disables "live" plotting. Plots will always be created after the last iteration.
+    config: True  # whether to save the config of each trial as a .yaml file or not
+    wandb: False  # whether to use the wandb logger or not
+    defaults: True  # whether to log default values (time and memory usage, the config dictionary)
+    visualization: True
+    wandb_params:
+      project_name: ALRProject  # name of the project
+
