@@ -27,7 +27,7 @@ params:
   task:
     dataset: flag_minimal
     rollout_split: valid
-    batch_size: 128
+    batch_size: 1
     epochs: 1
     trajectories: 1
     rollouts: 1

@@ -25,6 +25,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
         self._network = None
         self._optimizer = None
+        # TODO: Add scheduler
         # self._scheduler = None
 
         self.loss_function = F.mse_loss
