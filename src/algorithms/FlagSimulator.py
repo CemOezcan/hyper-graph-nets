@@ -13,6 +13,7 @@ from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from util.pytorch.TorchUtil import detach
 from src.model.flag import FlagModel
 from src.util import device, NodeType
+from data.data_loader import DATA_DIR
 
 # TODO check if only applicable for flag
 class FlagSimulator(AbstractIterativeAlgorithm):
@@ -20,6 +21,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         super().__init__(config=config)
         # TODO: Config file for flag model
         self._network_config = config.get("model")
+        self._dataset_dir = os.path.join(DATA_DIR, config.get('task').get('dataset'))
 
         self._network = None
         self._optimizer = None
@@ -56,7 +58,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
         params = self._network_config
-        dataset_dir = params.get('dataset_dir')
+        dataset_dir = self._dataset_dir
         is_training = True
 
         for data in train_dataloader:  # for each batch
@@ -94,7 +96,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         shapes = {}
         dtypes = {}
         types = {}
-        steps = params['steps']
+        steps = None
 
         if not loaded_meta:
             try:
