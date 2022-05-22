@@ -73,14 +73,10 @@ def main():
     task = FlagTask(algo, params)
 
     task.run_iteration()
-    print(params)
 
 if __name__ == '__main__':
     """from optuna_work.experiment_wrappers import wrap_iterative_experiment
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    torch.manual_seed(0)
-    random.seed(0)
-    np.random.seed(0)
     main()

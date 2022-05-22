@@ -81,8 +81,6 @@ class FlagSimulator(AbstractIterativeAlgorithm):
                 error = torch.sum((target_normalized - network_output) ** 2, dim=1)
                 loss = torch.mean(error[loss_mask])
 
-                print(loss)
-
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
