@@ -49,7 +49,7 @@ class MeshGraphNet(nn.Module):
             network = nn.Sequential(network, nn.LayerNorm(normalized_shape=widths[-1]))
         return network
 
-
+# TODO refactor into new file
 class LazyMLP(nn.Module):
     def __init__(self, output_sizes):
         super().__init__()

@@ -38,6 +38,7 @@ class GraphNet(nn.Module):
         else:
             return self.world_edge_model(features)
 
+    # TODO refactor
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
         """
         Computes the sum along segments of a tensor. Analogous to tf.unsorted_segment_sum.

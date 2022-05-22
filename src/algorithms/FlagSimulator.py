@@ -14,7 +14,7 @@ from util.pytorch.TorchUtil import detach
 from src.model.flag import FlagModel
 from src.util import device, NodeType
 
-
+# TODO check if only applicable for flag
 class FlagSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
@@ -69,7 +69,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
                 cur_position = data_frame['world_pos']
                 prev_position = data_frame['prev|world_pos']
                 target_position = data_frame['target|world_pos']
-
+                # TODO check if applicable for other tasks, refactor to model itself
                 target_acceleration = target_position - 2 * cur_position + prev_position
                 target_normalized = self._network.get_output_normalizer()(target_acceleration).to(device)
 
@@ -175,7 +175,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
             other = torch.Tensor([NodeType.NORMAL.value]).to(device)
             mask = torch.eq(frame['node_type'], other.int())[:, 0]
             mask_sequence = []
-            for i in range(noise.shape[1]):
+            for _ in range(noise.shape[1]):
                 mask_sequence.append(mask)
             mask = torch.stack(mask_sequence, dim=1)
             noise = torch.where(mask, noise, torch.zeros_like(noise))

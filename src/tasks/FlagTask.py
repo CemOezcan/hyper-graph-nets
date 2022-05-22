@@ -1,8 +1,8 @@
 from src.tasks.AbstractTask import AbstractTask
 from data.data_loader import get_data
-from util.Types import *
-from torch.utils.data import DataLoader
-from torch.utils.data import TensorDataset
+from util.Types import *  # TODO change
+from torch.utils.data import DataLoader  # NOTE not accessed
+from torch.utils.data import TensorDataset  # NOTE not accessed
 import torch
 import plotly.graph_objects as go
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
@@ -12,9 +12,9 @@ import common
 
 device = torch.device('cuda')
 
-
+# TODO change to MeshTask
 class FlagTask(AbstractTask):
-    #TODO comments and discussion about nested functions
+    # TODO comments and discussion about nested functions
     def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
         """
         Initializes all necessary data for a classification task.
@@ -43,6 +43,7 @@ class FlagTask(AbstractTask):
         assert isinstance(self._algorithm, FlagModel), "Need a classifier to train on a classification task"
         self._algorithm.fit_iteration(train_dataloader=self.train_loader)
 
+    # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, FlagModel)
         train_scalars = self._algorithm.score(inputs=self._train_X, labels=self._train_y)
@@ -51,7 +52,7 @@ class FlagTask(AbstractTask):
         test_scalars = self._algorithm.score(inputs=self._test_X, labels=self._test_y)
         test_scalars = {"test_" + k: v for k, v in test_scalars.items()}
 
-        return train_scalars | test_scalars
+        return train_scalars | test_scalars  # NOTE what does | do?
 
     def plot(self) -> go.Figure:
         if self._input_dimension == 2:  # 2d classification, allowing for a contour plot
@@ -85,7 +86,7 @@ class FlagTask(AbstractTask):
         else:
             raise NotImplementedError("plotting not supported for {}-dimensional features", self._input_dimension)
 
-
+# TODO refactor to FlagSimulator.py
 def _rollout(self, model, initial_state, num_steps):
     """Rolls out a model trajectory."""
     node_type = initial_state['node_type']
