@@ -15,7 +15,7 @@ from src.util import NodeType, EdgeSet, MultiGraph, device
 class FlagModel(nn.Module):
     """Model for static cloth simulation."""
 
-    def __init__(self, params, message_passing_aggregator='sum', message_passing_steps=15, attention=False):
+    def __init__(self, params):
         super(FlagModel, self).__init__()
         self._params = params
         self._output_normalizer = Normalizer(size=3, name='output_normalizer')
@@ -25,13 +25,13 @@ class FlagModel(nn.Module):
         self._mesh_edge_normalizer = Normalizer(
             size=7, name='mesh_edge_normalizer')  # 2D coord + 3D coord + 2*length = 7
         self._world_edge_normalizer = Normalizer(size=4, name='world_edge_normalizer')
-        self._model_type = params['model'].__name__
 
-        self.message_passing_steps = message_passing_steps
-        self.message_passing_aggregator = message_passing_aggregator
-        self._attention = attention
+        self.message_passing_steps = params.get('message_passing_steps')
+        self.message_passing_aggregator = params.get('aggregation')
+        self._attention = params.get('attention') == 'True'
+
         self.learned_model = MeshGraphNet(
-            output_size=params['size'],
+            output_size=params.get('size'),
             latent_size=128,
             num_layers=2,
             message_passing_steps=self.message_passing_steps,
@@ -104,7 +104,7 @@ class FlagModel(nn.Module):
 
     def forward(self, inputs, is_training):
         graph = self._build_graph(inputs, is_training=is_training)
-        return self.learned_model(graph, world_edge_normalizer=self._world_edge_normalizer, is_training=is_training)
+        return self.learned_model(graph)
 
     def _update(self, inputs, per_node_network_output):
         """Integrate model outputs."""

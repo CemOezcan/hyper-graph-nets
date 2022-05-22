@@ -13,16 +13,19 @@ from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from util.pytorch.TorchUtil import detach
 from src.model.flag import FlagModel
 from src.util import device, NodeType
+from data.data_loader import DATA_DIR
 
 # TODO check if only applicable for flag
 class FlagSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
         # TODO: Config file for flag model
-        self._network_config = config.get("algorithm").get("network")
+        self._network_config = config.get("model")
+        self._dataset_dir = os.path.join(DATA_DIR, config.get('task').get('dataset'))
 
         self._network = None
         self._optimizer = None
+        # TODO: Add scheduler
         # self._scheduler = None
 
         self.loss_function = F.mse_loss
@@ -30,7 +33,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         # self._scheduler_learning_rate = self._network_config.get("scheduler_learning_rate")
 
     def initialize(self, task_information: ConfigDict) -> None:
-        self._network = FlagModel(self._network_config.get("params"))
+        self._network = FlagModel(self._network_config)
 
         self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
         # self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
@@ -55,8 +58,8 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        params = self._network_config.get("params")
-        dataset_dir = params['dataset_dir']
+        params = self._network_config
+        dataset_dir = self._dataset_dir
         is_training = True
 
         for data in train_dataloader:  # for each batch
@@ -94,7 +97,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         shapes = {}
         dtypes = {}
         types = {}
-        steps = params['steps']
+        steps = None
 
         if not loaded_meta:
             try:
@@ -127,42 +130,31 @@ class FlagSimulator(AbstractIterativeAlgorithm):
             trajectory[key] = reshaped_data
 
         if add_targets_bool:
-            trajectory = self._add_targets(params)(trajectory)
+            trajectory = self._add_targets(params, steps)(trajectory)
         if split_and_preprocess_bool:
-            trajectory = self._split_and_preprocess(params)(trajectory)
+            trajectory = self._split_and_preprocess(params, steps)(trajectory)
         return trajectory
 
     @staticmethod
-    def _add_targets(params):
+    def _add_targets(params, steps):
         # TODO: redundant (see flagdata.py)
         fields = params['field']
         add_history = params['history']
-        loss_type = params['loss_type']
 
         def fn(trajectory):
-            if loss_type == 'deform':
-                out = {}
-                for key, val in trajectory.items():
-                    out[key] = val[0:-1]
-                    if key in fields:
-                        out['target|' + key] = val[1:]
-                    if key == 'stress':
-                        out['target|stress'] = val[1:]
-                return out
-            elif loss_type == 'cloth':
-                out = {}
-                for key, val in trajectory.items():
-                    out[key] = val[1:-1]
-                    if key in fields:
-                        if add_history:
-                            out['prev|' + key] = val[0:-2]
-                        out['target|' + key] = val[2:]
-                return out
+            out = {}
+            for key, val in trajectory.items():
+                out[key] = val[1:-1]
+                if key in fields:
+                    if add_history:
+                        out['prev|' + key] = val[0:-2]
+                    out['target|' + key] = val[2:]
+            return out
 
         return fn
 
     @staticmethod
-    def _split_and_preprocess(params):
+    def _split_and_preprocess(params, steps):
         # TODO: redundant (see flagdata.py)
 
         noise_field = params['field']
@@ -185,7 +177,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
         def element_operation(trajectory):
             trajectory_steps = []
-            for i in range(params['steps']):
+            for i in range(steps):
                 trajectory_step = {}
                 for key, value in trajectory.items():
                     trajectory_step[key] = value[i]
