@@ -1,0 +1,6 @@
+# TODO Abstract clusterer
+# TODO Abstract plotter
+# TODO comments
+
+Niko:
+Cem:
