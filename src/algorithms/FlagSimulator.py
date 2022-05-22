@@ -81,6 +81,8 @@ class FlagSimulator(AbstractIterativeAlgorithm):
                 error = torch.sum((target_normalized - network_output) ** 2, dim=1)
                 loss = torch.mean(error[loss_mask])
 
+                print(loss)
+
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
@@ -130,42 +132,31 @@ class FlagSimulator(AbstractIterativeAlgorithm):
             trajectory[key] = reshaped_data
 
         if add_targets_bool:
-            trajectory = self._add_targets(params)(trajectory)
+            trajectory = self._add_targets(params, steps)(trajectory)
         if split_and_preprocess_bool:
-            trajectory = self._split_and_preprocess(params)(trajectory)
+            trajectory = self._split_and_preprocess(params, steps)(trajectory)
         return trajectory
 
     @staticmethod
-    def _add_targets(params):
+    def _add_targets(params, steps):
         # TODO: redundant (see flagdata.py)
         fields = params['field']
         add_history = params['history']
-        loss_type = params['loss_type']
 
         def fn(trajectory):
-            if loss_type == 'deform':
-                out = {}
-                for key, val in trajectory.items():
-                    out[key] = val[0:-1]
-                    if key in fields:
-                        out['target|' + key] = val[1:]
-                    if key == 'stress':
-                        out['target|stress'] = val[1:]
-                return out
-            elif loss_type == 'cloth':
-                out = {}
-                for key, val in trajectory.items():
-                    out[key] = val[1:-1]
-                    if key in fields:
-                        if add_history:
-                            out['prev|' + key] = val[0:-2]
-                        out['target|' + key] = val[2:]
-                return out
+            out = {}
+            for key, val in trajectory.items():
+                out[key] = val[1:-1]
+                if key in fields:
+                    if add_history:
+                        out['prev|' + key] = val[0:-2]
+                    out['target|' + key] = val[2:]
+            return out
 
         return fn
 
     @staticmethod
-    def _split_and_preprocess(params):
+    def _split_and_preprocess(params, steps):
         # TODO: redundant (see flagdata.py)
 
         noise_field = params['field']
@@ -188,7 +179,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
         def element_operation(trajectory):
             trajectory_steps = []
-            for i in range(params['steps']):
+            for i in range(steps):
                 trajectory_step = {}
                 for key, value in trajectory.items():
                     trajectory_step[key] = value[i]

@@ -1,4 +1,5 @@
 import pprint
+import random
 
 from cw2 import cluster_work, experiment, cw_error
 from cw2.cw_data import cw_logging
@@ -79,4 +80,7 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
     main()
