@@ -22,7 +22,7 @@ class NodeType(enum.IntEnum):
 
 
 def read_yaml():
-    with open("config/flag.yaml", 'r') as stream:
+    with open("configs/flag.yaml", 'r') as stream:
         try:
             parsed_yaml = yaml.safe_load_all(stream)
             for file in parsed_yaml:

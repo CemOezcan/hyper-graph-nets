@@ -1,5 +1,6 @@
 from util.Types import *
 from util.Functions import get_from_nested_dict
+from src.data.dataset import load_dataset
 
 
 def get_data(config: ConfigDict):
@@ -15,5 +16,10 @@ def get_data(config: ConfigDict):
             "y": y,
             "dimension": 2
         }
+    elif dataset == 'flag_minimal':
+        return load_dataset('../flag_minimal', 'train', batch_size=config.get('task').get('batch_size'),
+                            prefetch_factor=config.get('task').get('prefetch_factor'),
+                            add_targets=True, split_and_preprocess=True)
+
     else:
         raise NotImplementedError("Implement your data loading here!")

@@ -25,13 +25,12 @@ class FlagModel(nn.Module):
         self._mesh_edge_normalizer = Normalizer(
             size=7, name='mesh_edge_normalizer')  # 2D coord + 3D coord + 2*length = 7
         self._world_edge_normalizer = Normalizer(size=4, name='world_edge_normalizer')
-        self._model_type = params['model'].__name__
 
         self.message_passing_steps = message_passing_steps
         self.message_passing_aggregator = message_passing_aggregator
         self._attention = attention
         self.learned_model = MeshGraphNet(
-            output_size=params['size'],
+            output_size=params.get('size'),
             latent_size=128,
             num_layers=2,
             message_passing_steps=self.message_passing_steps,

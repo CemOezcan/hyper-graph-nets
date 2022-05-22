@@ -2,10 +2,11 @@ import pprint
 
 from cw2 import cluster_work, experiment, cw_error
 from cw2.cw_data import cw_logging
-from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
+from src.algorithms.FlagSimulator import FlagSimulator
 from src.algorithms.get_algorithm import get_algorithm
 from src.tasks.AbstractTask import AbstractTask
 from recording.get_recorder import get_recorder
+from src.tasks.FlagTask import FlagTask
 from src.tasks.get_task import get_task
 from recording.Recorder import Recorder
 from util.Types import *
@@ -13,6 +14,12 @@ from util.InitializeConfig import initialize_config
 import copy
 import numpy as np
 import torch
+import os
+from src.util import device, read_yaml
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
+OUT_DIR = os.path.join(DATA_DIR, 'output')
 
 
 class IterativeExperiment(experiment.AbstractIterativeExperiment):
@@ -54,8 +61,22 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
                 print("Failed finalizing recorder: {}".format(e))
 
 
+def main():
+    params = read_yaml()['params']
+    dataset_name = params['task']['dataset']
+
+    dataset_dir = os.path.join(DATA_DIR, dataset_name)
+    output_dir = os.path.join(OUT_DIR, dataset_name)
+
+    algo = FlagSimulator(params)
+    task = FlagTask(algo, params)
+
+    task.run_iteration()
+    print(params)
+
 if __name__ == '__main__':
-    from optuna_work.experiment_wrappers import wrap_iterative_experiment
+    """from optuna_work.experiment_wrappers import wrap_iterative_experiment
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
-    cw.run()
+    cw.run()"""
+    main()

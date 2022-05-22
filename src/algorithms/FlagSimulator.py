@@ -19,7 +19,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
         # TODO: Config file for flag model
-        self._network_config = config.get("algorithm").get("network")
+        self._network_config = config.get("model")
 
         self._network = None
         self._optimizer = None
@@ -30,7 +30,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         # self._scheduler_learning_rate = self._network_config.get("scheduler_learning_rate")
 
     def initialize(self, task_information: ConfigDict) -> None:
-        self._network = FlagModel(self._network_config.get("params"))
+        self._network = FlagModel(self._network_config)
 
         self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
         # self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
@@ -55,8 +55,8 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        params = self._network_config.get("params")
-        dataset_dir = params['dataset_dir']
+        params = self._network_config
+        dataset_dir = params.get('dataset_dir')
         is_training = True
 
         for data in train_dataloader:  # for each batch

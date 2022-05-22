@@ -1,3 +1,4 @@
+from src import util
 from src.tasks.AbstractTask import AbstractTask
 from data.data_loader import get_data
 from util.Types import *  # TODO change
@@ -6,9 +7,8 @@ from torch.utils.data import TensorDataset  # NOTE not accessed
 import torch
 import plotly.graph_objects as go
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
-from src.algorithms.FlagSimulator import FlagModel
+from src.algorithms.FlagSimulator import FlagSimulator
 from src.data.dataset import load_dataset
-import common
 
 device = torch.device('cuda')
 
@@ -26,26 +26,21 @@ class FlagTask(AbstractTask):
         super().__init__(algorithm=algorithm, config=config)
         self._raw_data = get_data(config=config)
 
-        self.train_loader = load_dataset(self._raw_data, 'train', batch_size=config.get("task").get("batch_size"),
-                                                 prefetch_factor=config.get("task").get("prefetch_factor"),
-                                                 add_targets=True, split_and_preprocess=True)
+        self.train_loader = get_data(config=config)
 
         self._test_loader = None
-        self._input_dimension = self._raw_data.get("dimension")
 
-        self.classes = self._raw_data.get("classes", None)
-        self.out_features = len(self.classes) if self.classes is not None else 1
         self.mask = None
 
-        self._algorithm.initialize(task_information={"input_dimension": self._input_dimension})
+        self._algorithm.initialize(task_information=config)
 
     def run_iteration(self):
-        assert isinstance(self._algorithm, FlagModel), "Need a classifier to train on a classification task"
+        assert isinstance(self._algorithm, FlagSimulator), "Need a classifier to train on a classification task"
         self._algorithm.fit_iteration(train_dataloader=self.train_loader)
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
-        assert isinstance(self._algorithm, FlagModel)
+        assert isinstance(self._algorithm, FlagSimulator)
         train_scalars = self._algorithm.score(inputs=self._train_X, labels=self._train_y)
         train_scalars = {"train_" + k: v for k, v in train_scalars.items()}
 
@@ -56,7 +51,7 @@ class FlagTask(AbstractTask):
 
     def plot(self) -> go.Figure:
         if self._input_dimension == 2:  # 2d classification, allowing for a contour plot
-            assert isinstance(self._algorithm, FlagModel)
+            assert isinstance(self._algorithm, FlagSimulator)
             points_per_axis = 5
             X = self.raw_data.get("X")
             y = self.raw_data.get("y")
@@ -91,7 +86,7 @@ def _rollout(self, model, initial_state, num_steps):
     """Rolls out a model trajectory."""
     node_type = initial_state['node_type']
     self.mask = torch.eq(node_type[:, 0], torch.tensor(
-        [common.NodeType.NORMAL.value], device=device))
+        [util.NodeType.NORMAL.value], device=device))
     self.mask = torch.stack((self.mask, self.mask, self.mask), dim=1)
 
     def step_fn(prev_pos, cur_pos, trajectory):
