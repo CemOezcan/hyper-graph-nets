@@ -52,7 +52,7 @@ class FlagTask(AbstractTask):
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
-        path = os.path.join(OUT_DIR, 'flag_minimal/rollout.pkl')
+        path = os.path.join(OUT_DIR, 'flag_minimal/rollouts.pkl')
         save_path = os.path.join(OUT_DIR, 'flag_minimal')
 
         with open(path, 'rb') as fp:
