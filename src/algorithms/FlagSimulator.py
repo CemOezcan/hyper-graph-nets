@@ -18,7 +18,7 @@ from data.data_loader import DATA_DIR
 
 
 # TODO check if only applicable for flag
-class FlagSimulator(AbstractIterativeAlgorithm):
+class MeshSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
         # TODO: Config file for flag model

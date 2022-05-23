@@ -9,13 +9,12 @@ from torch.utils.data import TensorDataset  # NOTE not accessed
 import torch
 import plotly.graph_objects as go
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
-from src.algorithms.FlagSimulator import FlagSimulator
+from src.algorithms.FlagSimulator import MeshSimulator
 from src.data.dataset import load_dataset
 
 device = torch.device('cuda')
 
-# TODO change to MeshTask
-class FlagTask(AbstractTask):
+class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
     def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
         """
@@ -38,12 +37,13 @@ class FlagTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
-        assert isinstance(self._algorithm, FlagSimulator), "Need a classifier to train on a classification task"
+        assert isinstance(
+            self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
         self._algorithm.fit_iteration(train_dataloader=self.train_loader)
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
-        assert isinstance(self._algorithm, FlagSimulator)
+        assert isinstance(self._algorithm, MeshSimulator)
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
@@ -51,7 +51,7 @@ class FlagTask(AbstractTask):
             raise NotImplementedError(
                 "plotting not supported for {}-dimensional features", self._input_dimension)
         # 2d classification, allowing for a contour plot
-        assert isinstance(self._algorithm, FlagSimulator)
+        assert isinstance(self._algorithm, MeshSimulator)
         points_per_axis = 5
         X = self.raw_data.get("X")
         y = self.raw_data.get("y")
