@@ -2,7 +2,7 @@
 import torch
 import os
 
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import IterableDataset
 from tfrecord.torch.dataset import TFRecordDataset
 from src.util import NodeType, device
 
