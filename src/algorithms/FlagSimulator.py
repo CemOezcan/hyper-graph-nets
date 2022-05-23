@@ -15,7 +15,6 @@ from src.model.flag import FlagModel
 from src.util import NodeType, device
 from torch.utils.data import DataLoader
 from util.pytorch.TorchUtil import detach
-from util.Types import ConfigDict, ScalarDict
 
 
 # TODO check if only applicable for flag
