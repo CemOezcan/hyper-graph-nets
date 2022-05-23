@@ -1,9 +1,13 @@
+import math
+import os
 import pickle
 
 from src import util
 from src.tasks.AbstractTask import AbstractTask
-from data.data_loader import get_data, DATA_DIR
+from data.data_loader import get_data, OUT_DIR
 from util.Types import *  # TODO change
+import matplotlib.pyplot as plt
+from matplotlib import animation
 from torch.utils.data import DataLoader  # NOTE not accessed
 from torch.utils.data import TensorDataset  # NOTE not accessed
 import torch
@@ -44,7 +48,10 @@ class FlagTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, FlagSimulator)
-        return self._algorithm.evaluator(self._test_loader, self._rollouts)
+        x = self._algorithm.evaluator(self._test_loader, self._rollouts)
+        # TODO: Use
+        self._algorithm.n_step_evaluator(self._test_loader)
+        return x
 
     def plot(self) -> go.Figure:
         if self._input_dimension == 2:  # 2d classification, allowing for a contour plot
