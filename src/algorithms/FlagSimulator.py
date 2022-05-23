@@ -1,5 +1,6 @@
 import json
 import os
+import pickle
 
 import torch
 
@@ -15,6 +16,7 @@ from src.model.flag import FlagModel
 from src.util import device, NodeType
 from data.data_loader import DATA_DIR
 
+
 # TODO check if only applicable for flag
 class FlagSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
@@ -22,6 +24,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         # TODO: Config file for flag model
         self._network_config = config.get("model")
         self._dataset_dir = os.path.join(DATA_DIR, config.get('task').get('dataset'))
+        self._dataset_name = config.get('task').get('dataset')
 
         self._network = None
         self._optimizer = None
@@ -58,16 +61,14 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        params = self._network_config
-        dataset_dir = self._dataset_dir
-        is_training = True
 
-        for data in train_dataloader:  # for each batch
-            trajectory = self._process_trajectory(data, params, dataset_dir, True, True)
+        for i, data in enumerate(train_dataloader):  # for each batch
+            trajectory = self._process_trajectory(data, self._network_config, self._dataset_dir, True, True)
+            print(i)
 
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
-                network_output = self._network(data_frame, is_training)
+                network_output = self._network(data_frame, is_training=True)
 
                 cur_position = data_frame['world_pos']
                 prev_position = data_frame['prev|world_pos']
@@ -84,6 +85,128 @@ class FlagSimulator(AbstractIterativeAlgorithm):
                 self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
+
+            self.save()
+
+    def evaluator(self, ds_loader, rollouts):
+        """Run a model rollout trajectory."""
+        trajectories = []
+
+        mse_losses = []
+        l1_losses = []
+
+        for index in range(rollouts):
+            for trajectory in ds_loader:
+                trajectory = self._process_trajectory(trajectory, self._network_config, self._dataset_dir, True)
+
+                _, prediction_trajectory = self.evaluate(trajectory)
+                mse_loss_fn = torch.nn.MSELoss()
+                l1_loss_fn = torch.nn.L1Loss()
+
+                mse_loss = mse_loss_fn(torch.squeeze(trajectory['world_pos'], dim=0), prediction_trajectory['pred_pos'])
+                l1_loss = l1_loss_fn(torch.squeeze(trajectory['world_pos'], dim=0), prediction_trajectory['pred_pos'])
+
+                mse_losses.append(mse_loss.cpu())
+                l1_losses.append(l1_loss.cpu())
+                trajectories.append(prediction_trajectory)
+            # scalars.append(scalar_data)
+        loss_record = {}
+        loss_record['eval_total_mse_loss'] = torch.sum(torch.stack(mse_losses)).item()
+        loss_record['eval_total_l1_loss'] = torch.sum(torch.stack(l1_losses)).item()
+        loss_record['eval_mean_mse_loss'] = torch.mean(torch.stack(mse_losses)).item()
+        loss_record['eval_max_mse_loss'] = torch.max(torch.stack(mse_losses)).item()
+        loss_record['eval_min_mse_loss'] = torch.min(torch.stack(mse_losses)).item()
+        loss_record['eval_mean_l1_loss'] = torch.mean(torch.stack(l1_losses)).item()
+        loss_record['eval_max_l1_loss'] = torch.max(torch.stack(l1_losses)).item()
+        loss_record['eval_min_l1_loss'] = torch.min(torch.stack(l1_losses)).item()
+        loss_record['eval_mse_losses'] = mse_losses
+        loss_record['eval_l1_losses'] = l1_losses
+        self.save_rollouts(trajectories)
+        return loss_record
+
+    def evaluate(self, trajectory, num_steps=None):
+        """Performs model rollouts and create stats."""
+        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
+        if num_steps is None:
+            num_steps = trajectory['cells'].shape[0]
+
+        prediction = self._rollout(initial_state, num_steps)
+
+        scalars = None
+        traj_ops = {
+            'faces': trajectory['cells'],
+            'mesh_pos': trajectory['mesh_pos'],
+            'gt_pos': trajectory['world_pos'],
+            'pred_pos': prediction
+        }
+        return scalars, traj_ops
+
+    def n_step_evaluator(self, ds_loader, n_step_list=[3], n_traj=1):
+
+        n_step_mse_losses = {}
+        n_step_l1_losses = {}
+
+        # Take n_traj trajectories from valid set for n_step loss calculation
+        for i in range(n_traj):
+            for trajectory in ds_loader:
+                trajectory = self._process_trajectory(trajectory, self._network_config, self._dataset_dir, True)
+                for n_step in n_step_list:
+                    mse_losses = []
+                    l1_losses = []
+                    for step in range(len(trajectory['world_pos']) - n_step):
+                        eval_traj = {}
+                        for k, v in trajectory.items():
+                            eval_traj[k] = v[step:step + n_step + 1]
+                        _, prediction_trajectory = self.evaluate(eval_traj, n_step + 1)
+                        mse_loss_fn = torch.nn.MSELoss()
+                        l1_loss_fn = torch.nn.L1Loss()
+                        mse_loss = mse_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
+                                               prediction_trajectory['pred_pos'])
+                        l1_loss = l1_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
+                                             prediction_trajectory['pred_pos'])
+
+                        mse_losses.append(mse_loss.cpu())
+                        l1_losses.append(l1_loss.cpu())
+                    if n_step not in n_step_mse_losses and n_step not in n_step_l1_losses:
+                        n_step_mse_losses[n_step] = torch.stack(mse_losses)
+                        n_step_l1_losses[n_step] = torch.stack(l1_losses)
+                    elif n_step in n_step_mse_losses and n_step in n_step_l1_losses:
+                        n_step_mse_losses[n_step] = n_step_mse_losses[n_step] + torch.stack(mse_losses)
+                        n_step_l1_losses[n_step] = n_step_l1_losses[n_step] + torch.stack(l1_losses)
+                    else:
+                        raise Exception('Error when computing n step losses!')
+        for (kmse, vmse), (kl1, vl1) in zip(n_step_mse_losses.items(), n_step_l1_losses.items()):
+            n_step_mse_losses[kmse] = torch.div(vmse, i + 1)
+            n_step_l1_losses[kl1] = torch.div(vl1, i + 1)
+
+        return {'n_step_mse_loss': n_step_mse_losses, 'n_step_l1_loss': n_step_l1_losses}
+
+    def _rollout(self, initial_state, num_steps):
+        """Rolls out a model trajectory."""
+        node_type = initial_state['node_type']
+        self.mask = torch.eq(node_type[:, 0], torch.tensor(
+            [NodeType.NORMAL.value], device=device))
+        self.mask = torch.stack((self.mask, self.mask, self.mask), dim=1)
+
+        def step_fn(prev_pos, cur_pos, trajectory):
+            # memory_prev = torch.cuda.memory_allocated(device) / (1024 * 1024)
+            with torch.no_grad():
+                prediction = self._network({**initial_state,
+                                            'prev|world_pos': prev_pos,
+                                            'world_pos': cur_pos}, is_training=False)
+
+            next_pos = torch.where(self.mask, torch.squeeze(
+                prediction), torch.squeeze(cur_pos))
+
+            trajectory.append(cur_pos)
+            return cur_pos, next_pos, trajectory
+
+        prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
+        cur_pos = torch.squeeze(initial_state['world_pos'], 0)
+        trajectory = []
+        for _ in range(num_steps):
+            prev_pos, cur_pos, trajectory = step_fn(prev_pos, cur_pos, trajectory)
+        return torch.stack(trajectory)
 
     @staticmethod
     def _squeeze_data_frame(data_frame):
@@ -190,3 +313,13 @@ class FlagSimulator(AbstractIterativeAlgorithm):
     @property
     def network(self):
         return self._network
+
+    def save(self):
+        dir = 'output/' + self._dataset_name + '/model.pkl'
+        with open(os.path.join(DATA_DIR, dir), 'wb') as file:
+            pickle.dump(self, file)
+
+    def save_rollouts(self, rollouts):
+        dir = 'output/' + self._dataset_name + '/rollouts.pkl'
+        with open(os.path.join(DATA_DIR, dir), 'wb') as file:
+            pickle.dump(rollouts, file)

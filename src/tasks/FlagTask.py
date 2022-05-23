@@ -1,7 +1,13 @@
+import math
+import pickle
+
 from src import util
 from src.tasks.AbstractTask import AbstractTask
-from data.data_loader import get_data
+from data.data_loader import get_data, OUT_DIR
 from util.Types import *  # TODO change
+from matplotlib import animation
+import matplotlib.pyplot as plt
+import os
 from torch.utils.data import DataLoader  # NOTE not accessed
 from torch.utils.data import TensorDataset  # NOTE not accessed
 import torch
@@ -25,14 +31,15 @@ class FlagTask(AbstractTask):
         """
         super().__init__(algorithm=algorithm, config=config)
         self._raw_data = get_data(config=config)
-
+        self._rollouts = config.get('task').get('rollouts')
         self.train_loader = get_data(config=config)
 
-        self._test_loader = None
+        self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
 
         self.mask = None
 
         self._algorithm.initialize(task_information=config)
+        self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
         assert isinstance(self._algorithm, FlagSimulator), "Need a classifier to train on a classification task"
@@ -41,91 +48,59 @@ class FlagTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, FlagSimulator)
-        train_scalars = self._algorithm.score(inputs=self._train_X, labels=self._train_y)
-        train_scalars = {"train_" + k: v for k, v in train_scalars.items()}
-
-        test_scalars = self._algorithm.score(inputs=self._test_X, labels=self._test_y)
-        test_scalars = {"test_" + k: v for k, v in test_scalars.items()}
-
-        return train_scalars | test_scalars  # NOTE what does | do?
+        # TODO: Use n_step_eval
+        return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
-        if self._input_dimension == 2:  # 2d classification, allowing for a contour plot
-            assert isinstance(self._algorithm, FlagSimulator)
-            points_per_axis = 5
-            X = self.raw_data.get("X")
-            y = self.raw_data.get("y")
-            bottom_left = np.min(X, axis=0)
-            top_right = np.max(X, axis=0)
-            x_margin = (top_right[0] - bottom_left[0]) / 2
-            y_margin = (top_right[1] - bottom_left[1]) / 2
-            x_positions = np.linspace(bottom_left[0] - x_margin, top_right[0] + x_margin, num=points_per_axis)
-            y_positions = np.linspace(bottom_left[1] - y_margin, top_right[1] + y_margin, num=points_per_axis)
-            evaluation_grid = np.transpose([np.tile(x_positions, len(y_positions)),
-                                            np.repeat(y_positions, len(x_positions))])
+        path = os.path.join(OUT_DIR, 'flag_minimal/rollouts.pkl')
+        save_path = os.path.join(OUT_DIR, 'flag_minimal')
 
-            good_samples = X[y == 1]
-            bad_samples = X[y == 0]
+        with open(path, 'rb') as fp:
+            rollout_data = pickle.load(fp)
 
-            reward_evaluation_grid = self._algorithm.predict(evaluation_grid)
-            reward_evaluation_grid = reward_evaluation_grid.reshape((points_per_axis, points_per_axis))
-            reward_evaluation_grid = np.clip(a=reward_evaluation_grid, a_min=-3, a_max=3)
-            fig = go.Figure(data=[go.Contour(x=x_positions, y=y_positions, z=reward_evaluation_grid,
-                                             colorscale="Portland", ),
-                                  go.Scatter(x=good_samples[::10, 0], y=good_samples[::10, 1],
-                                             mode="markers", fillcolor="green", showlegend=False),
-                                  go.Scatter(x=bad_samples[::10, 0], y=bad_samples[::10, 1],
-                                             mode="markers", fillcolor="red", showlegend=False)
-                                  ])
-            return fig
-        else:
-            raise NotImplementedError("plotting not supported for {}-dimensional features", self._input_dimension)
+        fig = plt.figure(figsize=(19.2, 10.8))
+        ax = fig.add_subplot(111, projection='3d')
+        skip = 10
+        num_steps = rollout_data[0]['gt_pos'].shape[0]
+        # print(num_steps)
+        num_frames = num_steps
 
-# TODO refactor to FlagSimulator.py
-def _rollout(self, model, initial_state, num_steps):
-    """Rolls out a model trajectory."""
-    node_type = initial_state['node_type']
-    self.mask = torch.eq(node_type[:, 0], torch.tensor(
-        [util.NodeType.NORMAL.value], device=device))
-    self.mask = torch.stack((self.mask, self.mask, self.mask), dim=1)
+        # compute bounds
+        bounds = []
+        index_temp = 0
+        for trajectory in rollout_data:
+            index_temp += 1
+            # print("bb_min shape", trajectory['gt_pos'].shape)
+            bb_min = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
+            bb_max = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
+            bounds.append((bb_min, bb_max))
 
-    def step_fn(prev_pos, cur_pos, trajectory):
-        # memory_prev = torch.cuda.memory_allocated(device) / (1024 * 1024)
-        with torch.no_grad():
-            prediction = model({**initial_state,
-                                'prev|world_pos': prev_pos,
-                                'world_pos': cur_pos}, is_training=False)
+        def animate(num):
+            skip = 30
+            # step = (num * skip) % num_steps
+            traj = (num * skip) // num_steps
+            # traj = 0
 
-        next_pos = torch.where(self.mask, torch.squeeze(
-            prediction), torch.squeeze(cur_pos))
+            step = (num * skip) % num_steps
 
-        trajectory.append(cur_pos)
-        return cur_pos, next_pos, trajectory
+            ax.cla()
+            bound = bounds[traj]
 
-    prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
-    cur_pos = torch.squeeze(initial_state['world_pos'], 0)
-    trajectory = []
-    for _ in range(num_steps):
-        prev_pos, cur_pos, trajectory = step_fn(prev_pos, cur_pos, trajectory)
-    return torch.stack(trajectory)
+            ax.set_xlim([bound[0][0], bound[1][0]])
+            ax.set_ylim([bound[0][1], bound[1][1]])
+            ax.set_zlim([bound[0][2], bound[1][2]])
 
+            pos = torch.squeeze(rollout_data[traj]['pred_pos'], dim=0)[step].to('cpu')
+            original_pos = torch.squeeze(rollout_data[traj]['gt_pos'], dim=0)[step].to('cpu')
+            # print(pos[10])
+            faces = torch.squeeze(rollout_data[traj]['faces'], dim=0)[step].to('cpu')
+            ax.plot_trisurf(pos[:, 0], pos[:, 1], faces, pos[:, 2], shade=True)
+            ax.plot_trisurf(original_pos[:, 0], original_pos[:, 1], faces, original_pos[:, 2], shade=True,
+                            alpha=0.3)
+            ax.set_title('Trajectory %d Step %d' % (traj, step))
+            return fig,
 
-def evaluate(self, model, trajectory, num_steps=None):
-    """Performs model rollouts and create stats."""
-    initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
-    if num_steps is None:
-        num_steps = trajectory['cells'].shape[0]
-    prediction = self._rollout(model, initial_state, num_steps)
-
-    # error = tf.reduce_mean((prediction - trajectory['world_pos'])**2, axis=-1)
-    # scalars = {'mse_%d_steps' % horizon: tf.reduce_mean(error[1:horizon+1])
-    #            for horizon in [1, 10, 20, 50, 100, 200]}
-
-    scalars = None
-    traj_ops = {
-        'faces': trajectory['cells'],
-        'mesh_pos': trajectory['mesh_pos'],
-        'gt_pos': trajectory['world_pos'],
-        'pred_pos': prediction
-    }
-    return scalars, traj_ops
+        anima = animation.FuncAnimation(fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
+        writervideo = animation.FFMpegWriter(fps=30)
+        anima.save(os.path.join(save_path, 'ani.mp4'), writer=writervideo)
+        plt.show(block=True)
