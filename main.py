@@ -4,11 +4,11 @@ import random
 
 from cw2 import cluster_work, experiment, cw_error
 from cw2.cw_data import cw_logging
-from src.algorithms.FlagSimulator import FlagSimulator
+from src.algorithms.MeshSimulator import MeshSimulator
 from src.algorithms.get_algorithm import get_algorithm
 from src.tasks.AbstractTask import AbstractTask
 from recording.get_recorder import get_recorder
-from src.tasks.FlagTask import FlagTask
+from src.tasks.MeshTask import MeshTask
 from src.tasks.get_task import get_task
 from recording.Recorder import Recorder
 from util.Types import *
@@ -75,9 +75,9 @@ def main(load):
         with open(os.path.join(DATA_DIR, dir), 'rb') as file:
             algo = pickle.load(file)
     else:
-        algo = FlagSimulator(params)
+        algo = MeshSimulator(params)
 
-    task = FlagTask(algo, params)
+    task = MeshTask(algo, params)
 
     if not load:
         task.run_iteration()
