@@ -5,6 +5,7 @@ from util.Functions import get_from_nested_dict
 from src.data.dataset import load_dataset
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+OUT_DIR = os.path.join(DATA_DIR, 'output')
 
 
 def get_data(config: ConfigDict, split='train', split_and_preprocess=True):

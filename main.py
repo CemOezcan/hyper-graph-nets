@@ -82,7 +82,10 @@ def main(load):
     if not load:
         task.run_iteration()
 
-    task.get_scalars()
+    if not os.path.exists(os.path.join(DATA_DIR, 'output/' + dataset_name + '/rollouts.pkl')):
+        task.get_scalars()
+
+    task.plot()
 
 if __name__ == '__main__':
     """from optuna_work.experiment_wrappers import wrap_iterative_experiment
