@@ -1,20 +1,19 @@
 import json
 import os
 import pickle
-
-import torch
-
+from typing import Union
 import numpy as np
-from util.Types import *
+import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader
-
-from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
-from util.pytorch.TorchUtil import detach
-from src.model.flag import FlagModel
-from src.util import device, NodeType
 from data.data_loader import DATA_DIR
+from src.algorithms.AbstractIterativeAlgorithm import \
+    AbstractIterativeAlgorithm
+from src.model.flag import FlagModel
+from src.util import NodeType, device
+from torch.utils.data import DataLoader
+from util.pytorch.TorchUtil import detach
+from util.Types import ConfigDict, ScalarDict
 
 
 # TODO check if only applicable for flag
