@@ -1,8 +1,7 @@
-
 import torch
 import os
 
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import IterableDataset
 from tfrecord.torch.dataset import TFRecordDataset
 from src.util import NodeType, device
 
@@ -53,7 +52,8 @@ class FlagSimpleDatasetIterative(IterableDataset):
         noise_gamma = 0.1
 
         def add_noise(frame):
-            zero_size = torch.zeros(frame[noise_field].size(), dtype=torch.float32).to(device)
+            zero_size = torch.zeros(
+                frame[noise_field].size(), dtype=torch.float32).to(device)
             noise = torch.normal(zero_size, std=noise_scale).to(device)
             other = torch.Tensor([NodeType.NORMAL.value]).to(device)
             mask = torch.eq(frame['node_type'], other.int())[:, 0]
