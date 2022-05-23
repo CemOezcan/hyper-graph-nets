@@ -71,7 +71,7 @@ class FlagSimpleDatasetIterative(IterableDataset):
             target_world_pos = trajectory['target|world_pos']
             prev_world_pos = trajectory['prev|world_pos']
             trajectory_steps = []
-            for i in range(399):
+            for i in range(399):  # TODO remove hardcoded values
                 wp = world_pos[i]
                 mp = mesh_pos[i]
                 twp = target_world_pos[i]
