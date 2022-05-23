@@ -1,3 +1,4 @@
+import pickle
 import pprint
 import random
 
@@ -62,21 +63,30 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
                 print("Failed finalizing recorder: {}".format(e))
 
 
-def main():
+def main(load):
     params = read_yaml()['params']
     dataset_name = params['task']['dataset']
 
     dataset_dir = os.path.join(DATA_DIR, dataset_name)
     output_dir = os.path.join(OUT_DIR, dataset_name)
 
-    algo = FlagSimulator(params)
+    if load:
+        dir = 'output/' + dataset_name + '/model.pkl'
+        with open(os.path.join(DATA_DIR, dir), 'rb') as file:
+            algo = pickle.load(file)
+    else:
+        algo = FlagSimulator(params)
+
     task = FlagTask(algo, params)
 
-    task.run_iteration()
+    if not load:
+        task.run_iteration()
+
+    task.get_scalars()
 
 if __name__ == '__main__':
     """from optuna_work.experiment_wrappers import wrap_iterative_experiment
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    main()
+    main(True)
