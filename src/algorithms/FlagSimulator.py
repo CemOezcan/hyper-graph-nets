@@ -1,11 +1,11 @@
 import json
 import os
 import pickle
-
+from typing import Union
 import torch
-
 import numpy as np
-from util.Types import *
+
+from util.Types import ConfigDict, ScalarDict
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
