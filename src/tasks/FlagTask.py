@@ -47,33 +47,38 @@ class FlagTask(AbstractTask):
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
-        if self._input_dimension == 2:  # 2d classification, allowing for a contour plot
-            assert isinstance(self._algorithm, FlagSimulator)
-            points_per_axis = 5
-            X = self.raw_data.get("X")
-            y = self.raw_data.get("y")
-            bottom_left = np.min(X, axis=0)
-            top_right = np.max(X, axis=0)
-            x_margin = (top_right[0] - bottom_left[0]) / 2
-            y_margin = (top_right[1] - bottom_left[1]) / 2
-            x_positions = np.linspace(bottom_left[0] - x_margin, top_right[0] + x_margin, num=points_per_axis)
-            y_positions = np.linspace(bottom_left[1] - y_margin, top_right[1] + y_margin, num=points_per_axis)
-            evaluation_grid = np.transpose([np.tile(x_positions, len(y_positions)),
-                                            np.repeat(y_positions, len(x_positions))])
+        if not self._input_dimension == 2:
+            raise NotImplementedError(
+                "plotting not supported for {}-dimensional features", self._input_dimension)
+        # 2d classification, allowing for a contour plot
+        assert isinstance(self._algorithm, FlagSimulator)
+        points_per_axis = 5
+        X = self.raw_data.get("X")
+        y = self.raw_data.get("y")
+        bottom_left = np.min(X, axis=0)
+        top_right = np.max(X, axis=0)
+        x_margin = (top_right[0] - bottom_left[0]) / 2
+        y_margin = (top_right[1] - bottom_left[1]) / 2
+        x_positions = np.linspace(
+            bottom_left[0] - x_margin, top_right[0] + x_margin, num=points_per_axis)
+        y_positions = np.linspace(
+            bottom_left[1] - y_margin, top_right[1] + y_margin, num=points_per_axis)
+        evaluation_grid = np.transpose([np.tile(x_positions, len(y_positions)),
+                                        np.repeat(y_positions, len(x_positions))])
 
-            good_samples = X[y == 1]
-            bad_samples = X[y == 0]
+        good_samples = X[y == 1]
+        bad_samples = X[y == 0]
 
-            reward_evaluation_grid = self._algorithm.predict(evaluation_grid)
-            reward_evaluation_grid = reward_evaluation_grid.reshape((points_per_axis, points_per_axis))
-            reward_evaluation_grid = np.clip(a=reward_evaluation_grid, a_min=-3, a_max=3)
-            fig = go.Figure(data=[go.Contour(x=x_positions, y=y_positions, z=reward_evaluation_grid,
-                                             colorscale="Portland", ),
-                                  go.Scatter(x=good_samples[::10, 0], y=good_samples[::10, 1],
-                                             mode="markers", fillcolor="green", showlegend=False),
-                                  go.Scatter(x=bad_samples[::10, 0], y=bad_samples[::10, 1],
-                                             mode="markers", fillcolor="red", showlegend=False)
-                                  ])
-            return fig
-        else:
-            raise NotImplementedError("plotting not supported for {}-dimensional features", self._input_dimension)
+        reward_evaluation_grid = self._algorithm.predict(evaluation_grid)
+        reward_evaluation_grid = reward_evaluation_grid.reshape(
+            (points_per_axis, points_per_axis))
+        reward_evaluation_grid = np.clip(
+            a=reward_evaluation_grid, a_min=-3, a_max=3)
+        fig = go.Figure(data=[go.Contour(x=x_positions, y=y_positions, z=reward_evaluation_grid,
+                                         colorscale="Portland", ),
+                              go.Scatter(x=good_samples[::10, 0], y=good_samples[::10, 1],
+                                         mode="markers", fillcolor="green", showlegend=False),
+                              go.Scatter(x=bad_samples[::10, 0], y=bad_samples[::10, 1],
+                                         mode="markers", fillcolor="red", showlegend=False)
+                              ])
+        return fig
