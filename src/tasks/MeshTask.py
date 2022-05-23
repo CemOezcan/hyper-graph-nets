@@ -10,13 +10,12 @@ from matplotlib import animation
 from src import util
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
-from ALR.rmp_GNN.src.algorithms.MeshSimulator import MeshSimulator
+from src.algorithms.MeshSimulator import MeshSimulator
 from src.data.dataset import load_dataset
 from src.tasks.AbstractTask import AbstractTask
 from util.Types import ConfigDict, ScalarDict
 
 device = torch.device('cuda')
-
 
 class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
