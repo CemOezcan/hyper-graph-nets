@@ -27,7 +27,7 @@ class FlagTask(AbstractTask):
         """
         super().__init__(algorithm=algorithm, config=config)
         self._raw_data = get_data(config=config)
-
+        self._rollouts = config.get('task').get('rollouts')
         self.train_loader = get_data(config=config)
 
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
@@ -44,13 +44,7 @@ class FlagTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, FlagSimulator)
-        train_scalars = self._algorithm.score(inputs=self._train_X, labels=self._train_y)
-        train_scalars = {"train_" + k: v for k, v in train_scalars.items()}
-
-        test_scalars = self._algorithm.score(inputs=self._test_X, labels=self._test_y)
-        test_scalars = {"test_" + k: v for k, v in test_scalars.items()}
-
-        return train_scalars | test_scalars  # NOTE what does | do?
+        return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
         if self._input_dimension == 2:  # 2d classification, allowing for a contour plot

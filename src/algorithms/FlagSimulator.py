@@ -88,14 +88,14 @@ class FlagSimulator(AbstractIterativeAlgorithm):
 
             self.save()
 
-    def evaluator(self, ds_loader):
+    def evaluator(self, ds_loader, rollouts):
         """Run a model rollout trajectory."""
         trajectories = []
 
         mse_losses = []
         l1_losses = []
 
-        for index in range(self._network_config.get('num_rollouts')):
+        for index in range(rollouts):
             for trajectory in ds_loader:
                 trajectory = self._process_trajectory(trajectory, self._network_config, self._dataset_dir, True)
 
@@ -121,7 +121,6 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         loss_record['eval_min_l1_loss'] = torch.min(torch.stack(l1_losses)).item()
         loss_record['eval_mse_losses'] = mse_losses
         loss_record['eval_l1_losses'] = l1_losses
-        print(loss_record)
         return loss_record
 
     def evaluate(self, trajectory, num_steps=None):
@@ -129,7 +128,8 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
         if num_steps is None:
             num_steps = trajectory['cells'].shape[0]
-        prediction = self._rollout(self._network, initial_state, num_steps)
+
+        prediction = self._rollout(initial_state, num_steps)
 
         scalars = None
         traj_ops = {
