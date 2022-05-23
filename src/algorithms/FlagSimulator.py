@@ -121,6 +121,7 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         loss_record['eval_min_l1_loss'] = torch.min(torch.stack(l1_losses)).item()
         loss_record['eval_mse_losses'] = mse_losses
         loss_record['eval_l1_losses'] = l1_losses
+        self.save_rollouts(trajectories)
         return loss_record
 
     def evaluate(self, trajectory, num_steps=None):
@@ -277,3 +278,8 @@ class FlagSimulator(AbstractIterativeAlgorithm):
         dir = 'output/' + self._dataset_name + '/model.pkl'
         with open(os.path.join(DATA_DIR, dir), 'wb') as file:
             pickle.dump(self, file)
+
+    def save_rollouts(self, rollouts):
+        dir = 'output/' + self._dataset_name + '/rollouts.pkl'
+        with open(os.path.join(DATA_DIR, dir), 'wb') as file:
+            pickle.dump(rollouts, file)
