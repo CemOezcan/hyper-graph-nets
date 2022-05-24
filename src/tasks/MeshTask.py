@@ -15,7 +15,6 @@ from src.data.dataset import load_dataset
 from src.tasks.AbstractTask import AbstractTask
 from util.Types import ConfigDict, ScalarDict
 
-device = torch.device('cuda')
 
 class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
@@ -52,6 +51,7 @@ class MeshTask(AbstractTask):
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
+        # TODO read path from other file to make it generic
         path = os.path.join(OUT_DIR, 'flag_minimal/rollouts.pkl')
         save_path = os.path.join(OUT_DIR, 'flag_minimal')
 

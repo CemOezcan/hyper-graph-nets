@@ -35,9 +35,9 @@ class FlagModel(nn.Module):
             latent_size=128,
             num_layers=2,
             message_passing_steps=self.message_passing_steps,
-            message_passing_aggregator=self.message_passing_aggregator, attention=self._attention)
+            message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
 
-    def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
+    def unsorted_segment_operation(self, data, segment_ids, num_segments, operation): #TODO check if redundant: see graphnet.py
         """
         Computes the sum along segments of a tensor. Analogous to tf.unsorted_segment_sum.
 

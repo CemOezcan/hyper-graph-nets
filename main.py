@@ -32,7 +32,8 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
         self._config: ConfigDict = None
 
     def initialize(self, config: ConfigDict, rep: int, logger: cw_logging.LoggerArray) -> None:
-        self._config = initialize_config(config=copy.deepcopy(config), repetition=rep)
+        self._config = initialize_config(
+            config=copy.deepcopy(config), repetition=rep)
 
         # initialize random seeds
         numpy_seed = self._config.get("random_seeds").get("numpy")
@@ -45,7 +46,8 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
         # start with the actual task and algorithm
         algorithm = get_algorithm(config=self._config)
         self._task = get_task(config=self._config, algorithm=algorithm)
-        self._recorder = get_recorder(config=self._config, algorithm=algorithm, task=self._task)
+        self._recorder = get_recorder(
+            config=self._config, algorithm=algorithm, task=self._task)
 
     def iterate(self, config: ConfigDict, rep: int, n: int) -> ScalarDict:
         self._task.run_iteration()
@@ -86,6 +88,7 @@ def main(load):
         task.get_scalars()
 
     task.plot()
+
 
 if __name__ == '__main__':
     """from optuna_work.experiment_wrappers import wrap_iterative_experiment

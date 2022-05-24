@@ -29,8 +29,10 @@ class GraphNet(nn.Module):
         """Aggregrates node features, and applies edge function."""
         senders = edge_set.senders.to(device)
         receivers = edge_set.receivers.to(device)
-        sender_features = torch.index_select(input=node_features, dim=0, index=senders)
-        receiver_features = torch.index_select(input=node_features, dim=0, index=receivers)
+        sender_features = torch.index_select(
+            input=node_features, dim=0, index=senders)
+        receiver_features = torch.index_select(
+            input=node_features, dim=0, index=receivers)
         features = [sender_features, receiver_features, edge_set.features]
         features = torch.cat(features, dim=-1)
         if edge_set.name == "mesh_edges":
@@ -48,29 +50,36 @@ class GraphNet(nn.Module):
         :param num_segments: The number of segments.
         :return: A tensor of same data type as the data argument.
         """
-        assert all([i in data.shape for i in segment_ids.shape]), "segment_ids.shape should be a prefix of data.shape"
+        assert all([i in data.shape for i in segment_ids.shape]
+                   ), "segment_ids.shape should be a prefix of data.shape"
 
         # segment_ids is a 1-D tensor repeat it to have the same shape as data
         data = data.to(device)
         segment_ids = segment_ids.to(device)
         if len(segment_ids.shape) == 1:
             s = torch.prod(torch.tensor(data.shape[1:])).long().to(device)
-            segment_ids = segment_ids.repeat_interleave(s).view(segment_ids.shape[0], *data.shape[1:]).to(device)
+            segment_ids = segment_ids.repeat_interleave(s).view(
+                segment_ids.shape[0], *data.shape[1:]).to(device)
 
         assert data.shape == segment_ids.shape, "data.shape and segment_ids.shape should be equal"
 
         shape = [num_segments] + list(data.shape[1:])
         result = torch.zeros(*shape).to(device)
         if operation == 'sum':
-            result = torch_scatter.scatter_add(data.float(), segment_ids, dim=0, dim_size=num_segments)
+            result = torch_scatter.scatter_add(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
         elif operation == 'max':
-            result, _ = torch_scatter.scatter_max(data.float(), segment_ids, dim=0, dim_size=num_segments)
+            result, _ = torch_scatter.scatter_max(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
         elif operation == 'mean':
-            result = torch_scatter.scatter_mean(data.float(), segment_ids, dim=0, dim_size=num_segments)
+            result = torch_scatter.scatter_mean(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
         elif operation == 'min':
-            result, _ = torch_scatter.scatter_min(data.float(), segment_ids, dim=0, dim_size=num_segments)
+            result, _ = torch_scatter.scatter_min(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
         elif operation == 'std':
-            result = torch_scatter.scatter_std(data.float(), segment_ids, out=result, dim=0, dim_size=num_segments)
+            result = torch_scatter.scatter_std(
+                data.float(), segment_ids, out=result, dim=0, dim_size=num_segments)
         else:
             raise Exception('Invalid operation type!')
         result = result.type(data.dtype)
@@ -129,18 +138,22 @@ class GraphNet(nn.Module):
         # apply edge functions
         new_edge_sets = []
         for edge_set in graph.edge_sets:
-            updated_features = self._update_edge_features(graph.node_features, edge_set)
+            updated_features = self._update_edge_features(
+                graph.node_features, edge_set)
             new_edge_sets.append(edge_set._replace(features=updated_features))
 
         # apply node function
-        new_node_features = self._update_node_features(graph.node_features, new_edge_sets)
+        new_node_features = self._update_node_features(
+            graph.node_features, new_edge_sets)
 
         # add residual connections
         new_node_features += graph.node_features
         if mask is not None:
             mask = mask.repeat(new_node_features.shape[-1])
-            mask = mask.view(new_node_features.shape[0], new_node_features.shape[1])
-            new_node_features = torch.where(mask, new_node_features, graph.node_features)
+            mask = mask.view(
+                new_node_features.shape[0], new_node_features.shape[1])
+            new_node_features = torch.where(
+                mask, new_node_features, graph.node_features)
         new_edge_sets = [es._replace(features=es.features + old_es.features)
                          for es, old_es in zip(new_edge_sets, graph.edge_sets)]
         return MultiGraph(new_node_features, new_edge_sets)
