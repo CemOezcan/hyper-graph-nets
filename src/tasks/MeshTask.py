@@ -78,12 +78,8 @@ class MeshTask(AbstractTask):
             bounds.append((bb_min, bb_max))
 
         def animate(num):
-            skip = 30
-            # step = (num * skip) % num_steps
-            traj = (num * skip) // num_steps
-            # traj = 0
-
             step = (num * skip) % num_steps
+            traj = (num * skip) // num_steps
 
             ax.cla()
             bound = bounds[traj]

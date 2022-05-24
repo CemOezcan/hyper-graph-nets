@@ -104,7 +104,13 @@ class FlagModel(nn.Module):
 
     def forward(self, inputs, is_training):
         graph = self._build_graph(inputs, is_training=is_training)
-        return self.learned_model(graph)
+        if is_training:
+            return self.learned_model(graph,
+                                      world_edge_normalizer=self._world_edge_normalizer, is_training=is_training)
+        else:
+            return self._update(inputs, self.learned_model(graph,
+                                                           world_edge_normalizer=self._world_edge_normalizer,
+                                                           is_training=is_training))
 
     def _update(self, inputs, per_node_network_output):
         """Integrate model outputs."""

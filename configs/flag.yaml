@@ -40,8 +40,8 @@ params:
     noise: 0.003
     gamma: 0.1
     aggregation: min
-    learning_rate: 3.0e-4
-    message_passing_steps: 15
+    learning_rate: 1.0e-4
+    message_passing_steps: 1
     attention: False
     load: None
     stochastic_message_passing_used: False
