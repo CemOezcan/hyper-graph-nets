@@ -15,7 +15,6 @@ from src.data.dataset import load_dataset
 from src.tasks.AbstractTask import AbstractTask
 from util.Types import ConfigDict, ScalarDict
 
-device = torch.device('cuda')
 
 class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
@@ -52,10 +51,11 @@ class MeshTask(AbstractTask):
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
+        # TODO read path from other file to make it generic
         path = os.path.join(OUT_DIR, 'flag_minimal/rollouts.pkl')
         save_path = os.path.join(OUT_DIR, 'flag_minimal')
 
-        with open(path, 'rb') as fp:
+        with open('rollouts.pkl', 'rb') as fp:
             rollout_data = pickle.load(fp)
 
         fig = plt.figure(figsize=(19.2, 10.8))
@@ -108,5 +108,5 @@ class MeshTask(AbstractTask):
         anima = animation.FuncAnimation(
             fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
         writervideo = animation.FFMpegWriter(fps=30)
-        anima.save(os.path.join(save_path, 'ani.mp4'), writer=writervideo)
+        anima.save('ani.mp4', writer=writervideo)
         plt.show(block=True)
