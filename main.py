@@ -1,6 +1,7 @@
 import pickle
 import pprint
 import random
+from xmlrpc.client import Boolean
 
 from cw2 import cluster_work, experiment, cw_error
 from cw2.cw_data import cw_logging
@@ -65,26 +66,23 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
                 print("Failed finalizing recorder: {}".format(e))
 
 
-def main(load):
+def main(load_model: Boolean):
     params = read_yaml()['params']
     dataset_name = params['task']['dataset']
 
-    dataset_dir = os.path.join(DATA_DIR, dataset_name)
-    output_dir = os.path.join(OUT_DIR, dataset_name)
-
-    if load:
-        dir = 'output/' + dataset_name + '/model.pkl'
-        with open(os.path.join(DATA_DIR, dir), 'rb') as file:
-            algo = pickle.load(file)
+    if load_model:
+        model_path = os.path.join(OUT_DIR, dataset_name) + '/model.pkl'
+        with open(model_path, 'rb') as file:
+            algorithm = pickle.load(file)
     else:
-        algo = MeshSimulator(params)
+        algorithm = MeshSimulator(params)
 
-    task = MeshTask(algo, params)
+    task = MeshTask(algorithm, params)
 
-    if not load:
+    if not load_model:
         task.run_iteration()
 
-    if not os.path.exists(os.path.join(DATA_DIR, 'output/' + dataset_name + '/rollouts.pkl')):
+    if not os.path.exists(os.path.join(OUT_DIR, dataset_name) + '/rollouts.pkl'):
         task.get_scalars()
 
     task.plot()
