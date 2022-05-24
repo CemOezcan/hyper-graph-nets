@@ -22,6 +22,7 @@ class FlagSimpleDatasetIterative(IterableDataset):
         index_path = os.path.join(path, split + ".idx")
         tf_dataset = TFRecordDataset(tfrecord_path, index_path, None)
         # loader and iter(loader) have size 1000, which is the number of all training trajectories
+        # TODO Batch Size is set to 1 here, maybe this is what causes the error
         loader = torch.utils.data.DataLoader(tf_dataset, batch_size=1)
         # use list to make list from iterable so that the order of elements is ensured
         self.dataset = iter(loader)
@@ -49,11 +50,12 @@ class FlagSimpleDatasetIterative(IterableDataset):
     def split_and_preprocess(self):
         """Splits trajectories into frames, and adds training noise."""
         noise_field = 'world_pos'
-        noise_scale = 0.003
+        noise_scale = 0.003  # TODO remove
         noise_gamma = 0.1
 
         def add_noise(frame):
-            zero_size = torch.zeros(frame[noise_field].size(), dtype=torch.float32).to(device)
+            zero_size = torch.zeros(
+                frame[noise_field].size(), dtype=torch.float32).to(device)
             noise = torch.normal(zero_size, std=noise_scale).to(device)
             other = torch.Tensor([NodeType.NORMAL.value]).to(device)
             mask = torch.eq(frame['node_type'], other.int())[:, 0]
