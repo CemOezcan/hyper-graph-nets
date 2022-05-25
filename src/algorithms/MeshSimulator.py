@@ -23,6 +23,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network_config = config.get("model")
         self._dataset_dir = os.path.join(
             DATA_DIR, config.get('task').get('dataset'))
+        self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
 
         self._network = None
@@ -63,9 +64,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
 
         for i, data in enumerate(train_dataloader):  # for each batch
-            trajectory = self._process_trajectory(
-                data, self._network_config, self._dataset_dir, True, True)
-            print(i)
+            if i >= self._trajectories:
+                break
+            trajectory = self._process_trajectory(data, self._network_config, self._dataset_dir, True, True)
 
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
