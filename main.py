@@ -1,24 +1,22 @@
-import pickle
-import pprint
-import random
-from xmlrpc.client import Boolean
-
-from cw2 import cluster_work, experiment, cw_error
-from cw2.cw_data import cw_logging
-from src.algorithms.MeshSimulator import MeshSimulator
-from src.algorithms.get_algorithm import get_algorithm
-from src.tasks.AbstractTask import AbstractTask
-from recording.get_recorder import get_recorder
-from src.tasks.MeshTask import MeshTask
-from src.tasks.get_task import get_task
-from recording.Recorder import Recorder
-from util.Types import *
-from util.InitializeConfig import initialize_config
 import copy
+import os
+import pickle
+
 import numpy as np
 import torch
-import os
-from src.util import device, read_yaml
+from cw2 import cluster_work, cw_error, experiment
+from cw2.cw_data import cw_logging
+
+from recording.get_recorder import get_recorder
+from recording.Recorder import Recorder
+from src.algorithms.get_algorithm import get_algorithm
+from src.algorithms.MeshSimulator import MeshSimulator
+from src.tasks.AbstractTask import AbstractTask
+from src.tasks.get_task import get_task
+from src.tasks.MeshTask import MeshTask
+from src.util import read_yaml
+from util.InitializeConfig import initialize_config
+from util.Types import ConfigDict, ScalarDict
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
@@ -66,7 +64,7 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
                 print("Failed finalizing recorder: {}".format(e))
 
 
-def main(load_model: Boolean):
+def main(load_model: bool, compute_rollout: bool):
     params = read_yaml()['params']
     dataset_name = params['task']['dataset']
 
@@ -81,10 +79,8 @@ def main(load_model: Boolean):
 
     if not load_model:
         task.run_iteration()
-
-    if not os.path.exists(os.path.join(OUT_DIR, dataset_name) + '/rollouts.pkl'):
+    if compute_rollout:
         task.get_scalars()
-
     task.plot()
 
 
@@ -93,4 +89,4 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    main(False)
+    main(False, True)

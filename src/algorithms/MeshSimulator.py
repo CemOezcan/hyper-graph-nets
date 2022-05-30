@@ -19,7 +19,6 @@ from util.Types import ConfigDict, ScalarDict, Union
 class MeshSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
-        # TODO: Config file for flag model
         self._network_config = config.get("model")
         self._dataset_dir = os.path.join(
             DATA_DIR, config.get('task').get('dataset'))
@@ -28,21 +27,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self._network = None
         self._optimizer = None
-        # TODO: Add scheduler
-        # self._scheduler = None
+        self._scheduler = None
 
         self.loss_function = F.mse_loss
         self._learning_rate = self._network_config.get("learning_rate")
-        # self._scheduler_learning_rate = self._network_config.get("scheduler_learning_rate")
+        self._scheduler_learning_rate = self._network_config.get(
+            "scheduler_learning_rate")
 
-    def initialize(self, task_information: ConfigDict) -> None:
+    def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         self._network = FlagModel(self._network_config)
 
         self._optimizer = optim.Adam(
             self._network.parameters(), lr=self._learning_rate)
-        # self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
+        self._scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
 
-    def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:
+    def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:  # TODO check usability
         with torch.no_grad():
             inputs = torch.Tensor(inputs)
             labels = torch.Tensor(labels)
@@ -54,6 +54,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return {"loss": loss}
 
+    # TODO check usability
     def predict(self, samples: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
         if isinstance(samples, np.ndarray):
             samples = torch.Tensor(samples.astype(np.float32))
@@ -66,7 +67,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for i, data in enumerate(train_dataloader):  # for each batch
             if i >= self._trajectories:
                 break
-            trajectory = self._process_trajectory(data, self._network_config, self._dataset_dir, True, True)
+            trajectory = self._process_trajectory(
+                data, self._network_config, self._dataset_dir, True, True)
 
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
@@ -100,7 +102,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         mse_losses = []
         l1_losses = []
 
-        for index in range(rollouts):
+        for _ in range(rollouts):
             for trajectory in ds_loader:
                 trajectory = self._process_trajectory(
                     trajectory, self._network_config, self._dataset_dir, True)
@@ -117,7 +119,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 mse_losses.append(mse_loss.cpu())
                 l1_losses.append(l1_loss.cpu())
                 trajectories.append(prediction_trajectory)
-            # scalars.append(scalar_data)
+        loss_record = self.save_losses(mse_losses, l1_losses)
+        self.save_rollouts(trajectories)
+        return loss_record
+
+    @staticmethod
+    def save_losses(mse_losses, l1_losses):
         loss_record = {}
         loss_record['eval_total_mse_loss'] = torch.sum(
             torch.stack(mse_losses)).item()
@@ -137,7 +144,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             torch.stack(l1_losses)).item()
         loss_record['eval_mse_losses'] = mse_losses
         loss_record['eval_l1_losses'] = l1_losses
-        self.save_rollouts(trajectories)
         return loss_record
 
     def evaluate(self, trajectory, num_steps=None):
@@ -158,8 +164,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         }
         return scalars, traj_ops
 
+    # TODO remove hardcoded values
     def n_step_evaluator(self, ds_loader, n_step_list=[3], n_traj=1):
-
         n_step_mse_losses = {}
         n_step_l1_losses = {}
 
@@ -169,38 +175,47 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 trajectory = self._process_trajectory(
                     trajectory, self._network_config, self._dataset_dir, True)
                 for n_step in n_step_list:
-                    mse_losses = []
-                    l1_losses = []
-                    for step in range(len(trajectory['world_pos']) - n_step):
-                        eval_traj = {}
-                        for k, v in trajectory.items():
-                            eval_traj[k] = v[step:step + n_step + 1]
-                        _, prediction_trajectory = self.evaluate(
-                            eval_traj, n_step + 1)
-                        mse_loss_fn = torch.nn.MSELoss()
-                        l1_loss_fn = torch.nn.L1Loss()
-                        mse_loss = mse_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
-                                               prediction_trajectory['pred_pos'])
-                        l1_loss = l1_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
-                                             prediction_trajectory['pred_pos'])
-
-                        mse_losses.append(mse_loss.cpu())
-                        l1_losses.append(l1_loss.cpu())
-                    if n_step not in n_step_mse_losses and n_step not in n_step_l1_losses:
-                        n_step_mse_losses[n_step] = torch.stack(mse_losses)
-                        n_step_l1_losses[n_step] = torch.stack(l1_losses)
-                    elif n_step in n_step_mse_losses and n_step in n_step_l1_losses:
-                        n_step_mse_losses[n_step] = n_step_mse_losses[n_step] + \
-                            torch.stack(mse_losses)
-                        n_step_l1_losses[n_step] = n_step_l1_losses[n_step] + \
-                            torch.stack(l1_losses)
-                    else:
-                        raise Exception('Error when computing n step losses!')
+                    self.n_step_computation(
+                        n_step_mse_losses, n_step_l1_losses, trajectory, n_step)
         for (kmse, vmse), (kl1, vl1) in zip(n_step_mse_losses.items(), n_step_l1_losses.items()):
             n_step_mse_losses[kmse] = torch.div(vmse, i + 1)
             n_step_l1_losses[kl1] = torch.div(vl1, i + 1)
 
         return {'n_step_mse_loss': n_step_mse_losses, 'n_step_l1_loss': n_step_l1_losses}
+
+    def n_step_computation(self, n_step_mse_losses, n_step_l1_losses, trajectory, n_step):
+        mse_losses = []
+        l1_losses = []
+        for step in range(len(trajectory['world_pos']) - n_step):
+            eval_traj = {}
+            for k, v in trajectory.items():
+                eval_traj[k] = v[step:step + n_step + 1]
+            _, prediction_trajectory = self.evaluate(
+                eval_traj, n_step + 1)
+            mse_loss_fn = torch.nn.MSELoss()
+            l1_loss_fn = torch.nn.L1Loss()
+            mse_loss = mse_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
+                                   prediction_trajectory['pred_pos'])
+            l1_loss = l1_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
+                                 prediction_trajectory['pred_pos'])
+
+            mse_losses.append(mse_loss.cpu())
+            l1_losses.append(l1_loss.cpu())
+        self._compute_n_step_losses(
+            n_step_mse_losses, n_step_l1_losses, n_step, mse_losses, l1_losses)
+
+    @staticmethod
+    def _compute_n_step_losses(n_step_mse_losses, n_step_l1_losses, n_step, mse_losses, l1_losses):
+        if n_step not in n_step_mse_losses and n_step not in n_step_l1_losses:
+            n_step_mse_losses[n_step] = torch.stack(mse_losses)
+            n_step_l1_losses[n_step] = torch.stack(l1_losses)
+        elif n_step in n_step_mse_losses and n_step in n_step_l1_losses:
+            n_step_mse_losses[n_step] = n_step_mse_losses[n_step] + \
+                torch.stack(mse_losses)
+            n_step_l1_losses[n_step] = n_step_l1_losses[n_step] + \
+                torch.stack(l1_losses)
+        else:
+            raise Exception('Error when computing n step losses!')
 
     def _rollout(self, initial_state, num_steps):
         """Rolls out a model trajectory."""
@@ -209,26 +224,23 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             [NodeType.NORMAL.value], device=device))
         self.mask = torch.stack((self.mask, self.mask, self.mask), dim=1)
 
-        def step_fn(prev_pos, cur_pos, trajectory):
-            # memory_prev = torch.cuda.memory_allocated(device) / (1024 * 1024)
-            with torch.no_grad():
-                prediction = self._network({**initial_state,
-                                            'prev|world_pos': prev_pos,
-                                            'world_pos': cur_pos}, is_training=False)
-
-            next_pos = torch.where(self.mask, torch.squeeze(
-                prediction), torch.squeeze(cur_pos))
-
-            trajectory.append(cur_pos)
-            return cur_pos, next_pos, trajectory
-
         prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
         trajectory = []
         for _ in range(num_steps):
-            prev_pos, cur_pos, trajectory = step_fn(
-                prev_pos, cur_pos, trajectory)
+            prev_pos, cur_pos, trajectory = self._step_fn(
+                initial_state, prev_pos, cur_pos, trajectory)
         return torch.stack(trajectory)
+
+    def _step_fn(self, initial_state,  prev_pos, cur_pos, trajectory):
+        with torch.no_grad():
+            prediction = self._network({**initial_state,
+                                        'prev|world_pos': prev_pos,
+                                        'world_pos': cur_pos}, is_training=False)
+        next_pos = torch.where(self.mask, torch.squeeze(
+            prediction), torch.squeeze(cur_pos))
+        trajectory.append(cur_pos)
+        return cur_pos, next_pos, trajectory
 
     @staticmethod
     def _squeeze_data_frame(data_frame):
@@ -244,21 +256,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         types = {}
         steps = None
 
-        if not loaded_meta:
-            try:
-                with open(os.path.join(dataset_dir, 'meta.json'), 'r') as fp:
-                    meta = json.loads(fp.read())
-                shapes = {}
-                dtypes = {}
-                types = {}
-                steps = meta['trajectory_length'] - 2
-                for key, field in meta['features'].items():
-                    shapes[key] = field['shape']
-                    dtypes[key] = field['dtype']
-                    types[key] = field['type']
-            except FileNotFoundError as e:
-                print(e)
-                quit()
+        shapes, dtypes, types, steps, meta = self._load_model(
+            dataset_dir, loaded_meta)
         trajectory = {}
         # decode bytes into corresponding dtypes
         for key, value in trajectory_data.items():
@@ -283,6 +282,25 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return trajectory
 
     @staticmethod
+    def _load_model(dataset_dir, loaded_meta):
+        if not loaded_meta:
+            try:
+                with open(os.path.join(dataset_dir, 'meta.json'), 'r') as fp:
+                    meta = json.loads(fp.read())
+                shapes = {}
+                dtypes = {}
+                types = {}
+                steps = meta['trajectory_length'] - 2
+                for key, field in meta['features'].items():
+                    shapes[key] = field['shape']
+                    dtypes[key] = field['dtype']
+                    types[key] = field['type']
+            except FileNotFoundError as e:
+                print(e)
+                quit()
+        return shapes, dtypes, types, steps, meta
+
+    @staticmethod
     def _add_targets(params, steps):
         # TODO: redundant (see flagdata.py)
         fields = params['field']
@@ -303,25 +321,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     @staticmethod
     def _split_and_preprocess(params, steps):
         # TODO: redundant (see flagdata.py)
-
         noise_field = params['field']
         noise_scale = params['noise']
         noise_gamma = params['gamma']
-
-        def add_noise(frame):
-            zero_size = torch.zeros(
-                frame[noise_field].size(), dtype=torch.float32).to(device)
-            noise = torch.normal(zero_size, std=noise_scale).to(device)
-            other = torch.Tensor([NodeType.NORMAL.value]).to(device)
-            mask = torch.eq(frame['node_type'], other.int())[:, 0]
-            mask_sequence = []
-            for _ in range(noise.shape[1]):
-                mask_sequence.append(mask)
-            mask = torch.stack(mask_sequence, dim=1)
-            noise = torch.where(mask, noise, torch.zeros_like(noise))
-            frame[noise_field] += noise
-            frame['target|' + noise_field] += (1.0 - noise_gamma) * noise
-            return frame
 
         def element_operation(trajectory):
             trajectory_steps = []
@@ -329,11 +331,28 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 trajectory_step = {}
                 for key, value in trajectory.items():
                     trajectory_step[key] = value[i]
-                noisy_trajectory_step = add_noise(trajectory_step)
+                noisy_trajectory_step = MeshSimulator._add_noise(
+                    trajectory_step, noise_field, noise_scale, noise_gamma)
                 trajectory_steps.append(noisy_trajectory_step)
             return trajectory_steps
 
         return element_operation
+
+    @staticmethod
+    def _add_noise(frame, noise_field, noise_scale, noise_gamma):
+        zero_size = torch.zeros(
+            frame[noise_field].size(), dtype=torch.float32).to(device)
+        noise = torch.normal(zero_size, std=noise_scale).to(device)
+        other = torch.Tensor([NodeType.NORMAL.value]).to(device)
+        mask = torch.eq(frame['node_type'], other.int())[:, 0]
+        mask_sequence = []
+        for _ in range(noise.shape[1]):
+            mask_sequence.append(mask)
+        mask = torch.stack(mask_sequence, dim=1)
+        noise = torch.where(mask, noise, torch.zeros_like(noise))
+        frame[noise_field] += noise
+        frame['target|' + noise_field] += (1.0 - noise_gamma) * noise
+        return frame
 
     @property
     def network(self):
