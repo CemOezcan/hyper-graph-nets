@@ -41,6 +41,7 @@ params:
     gamma: 0.1
     aggregation: min
     learning_rate: 1.0e-4
+    scheduler_learning_rate:  1.0e-4
     message_passing_steps: 1
     attention: False
     load: None
