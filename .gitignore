@@ -6,3 +6,4 @@
 *.tfrecord
 meta.json
 *.pkl
+*.pyc
