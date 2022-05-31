@@ -17,7 +17,7 @@ from src.tasks.MeshTask import MeshTask
 from src.util import read_yaml
 from util.InitializeConfig import initialize_config
 from util.Types import ConfigDict, ScalarDict
-from src.data.data_loader import OUT_DIR
+from src.data.data_loader import OUT_DIR, CONFIG_NAME
 
 
 class IterativeExperiment(experiment.AbstractIterativeExperiment):
@@ -62,7 +62,7 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
 
 
 def main(load_model: bool, compute_rollout: bool):
-    params = read_yaml()['params']
+    params = read_yaml(CONFIG_NAME)['params']
     dataset_name = params['task']['dataset']
 
     if load_model:

@@ -4,10 +4,9 @@ import os
 
 from torch.utils.data import IterableDataset
 from tfrecord.torch.dataset import TFRecordDataset
-from src.util import NodeType, device
 
 
-class FlagSimpleDatasetIterative(IterableDataset):
+class FlagDatasetIterative(IterableDataset):
     def __init__(self, path, split, add_targets=False, split_and_preprocess=False):
         self.path = path
         self.split = split
