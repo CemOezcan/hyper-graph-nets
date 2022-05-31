@@ -358,12 +358,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def network(self):
         return self._network
 
-    def save(self):
+    def save(self):  # TODO change hardcoded
         dir = 'output/' + self._dataset_name + '/model.pkl'
         with open(os.path.join(DATA_DIR, dir), 'wb') as file:
             pickle.dump(self, file)
 
-    def save_rollouts(self, rollouts):
+    def save_rollouts(self, rollouts):  # TODO change hardcoded
         dir = 'output/' + self._dataset_name + '/rollouts.pkl'
         with open(os.path.join(DATA_DIR, dir), 'wb') as file:
             pickle.dump(rollouts, file)
