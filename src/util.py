@@ -20,7 +20,7 @@ class NodeType(enum.IntEnum):
     WALL_BOUNDARY = 6
     SIZE = 9
 
-
+# TODO make generic with dataset name
 def read_yaml():
     with open("configs/flag.yaml", 'r') as stream:
         try:
