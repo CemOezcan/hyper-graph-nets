@@ -17,10 +17,7 @@ from src.tasks.MeshTask import MeshTask
 from src.util import read_yaml
 from util.InitializeConfig import initialize_config
 from util.Types import ConfigDict, ScalarDict
-
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(ROOT_DIR, 'data')
-OUT_DIR = os.path.join(DATA_DIR, 'output')
+from src.data.data_loader import OUT_DIR
 
 
 class IterativeExperiment(experiment.AbstractIterativeExperiment):

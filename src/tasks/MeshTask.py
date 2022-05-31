@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import plotly.graph_objects as go
 import torch
-from data.data_loader import OUT_DIR, get_data
+from src.data.data_loader import OUT_DIR, get_data
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
@@ -49,8 +49,7 @@ class MeshTask(AbstractTask):
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
-        path = os.path.join(OUT_DIR, self._dataset_name)
-        rollouts = os.path.join(path, 'rollouts.pkl')
+        rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
@@ -96,5 +95,6 @@ class MeshTask(AbstractTask):
         animation = ani.FuncAnimation(
             fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
         writervideo = ani.FFMpegWriter(fps=30)
-        animation.save(os.path.join(path, 'animation.mp4'), writer=writervideo)
+        animation.save(os.path.join(OUT_DIR, 'animation.mp4'),
+                       writer=writervideo)
         plt.show(block=True)

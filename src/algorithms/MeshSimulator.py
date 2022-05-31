@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-from data.data_loader import DATA_DIR, OUT_DIR
+from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
@@ -20,8 +20,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
         self._network_config = config.get("model")
-        self._dataset_dir = os.path.join(
-            DATA_DIR, config.get('task').get('dataset'))
+        self._dataset_dir = IN_DIR
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
 
@@ -357,11 +356,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return self._network
 
     def save(self):
-        dir = OUT_DIR + self._dataset_name + '/model.pkl'
-        with open(os.path.join(DATA_DIR, dir), 'wb') as file:
+        with open(os.path.join(OUT_DIR, 'model.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
     def save_rollouts(self, rollouts):
-        dir = OUT_DIR + self._dataset_name + '/rollouts.pkl'
-        with open(os.path.join(DATA_DIR, dir), 'wb') as file:
+        with open(os.path.join(OUT_DIR, 'rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
