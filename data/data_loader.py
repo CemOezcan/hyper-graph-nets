@@ -1,19 +1,19 @@
 import os
 
-from util.Types import *  # TODO change
+from util.Types import ConfigDict
 from util.Functions import get_from_nested_dict
-from src.data.dataset import load_dataset
+from torch.utils.data import DataLoader
+from src.data.flagdata import FlagSimpleDatasetIterative
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(DATA_DIR, 'output')
 
-# TODO change setup of DataLoader, move to MeshTask maybe?
-def get_data(config: ConfigDict, split='train', split_and_preprocess=True):
+
+def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):
     dataset = get_from_nested_dict(config, list_of_keys=["task", "dataset"], raise_error=True)
     if dataset == 'flag_minimal':
-        return load_dataset(os.path.join(DATA_DIR, 'flag_minimal'), split, batch_size=config.get('task').get('batch_size'),
-                            prefetch_factor=config.get('task').get('prefetch_factor'),
-                            add_targets=True, split_and_preprocess=split_and_preprocess)
-
+        return DataLoader(FlagSimpleDatasetIterative(path=os.path.join(DATA_DIR, 'flag_minimal'), split=split, add_targets=add_targets,
+                                                     split_and_preprocess=split_and_preprocess), batch_size=config.get('task').get('batch_size'),
+                          prefetch_factor=config.get('task').get('prefetch_factor'), shuffle=False, num_workers=0)
     else:
         raise NotImplementedError("Implement your data loading here!")

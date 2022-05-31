@@ -10,7 +10,6 @@ from data.data_loader import OUT_DIR, get_data
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
-from src.data.dataset import load_dataset
 from src.tasks.AbstractTask import AbstractTask
 from util.Types import ConfigDict, ScalarDict
 
@@ -86,7 +85,6 @@ class MeshTask(AbstractTask):
                 step].to('cpu')
             original_pos = torch.squeeze(rollout_data[traj]['gt_pos'], dim=0)[
                 step].to('cpu')
-            # print(pos[10])
             faces = torch.squeeze(rollout_data[traj]['faces'], dim=0)[
                 step].to('cpu')
             ax.plot_trisurf(pos[:, 0], pos[:, 1], faces, pos[:, 2], shade=True)
