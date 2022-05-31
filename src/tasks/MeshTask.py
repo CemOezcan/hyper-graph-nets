@@ -3,11 +3,10 @@ import os
 import pickle
 
 import matplotlib.pyplot as plt
+import matplotlib.animation as ani
 import plotly.graph_objects as go
 import torch
 from data.data_loader import OUT_DIR, get_data
-from matplotlib import animation
-from src import util
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
@@ -51,26 +50,21 @@ class MeshTask(AbstractTask):
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
-        # TODO read path from other file to make it generic
-        path = os.path.join(OUT_DIR, 'flag_minimal/rollouts.pkl')
-        save_path = os.path.join(OUT_DIR, 'flag_minimal')
+        path = os.path.join(OUT_DIR, self._dataset_name)
+        rollouts = os.path.join(path, 'rollouts.pkl')
 
-        with open(path, 'rb') as fp:
+        with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
 
         fig = plt.figure(figsize=(19.2, 10.8))
         ax = fig.add_subplot(111, projection='3d')
         skip = 10
         num_steps = rollout_data[0]['gt_pos'].shape[0]
-        # print(num_steps)
         num_frames = num_steps
 
         # compute bounds
         bounds = []
-        index_temp = 0
         for trajectory in rollout_data:
-            index_temp += 1
-            # print("bb_min shape", trajectory['gt_pos'].shape)
             bb_min = torch.squeeze(
                 trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
             bb_max = torch.squeeze(
@@ -101,8 +95,8 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        anima = animation.FuncAnimation(
+        animation = ani.FuncAnimation(
             fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
-        writervideo = animation.FFMpegWriter(fps=30)
-        anima.save(os.path.join(save_path, 'ani.mp4'), writer=writervideo)
+        writervideo = ani.FFMpegWriter(fps=30)
+        animation.save(os.path.join(path, 'animation.mp4'), writer=writervideo)
         plt.show(block=True)
