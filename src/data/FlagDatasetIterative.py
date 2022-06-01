@@ -7,7 +7,7 @@ from tfrecord.torch.dataset import TFRecordDataset
 
 
 class FlagDatasetIterative(IterableDataset):
-    def __init__(self, path, split, add_targets=False, split_and_preprocess=False):
+    def __init__(self, path, split, add_targets=False, split_and_preprocess=False, batch_size=1):
         self.path = path
         self.split = split
         self._add_targets = add_targets
@@ -18,7 +18,7 @@ class FlagDatasetIterative(IterableDataset):
         tf_dataset = TFRecordDataset(tfrecord_path, index_path, None)
         # loader and iter(loader) have size 1000, which is the number of all training trajectories
         # TODO Batch Size is set to 1 here, maybe this is what causes the error
-        loader = torch.utils.data.DataLoader(tf_dataset, batch_size=1)
+        loader = torch.utils.data.DataLoader(tf_dataset, batch_size=batch_size)
         # use list to make list from iterable so that the order of elements is ensured
         self.dataset = iter(loader)
 
