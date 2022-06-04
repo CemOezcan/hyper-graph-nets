@@ -1,16 +1,15 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 
-class Clustering():
+class AbstractClusteringAlgorithm(ABC):
 
-    def __init__(self, graph):
+    def __init__(self):
         self._initialize()
-        return
 
     @abstractmethod
     def _initialize(self):
         raise NotImplementedError
 
     @abstractmethod
-    def run(self):
+    def run(self, graph):
         raise NotImplementedError
