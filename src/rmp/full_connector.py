@@ -3,6 +3,7 @@ import torch
 from src.rmp.abstract_connector import AbstractConnector
 from src.util import device, EdgeSet, MultiGraphWithPos
 
+
 class FullConnector(AbstractConnector):
 
     def __init__(self, normalizer):
