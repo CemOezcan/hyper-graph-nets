@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 from torch import nn
 
-from src.cluster.remote_message_passing import RemoteMessagePassing
+from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util

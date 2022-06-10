@@ -1,6 +1,6 @@
 import torch
 
-from src.cluster.abstract_connector import AbstractConnector
+from src.rmp.abstract_connector import AbstractConnector
 from src.util import device, EdgeSet, MultiGraphWithPos
 
 class FullConnector(AbstractConnector):

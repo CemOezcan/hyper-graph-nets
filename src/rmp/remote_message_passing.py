@@ -1,6 +1,6 @@
 
-from src.cluster.random_clustering import RandomClustering
-from src.cluster.full_connector import FullConnector
+from src.rmp.random_clustering import RandomClustering
+from src.rmp.full_connector import FullConnector
 
 
 class RemoteMessagePassing():

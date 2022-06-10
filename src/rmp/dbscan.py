@@ -1,6 +1,6 @@
 import torch
 
-from src.cluster.abstract_clustering_algorithm import AbstractClusteringAlgorithm
+from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 
 
 class DBSCAN(AbstractClusteringAlgorithm):
