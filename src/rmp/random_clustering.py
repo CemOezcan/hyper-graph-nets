@@ -9,26 +9,24 @@ class RandomClustering(AbstractClusteringAlgorithm):
         super().__init__()
 
     def _initialize(self):
-        pass
+        self._num_clusters = 5
 
     def run(self, graph):
         # TODO: return Clusters and Representatives (Core and Border)
 
         # Cluster
         indices = []
-        # TODO: Parameter: num. clusters
-        num_clusters = 5
 
         target_feature_matrix = graph.target_feature
         num_nodes = target_feature_matrix.shape[0]
-        cluster_size = num_nodes // num_clusters
-        cluster_size_rest = num_nodes % num_clusters
+        cluster_size = num_nodes // self._num_clusters
+        cluster_size_rest = num_nodes % self._num_clusters
 
-        for i in range(num_clusters - 1):
+        for i in range(self._num_clusters - 1):
             start_index = i * cluster_size
             end_index = (i + 1) * cluster_size
             indices.append((start_index, end_index))
-        indices.append(((num_clusters - 1) * cluster_size, num_clusters * cluster_size + cluster_size_rest))
+        indices.append(((self._num_clusters - 1) * cluster_size, self._num_clusters * cluster_size + cluster_size_rest))
 
         # Reprs.
         selected_nodes = []
