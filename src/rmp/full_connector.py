@@ -30,7 +30,7 @@ class FullConnector(AbstractConnector):
             core_nodes.append(list(map(lambda x: x[1], tuples)))
 
         # TODO: Decide on whether to create one edge set per cluster or not
-        # TODO: At least separate inter- and intra-cluster edges
+        # TODO: At least separate inter- and intra-cluster edges for num_representatives > 1
         core_nodes = torch.tensor(sum(core_nodes, list()))
 
         target_feature = graph.target_feature
