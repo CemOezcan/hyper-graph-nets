@@ -18,7 +18,7 @@ class FullConnector(AbstractConnector):
         for cluster in clusters:
             cluster_size = len(cluster)
             # TODO: Parameter: num. representatives
-            core_size = 1
+            core_size = 3
             random_mask = torch.randperm(n=cluster_size)[0:core_size]
             representatives.append(random_mask)
 
