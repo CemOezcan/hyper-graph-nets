@@ -12,7 +12,16 @@ class FullConnector(AbstractConnector):
     def _initialize(self):
         pass
 
-    def run(self, graph, clusters, representatives, is_training):
+    def run(self, graph, clusters, is_training):
+        # Reprs.
+        representatives = []
+        for ripple in clusters:
+            cluster_size = ripple[1] - ripple[0]
+            # TODO: Parameter: num. representatives
+            core_size = min(5, cluster_size)
+            random_mask = torch.randperm(n=cluster_size)[0:core_size]
+            representatives.append(random_mask)
+
         # Fully Connected
         model_type = graph.model_type
         node_dynamic = graph.node_dynamic

@@ -12,5 +12,5 @@ class AbstractConnector(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run(self, graph, clusters, representatives, is_training):
+    def run(self, graph, clusters, is_training):
         raise NotImplementedError

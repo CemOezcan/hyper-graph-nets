@@ -10,7 +10,7 @@ class RemoteMessagePassing():
         self._node_connector = FullConnector(normalizer)
 
     def create_graph(self, graph, is_training):
-        clusters, representatives = self._clustering_algorithm.run(graph)
-        new_graph = self._node_connector.run(graph, clusters, representatives, is_training)
+        clusters = self._clustering_algorithm.run(graph)
+        new_graph = self._node_connector.run(graph, clusters, is_training)
 
         return new_graph

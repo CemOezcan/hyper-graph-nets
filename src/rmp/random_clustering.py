@@ -28,14 +28,5 @@ class RandomClustering(AbstractClusteringAlgorithm):
             indices.append((start_index, end_index))
         indices.append(((self._num_clusters - 1) * cluster_size, self._num_clusters * cluster_size + cluster_size_rest))
 
-        # Reprs.
-        selected_nodes = []
-        for ripple in indices:
-            cluster_size = ripple[1] - ripple[0]
-            # TODO: Parameter: num. representatives
-            core_size = min(5, cluster_size)
-            random_mask = torch.randperm(n=cluster_size)[0:core_size]
-            selected_nodes.append(random_mask)
-
         # TODO: Differentiate between core and border
-        return indices, selected_nodes
+        return indices
