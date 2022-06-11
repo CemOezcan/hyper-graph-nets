@@ -10,5 +10,5 @@ class HierarchicalConnector(AbstractConnector):
     def _initialize(self):
         pass
 
-    def run(self, graph, clusters, representatives, is_training):
+    def run(self, graph, clusters, is_training):
         pass
