@@ -3,12 +3,22 @@ import collections
 import enum
 import torch
 import yaml
+import numpy as np
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 EdgeSet = collections.namedtuple('EdgeSet', ['name', 'features', 'senders', 'receivers'])
 MultiGraph = collections.namedtuple('Graph', ['node_features', 'edge_sets'])
 MultiGraphWithPos = collections.namedtuple('Graph', ['node_features', 'edge_sets', 'target_feature', 'model_type', 'node_dynamic'])
+
+
+def detach(tensor: torch.Tensor) -> np.array:
+
+    if tensor.is_cuda:
+        return tensor.cpu().detach().numpy()
+    else:
+        return tensor.detach().numpy()
+
 
 class NodeType(enum.IntEnum):
     NORMAL = 0
