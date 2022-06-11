@@ -39,9 +39,9 @@ class FullConnector(AbstractConnector):
             receivers_list = core_node
             senders_list = core_node
             senders = torch.cat(
-                (torch.tensor(senders_list, device=device), torch.tensor(receivers_list, device=device)), dim=0)
+                (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
             receivers = torch.cat(
-                (torch.tensor(receivers_list, device=device), torch.tensor(senders_list, device=device)), dim=0)
+                (receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
 
             # TODO: Make model independent
             if model_type == 'flag' or model_type == 'deform_model':
