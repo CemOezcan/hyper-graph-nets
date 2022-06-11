@@ -25,8 +25,11 @@ class RandomClustering(AbstractClusteringAlgorithm):
         for i in range(self._num_clusters - 1):
             start_index = i * cluster_size
             end_index = (i + 1) * cluster_size
-            indices.append((start_index, end_index))
-        indices.append(((self._num_clusters - 1) * cluster_size, self._num_clusters * cluster_size + cluster_size_rest))
+            indices.append(range(start_index, end_index))
+        indices.append(range((self._num_clusters - 1) * cluster_size,
+                             self._num_clusters * cluster_size + cluster_size_rest))
+
+        indices = [list(x) for x in indices]
 
         # TODO: Differentiate between core and border
         return indices

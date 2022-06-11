@@ -15,23 +15,26 @@ class FullConnector(AbstractConnector):
     def run(self, graph, clusters, is_training):
         # Reprs.
         representatives = []
-        for ripple in clusters:
-            cluster_size = ripple[1] - ripple[0]
+        for cluster in clusters:
+            cluster_size = len(cluster)
             # TODO: Parameter: num. representatives
             core_size = min(5, cluster_size)
             random_mask = torch.randperm(n=cluster_size)[0:core_size]
             representatives.append(random_mask)
+
+        representatives = [x.tolist() for x in representatives]
 
         # Fully Connected
         model_type = graph.model_type
         node_dynamic = graph.node_dynamic
         _, sort_indices = torch.sort(node_dynamic, dim=0, descending=True)
 
-        core_nodes = []
-        for (start_index, end_index), node_mask in zip(clusters, representatives):
-            if end_index > start_index:
-                cluster = sort_indices[start_index:end_index]
-                core_nodes.append(cluster[node_mask])
+        core_nodes = list()
+        for indices, cluster in zip(representatives, clusters):
+            tuples = filter(lambda x: x[0] in indices, enumerate(cluster))
+            core_nodes.append(list(map(lambda x: x[1], tuples)))
+
+        core_nodes = torch.tensor(core_nodes)
 
         target_feature = graph.target_feature
         remote_edges = []
