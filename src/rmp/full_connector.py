@@ -1,18 +1,24 @@
+from typing import List
+
 import torch
 
+from src.migration.normalizer import Normalizer
 from src.rmp.abstract_connector import AbstractConnector
 from src.util import device, EdgeSet, MultiGraphWithPos
 
 
 class FullConnector(AbstractConnector):
+    """
+    Naive remote message passing with fully connected clusters.
+    """
 
-    def __init__(self, normalizer):
+    def __init__(self, normalizer: Normalizer):
         super().__init__(normalizer)
 
     def _initialize(self):
         pass
 
-    def run(self, graph, clusters, is_training):
+    def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         # Reprs.
         representatives = []
         for cluster in clusters:

@@ -39,11 +39,11 @@ class AbstractConnector(ABC):
 
         Parameters
         ----------
-        graph :
-        clusters :
-        is_training :
+        graph : Graph to add edges to
+        clusters : Clustering of the graph
+        is_training : Whether the input is a training instance or not
 
-        Returns
+        Returns a fully connected graph.
         -------
 
         """
