@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from src.util import MultiGraph
+from src.util import MultiGraphWithPos
 
 
 class AbstractClusteringAlgorithm(ABC):
@@ -29,7 +29,7 @@ class AbstractClusteringAlgorithm(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run(self, graph: MultiGraph) -> List[List]:
+    def run(self, graph: MultiGraphWithPos) -> List[List]:
         """
         Run clustering algorithm given a multigraph or point cloud.
 
