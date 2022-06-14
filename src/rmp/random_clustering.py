@@ -4,7 +4,9 @@ from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 
 
 class RandomClustering(AbstractClusteringAlgorithm):
-
+    """
+    Naive clustering strategy (Baseline). Pick clusters at random.
+    """
     def __init__(self):
         super().__init__()
 

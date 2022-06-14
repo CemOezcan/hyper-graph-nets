@@ -43,7 +43,7 @@ class AbstractConnector(ABC):
         clusters : Clustering of the graph
         is_training : Whether the input is a training instance or not
 
-        Returns a fully connected graph.
+        Returns the graph including remote edges.
         -------
 
         """

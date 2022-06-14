@@ -3,7 +3,9 @@ from src.rmp.abstract_connector import AbstractConnector
 
 
 class HierarchicalConnector(AbstractConnector):
-
+    """
+    Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
+    """
     def __init__(self, normalizer):
         super().__init__(normalizer)
 

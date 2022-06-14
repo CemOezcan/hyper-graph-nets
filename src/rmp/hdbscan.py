@@ -3,7 +3,9 @@ from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 
 
 class HDBSCAN(AbstractClusteringAlgorithm):
-
+    """
+    Hierarchical Density Based Clustering for Applications with Noise.
+    """
     def __init__(self):
         super().__init__()
 
@@ -11,6 +13,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         pass
 
     def run(self, graph):
+        # TODO: More features
         X = graph.target_feature
         clustering = hdbscan.HDBSCAN().fit(X)
         labels = clustering.labels_ + 1
