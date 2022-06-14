@@ -1,5 +1,8 @@
+from typing import List
+
 import hdbscan
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
+from src.util import MultiGraphWithPos
 
 
 class HDBSCAN(AbstractClusteringAlgorithm):
@@ -12,7 +15,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def _initialize(self):
         pass
 
-    def run(self, graph):
+    def run(self, graph: MultiGraphWithPos) -> List[List]:
         # TODO: More features
         X = graph.target_feature
         clustering = hdbscan.HDBSCAN().fit(X)

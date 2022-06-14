@@ -1,6 +1,7 @@
-import torch
+from typing import List
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
+from src.util import MultiGraphWithPos
 
 
 class RandomClustering(AbstractClusteringAlgorithm):
@@ -13,7 +14,7 @@ class RandomClustering(AbstractClusteringAlgorithm):
     def _initialize(self):
         self._num_clusters = 5
 
-    def run(self, graph):
+    def run(self, graph: MultiGraphWithPos) -> List[List]:
         # TODO: return Clusters and Representatives (Core and Border)
 
         # Cluster
