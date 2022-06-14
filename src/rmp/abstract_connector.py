@@ -7,7 +7,7 @@ from src.util import MultiGraphWithPos, MultiGraph
 
 class AbstractConnector(ABC):
     """
-    Abstract superclass for remote message passing strategies.
+    Abstract superclass for the expansion of the input graph with remote edges.
     """
 
     def __init__(self, normalizer: Normalizer):
@@ -39,11 +39,11 @@ class AbstractConnector(ABC):
 
         Parameters
         ----------
-        graph : Graph to add edges to
+        graph : Input graph
         clusters : Clustering of the graph
         is_training : Whether the input is a training instance or not
 
-        Returns the graph including remote edges.
+        Returns the input graph including remote edges.
         -------
 
         """
