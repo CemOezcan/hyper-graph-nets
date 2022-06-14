@@ -10,9 +10,8 @@ from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
-from src.util import NodeType, device
+from src.util import NodeType, device, detach
 from torch.utils.data import DataLoader
-from util.pytorch.TorchUtil import detach
 from util.Types import ConfigDict, ScalarDict, Union
 
 

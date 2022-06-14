@@ -19,6 +19,7 @@ class Encoder(nn.Module):
         node_latents = self.node_model(graph.node_features)
         new_edges_sets = []
 
+        # TODO: Additional MLP for remote_edges
         for index, edge_set in enumerate(graph.edge_sets):
             if edge_set.name == "mesh_edges":
                 feature = edge_set.features

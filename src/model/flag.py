@@ -6,10 +6,11 @@ import torch.nn.functional as F
 
 from torch import nn
 
+from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
-from src.util import NodeType, EdgeSet, MultiGraph, device
+from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
 class FlagModel(nn.Module):
@@ -27,6 +28,8 @@ class FlagModel(nn.Module):
             size=7, name='mesh_edge_normalizer')  # 2D coord + 3D coord + 2*length = 7
         self._world_edge_normalizer = Normalizer(
             size=4, name='world_edge_normalizer')
+        # TODO: Parameterize
+        self._model_type = 'flag'
 
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
@@ -39,7 +42,10 @@ class FlagModel(nn.Module):
             message_passing_steps=self.message_passing_steps,
             message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
 
-    # TODO check if redundant: see graphnet.py
+        # TODO: Parameterize clustering algorithm and node connector
+        self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
+
+    # TODO check if redundant: see graphnet.py_world_edge_normalizer
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
         """
         Computes the sum along segments of a tensor. Analogous to tf.unsorted_segment_sum.
@@ -110,9 +116,31 @@ class FlagModel(nn.Module):
             features=self._mesh_edge_normalizer(edge_features, is_training),
             receivers=receivers,
             senders=senders)
-        return MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
+
+        # TODO: Change data structure
+
+        num_nodes = node_type.shape[0]
+        max_node_dynamic = self.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
+                                                           num_nodes,
+                                                           operation='max').to(device)
+        min_node_dynamic = self.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
+                                                           num_nodes,
+                                                           operation='min').to(device)
+        node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)
+
+        graph = MultiGraphWithPos(node_features=self._node_normalizer(node_features),
+                                                  edge_sets=[mesh_edges], target_feature=world_pos,
+                                                  model_type=self._model_type,
+                                                  node_dynamic=node_dynamic)
+
+        # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
+        # TODO: Expand Graph
+        graph = self._remote_graph.create_graph(graph, is_training)
+
+        return graph
 
     def forward(self, inputs, is_training):
+        # TODO: Get rid of parameter: is_training
         graph = self._build_graph(inputs, is_training=is_training)
         if is_training:
             return self.learned_model(graph)
