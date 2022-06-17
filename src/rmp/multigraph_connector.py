@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Tuple
 
 import torch
+from torch import Tensor
 
 from src.migration.normalizer import Normalizer
 from src.rmp.abstract_connector import AbstractConnector
@@ -70,7 +71,8 @@ class MultigraphConnector(AbstractConnector):
                                  edge_sets=edge_sets, target_feature=graph.target_feature,
                                  model_type=graph.model_type, node_dynamic=graph.node_dynamic)
 
-    def _get_representatives(self, clusters, core_size):
+    @staticmethod
+    def _get_representatives(clusters: List[List], core_size: int) -> List[List]:
         representatives = list()
         for cluster in clusters:
             cluster_size = len(cluster)
@@ -87,7 +89,10 @@ class MultigraphConnector(AbstractConnector):
 
         return core_nodes
 
-    def _get_subgraph(self, model_type, target_feature, senders_list, receivers_list):
+    @staticmethod
+    def _get_subgraph(model_type: str, target_feature: Tensor, senders_list: Tensor, receivers_list: Tensor) \
+            -> Tuple[Tensor, Tensor, Tensor]:
+
         senders = torch.cat(
             (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
         receivers = torch.cat(
