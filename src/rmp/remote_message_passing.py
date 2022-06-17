@@ -1,7 +1,7 @@
 from src.migration.normalizer import Normalizer
 from src.rmp.random_clustering import RandomClustering
 from src.rmp.hdbscan import HDBSCAN
-from src.rmp.full_connector import FullConnector
+from src.rmp.multigraph_connector import MultigraphConnector
 from src.util import MultiGraphWithPos
 
 
@@ -19,7 +19,7 @@ class RemoteMessagePassing:
         """
         # TODO: Parameterize
         self._clustering_algorithm = HDBSCAN()
-        self._node_connector = FullConnector(normalizer)
+        self._node_connector = MultigraphConnector(normalizer)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraphWithPos:
         """
