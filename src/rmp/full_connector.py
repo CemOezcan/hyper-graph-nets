@@ -20,6 +20,7 @@ class FullConnector(AbstractConnector):
 
     def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         target_feature = graph.target_feature
+        model_type = graph.model_type
         remote_edges = list()
 
         # Intra cluster communication
@@ -31,24 +32,9 @@ class FullConnector(AbstractConnector):
         snd = list()
         rcv = list()
         for cluster in core_nodes:
-            receivers_list = cluster
-            senders_list = cluster
-            senders = torch.cat(
-                (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
-            receivers = torch.cat(
-                (receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
+            senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, cluster, cluster)
             snd.append(senders)
             rcv.append(receivers)
-
-            # TODO: Make model independent
-            if graph.model_type == 'flag' or graph.model_type == 'deform_model':
-                relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
-                                           torch.index_select(input=target_feature, dim=0, index=receivers))
-                edge_features = torch.cat(
-                    (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
-            else:
-                raise Exception("Model type is not specified in RippleNodeConnector.")
-
             edges.append(edge_features)
 
         edges = self._normalizer(torch.cat(edges, dim=0))
@@ -65,22 +51,7 @@ class FullConnector(AbstractConnector):
         # Inter cluster communication
         core_size = 1
         core_nodes = torch.tensor(sum(self._get_representatives(core_nodes, core_size), list()))
-        receivers_list = core_nodes
-        senders_list = core_nodes
-
-        senders = torch.cat(
-            (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
-        receivers = torch.cat(
-            (receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
-
-        # TODO: Make model independent
-        if graph.model_type == 'flag' or graph.model_type == 'deform_model':
-            relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
-                                       torch.index_select(input=target_feature, dim=0, index=receivers))
-            edge_features = torch.cat(
-                (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
-        else:
-            raise Exception("Model type is not specified in RippleNodeConnector.")
+        senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, core_nodes, core_nodes)
 
         edge_features = self._normalizer(edge_features)
         world_edges = EdgeSet(
@@ -115,4 +86,21 @@ class FullConnector(AbstractConnector):
             core_nodes.append(list(map(lambda x: x[1], tuples)))
 
         return core_nodes
+
+    def _get_subgraph(self, model_type, target_feature, senders_list, receivers_list):
+        senders = torch.cat(
+            (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
+        receivers = torch.cat(
+            (receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
+
+        # TODO: Make model independent
+        if model_type == 'flag' or model_type == 'deform_model':
+            relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
+                                       torch.index_select(input=target_feature, dim=0, index=receivers))
+            edge_features = torch.cat(
+                (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
+        else:
+            raise Exception("Model type is not specified in RippleNodeConnector.")
+
+        return senders, receivers, edge_features
 
