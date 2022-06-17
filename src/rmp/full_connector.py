@@ -25,22 +25,7 @@ class FullConnector(AbstractConnector):
         # Intra cluster communication
         # TODO: Parameter: num. representatives
         core_size = 5
-
-        representatives = list()
-        for cluster in clusters:
-            cluster_size = len(cluster)
-            # TODO: pick based on max node_dynamics or distance from central node (representative)
-            random_mask = torch.randperm(n=cluster_size)[0:core_size]
-            representatives.append(random_mask)
-
-        representatives = [x.tolist() for x in representatives]
-
-        core_nodes = list()
-        for indices, cluster in zip(representatives, clusters):
-            tuples = filter(lambda x: x[0] in indices, enumerate(cluster))
-            core_nodes.append(list(map(lambda x: x[1], tuples)))
-
-        core_nodes = torch.tensor(core_nodes)
+        core_nodes = torch.tensor(self._get_representatives(clusters, core_size))
 
         edges = list()
         snd = list()
@@ -79,22 +64,7 @@ class FullConnector(AbstractConnector):
 
         # Inter cluster communication
         core_size = 1
-
-        representatives = list()
-        for cluster in clusters:
-            cluster_size = len(cluster)
-            # TODO: pick based on max node_dynamics or distance from central node (representative)
-            random_mask = torch.randperm(n=cluster_size)[0:core_size]
-            representatives.append(random_mask)
-
-        representatives = [x.tolist() for x in representatives]
-
-        core_nodes = list()
-        for indices, cluster in zip(representatives, clusters):
-            tuples = filter(lambda x: x[0] in indices, enumerate(cluster))
-            core_nodes.append(list(map(lambda x: x[1], tuples)))
-
-        core_nodes = torch.tensor(sum(core_nodes, list()))
+        core_nodes = torch.tensor(sum(self._get_representatives(core_nodes, core_size), list()))
         receivers_list = core_nodes
         senders_list = core_nodes
 
@@ -128,3 +98,21 @@ class FullConnector(AbstractConnector):
         return MultiGraphWithPos(node_features=graph.node_features,
                                  edge_sets=edge_sets, target_feature=graph.target_feature,
                                  model_type=graph.model_type, node_dynamic=graph.node_dynamic)
+
+    def _get_representatives(self, clusters, core_size):
+        representatives = list()
+        for cluster in clusters:
+            cluster_size = len(cluster)
+            # TODO: pick based on max node_dynamics or distance from central node (representative)
+            random_mask = torch.randperm(n=cluster_size)[0:core_size]
+            representatives.append(random_mask)
+
+        representatives = [x.tolist() for x in representatives]
+
+        core_nodes = list()
+        for indices, cluster in zip(representatives, clusters):
+            tuples = filter(lambda x: x[0] in indices, enumerate(cluster))
+            core_nodes.append(list(map(lambda x: x[1], tuples)))
+
+        return core_nodes
+
