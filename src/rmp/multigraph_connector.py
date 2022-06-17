@@ -7,7 +7,7 @@ from src.rmp.abstract_connector import AbstractConnector
 from src.util import device, EdgeSet, MultiGraphWithPos
 
 
-class FullConnector(AbstractConnector):
+class MultigraphConnector(AbstractConnector):
     """
     Naive remote message passing with fully connected clusters.
     """
