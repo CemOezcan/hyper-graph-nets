@@ -24,17 +24,15 @@ class Encoder(nn.Module):
         new_edges_sets = []
 
         for index, edge_set in enumerate(graph.edge_sets):
+            feature = edge_set.features
             if edge_set.name == "mesh_edges":
-                feature = edge_set.features
                 latent = self.mesh_edge_model(feature)
-                new_edges_sets.append(edge_set._replace(features=latent))
             elif edge_set.name == "inter_cluster":
-                feature = edge_set.features
                 latent = self.inter_cluster_model(feature)
-                new_edges_sets.append(edge_set._replace(features=latent))
             elif edge_set.name == "intra_cluster":
-                feature = edge_set.features
                 latent = self.intra_cluster_model(feature)
-                new_edges_sets.append(edge_set._replace(features=latent))
+            else:
+                latent = self.world_edge_model(feature)
+            new_edges_sets.append(edge_set._replace(features=latent))
 
         return MultiGraph(node_latents, new_edges_sets)
