@@ -43,6 +43,10 @@ class GraphNet(nn.Module):
 
         if edge_set.name == "mesh_edges":
             return self.mesh_edge_model(features)
+        elif edge_set.name == "inter_cluster":
+            return self.inter_cluster_model(features)
+        elif edge_set.name == "intra_cluster":
+            return self.intra_cluster_model(features)
         else:
             return self.world_edge_model(features)
 
@@ -149,8 +153,7 @@ class GraphNet(nn.Module):
             new_edge_sets.append(edge_set._replace(features=updated_features))
 
         # apply node function
-        new_node_features = self._update_node_features(
-            graph.node_features, new_edge_sets)
+        new_node_features = self._update_node_features(graph.node_features, new_edge_sets)
 
         # add residual connections
         new_node_features += graph.node_features
