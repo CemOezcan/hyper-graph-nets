@@ -42,7 +42,7 @@ class MultigraphConnector(AbstractConnector):
         snd = torch.cat(snd, dim=0)
         rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
-            name='remote_edges',
+            name='intra_cluster',
             features=self._normalizer(edges, None, is_training),
             receivers=rcv,
             senders=snd)
@@ -56,7 +56,7 @@ class MultigraphConnector(AbstractConnector):
 
         edge_features = self._normalizer(edge_features)
         world_edges = EdgeSet(
-            name='remote_edges',
+            name='inter_cluster',
             features=self._normalizer(edge_features, None, is_training),
             receivers=receivers,
             senders=senders)

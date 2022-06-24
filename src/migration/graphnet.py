@@ -14,12 +14,17 @@ class GraphNet(nn.Module):
 
     def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False):
         super().__init__()
+        self.node_model = model_fn(output_size)
+
         self.mesh_edge_model = model_fn(output_size)
         self.world_edge_model = model_fn(output_size)
-        self.node_model = model_fn(output_size)
+        self.intra_cluster_model = model_fn(output_size)
+        self.inter_cluster_model = model_fn(output_size)
+
         self.attention = attention
         if attention:
             self.attention_model = AttentionModel()
+
         self.message_passing_aggregator = message_passing_aggregator
 
         self.linear_layer = nn.LazyLinear(1)
@@ -29,12 +34,13 @@ class GraphNet(nn.Module):
         """Aggregrates node features, and applies edge function."""
         senders = edge_set.senders.to(device)
         receivers = edge_set.receivers.to(device)
-        sender_features = torch.index_select(
-            input=node_features, dim=0, index=senders)
-        receiver_features = torch.index_select(
-            input=node_features, dim=0, index=receivers)
+
+        sender_features = torch.index_select(input=node_features, dim=0, index=senders)
+        receiver_features = torch.index_select(input=node_features, dim=0, index=receivers)
+
         features = [sender_features, receiver_features, edge_set.features]
         features = torch.cat(features, dim=-1)
+
         if edge_set.name == "mesh_edges":
             return self.mesh_edge_model(features)
         else:
