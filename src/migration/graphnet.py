@@ -14,6 +14,7 @@ class GraphNet(nn.Module):
 
     def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False):
         super().__init__()
+        # TODO: Additional hypernode model
         self.node_model = model_fn(output_size)
 
         self.mesh_edge_model = model_fn(output_size)
