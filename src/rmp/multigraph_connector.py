@@ -88,24 +88,3 @@ class MultigraphConnector(AbstractConnector):
             core_nodes.append(list(map(lambda x: x[1], tuples)))
 
         return core_nodes
-
-    @staticmethod
-    def _get_subgraph(model_type: str, target_feature: Tensor, senders_list: Tensor, receivers_list: Tensor) \
-            -> Tuple[Tensor, Tensor, Tensor]:
-
-        senders = torch.cat(
-            (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
-        receivers = torch.cat(
-            (receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
-
-        # TODO: Make model independent
-        if model_type == 'flag' or model_type == 'deform_model':
-            relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
-                                       torch.index_select(input=target_feature, dim=0, index=receivers))
-            edge_features = torch.cat(
-                (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
-        else:
-            raise Exception("Model type is not specified in RippleNodeConnector.")
-
-        return senders, receivers, edge_features
-
