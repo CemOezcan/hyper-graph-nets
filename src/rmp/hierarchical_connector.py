@@ -21,6 +21,7 @@ class HierarchicalConnector(AbstractConnector):
 
     def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         target_feature = graph.target_feature
+        node_feature = graph.node_features
         model_type = graph.model_type
         num_nodes = len(graph.node_features)
 
@@ -30,12 +31,18 @@ class HierarchicalConnector(AbstractConnector):
         # TODO: Parameter: num. representatives
         # TODO: Maybe change the current convention of appending hypernodes to normal nodes --> Use separate MLPs for different node types
         hyper_nodes = list(range(num_nodes, len(clusters) + num_nodes))
-        means = list()
+        target_feature_means = list()
+        node_feature_means = list()
         for cluster in clusters:
-            means.append(list(torch.mean(torch.index_select(input=target_feature, dim=0, index=torch.tensor(cluster)), dim=0)))
+            target_feature_means.append(
+                list(torch.mean(torch.index_select(input=target_feature, dim=0, index=torch.tensor(cluster)), dim=0)))
+            node_feature_means.append(
+                list(torch.mean(torch.index_select(input=node_feature, dim=0, index=torch.tensor(cluster)), dim=0)))
 
-        means = torch.tensor(means)
-        graph = graph._replace(target_feature=torch.cat((target_feature, means), dim=0))
+        target_feature_means = torch.tensor(target_feature_means)
+        node_feature_means = torch.tensor(node_feature_means)
+        graph = graph._replace(target_feature=torch.cat((target_feature, target_feature_means), dim=0))
+        graph = graph._replace(node_features=torch.cat((node_feature, node_feature_means), dim=0))
         target_feature = graph.target_feature
 
         edges = list()
