@@ -53,9 +53,10 @@ class AbstractConnector(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def _get_subgraph(model_type: str, target_feature: Tensor, senders_list: Tensor, receivers_list: Tensor) \
+    def _get_subgraph(model_type: str, target_feature: List[Tensor], senders_list: Tensor, receivers_list: Tensor) \
             -> Tuple[Tensor, Tensor, Tensor]:
-
+        target_feature = torch.cat(
+            tuple(map(lambda x: x.clone().detach(), target_feature)), dim=0)
         senders = torch.cat(
             (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
         receivers = torch.cat(

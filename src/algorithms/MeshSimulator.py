@@ -79,6 +79,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 target_acceleration = target_position - 2 * cur_position + prev_position
                 target_normalized = self._network.get_output_normalizer()(
                     target_acceleration).to(device)
+                network_output = network_output # TODO: generalize to multiple node types [:len(target_normalized)]
 
                 node_type = data_frame['node_type']
                 loss_mask = torch.eq(node_type[:, 0], torch.tensor(

@@ -41,8 +41,11 @@ class HierarchicalConnector(AbstractConnector):
 
         target_feature_means = torch.tensor(target_feature_means)
         node_feature_means = torch.tensor(node_feature_means)
-        graph = graph._replace(target_feature=torch.cat((target_feature, target_feature_means), dim=0))
-        graph = graph._replace(node_features=torch.cat((node_feature, node_feature_means), dim=0))
+
+        graph = graph._replace(target_feature=[target_feature, target_feature_means])
+        graph = graph._replace(node_features=[node_feature, node_feature_means])
+        # TODO: node_dynamic
+
         target_feature = graph.target_feature
 
         edges = list()

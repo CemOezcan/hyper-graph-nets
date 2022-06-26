@@ -150,7 +150,7 @@ class FlagModel(nn.Module):
     def _update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
 
-        acceleration = self._output_normalizer.inverse(per_node_network_output)
+        acceleration = self._output_normalizer.inverse(per_node_network_output) # TODO: generalize to multiple node types  [:len(inputs['world_pos'])]
 
         # integrate forward
         cur_position = inputs['world_pos']
