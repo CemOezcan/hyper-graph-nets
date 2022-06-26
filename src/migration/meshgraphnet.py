@@ -40,6 +40,7 @@ class MeshGraphNet(nn.Module):
         """Encodes and processes a multigraph, and returns node features."""
         latent_graph = self.encoder(graph)
         latent_graph = self.processor(latent_graph)
+        latent_graph = latent_graph._replace(node_features=latent_graph.node_features[0])
         return self.decoder(latent_graph)
 
     def _make_mlp(self, output_size, layer_norm=True):
