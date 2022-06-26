@@ -14,12 +14,19 @@ class GraphNet(nn.Module):
 
     def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False):
         super().__init__()
+        # TODO: Additional hypernode model
+        self.node_model = model_fn(output_size)
+        self.hyper_node_model = model_fn(output_size)
+
         self.mesh_edge_model = model_fn(output_size)
         self.world_edge_model = model_fn(output_size)
-        self.node_model = model_fn(output_size)
+        self.intra_cluster_model = model_fn(output_size)
+        self.inter_cluster_model = model_fn(output_size)
+
         self.attention = attention
         if attention:
             self.attention_model = AttentionModel()
+
         self.message_passing_aggregator = message_passing_aggregator
 
         self.linear_layer = nn.LazyLinear(1)
@@ -27,16 +34,22 @@ class GraphNet(nn.Module):
 
     def _update_edge_features(self, node_features, edge_set):
         """Aggregrates node features, and applies edge function."""
+        node_features = torch.cat(tuple(node_features), dim=0)
         senders = edge_set.senders.to(device)
         receivers = edge_set.receivers.to(device)
-        sender_features = torch.index_select(
-            input=node_features, dim=0, index=senders)
-        receiver_features = torch.index_select(
-            input=node_features, dim=0, index=receivers)
+
+        sender_features = torch.index_select(input=node_features, dim=0, index=senders)
+        receiver_features = torch.index_select(input=node_features, dim=0, index=receivers)
+
         features = [sender_features, receiver_features, edge_set.features]
         features = torch.cat(features, dim=-1)
+
         if edge_set.name == "mesh_edges":
             return self.mesh_edge_model(features)
+        elif edge_set.name == "inter_cluster":
+            return self.inter_cluster_model(features)
+        elif edge_set.name == "intra_cluster":
+            return self.intra_cluster_model(features)
         else:
             return self.world_edge_model(features)
 
@@ -87,6 +100,8 @@ class GraphNet(nn.Module):
 
     def _update_node_features(self, node_features, edge_sets):
         """Aggregrates edge features, and applies node function."""
+        hyper_node_offset = len(node_features[0])
+        node_features = torch.cat(tuple(node_features), dim=0)
         num_nodes = node_features.shape[0]
         features = [node_features]
         for edge_set in edge_sets:
@@ -131,7 +146,10 @@ class GraphNet(nn.Module):
                     self.unsorted_segment_operation(edge_set.features, edge_set.receivers, num_nodes,
                                                     operation=self.message_passing_aggregator))
         features = torch.cat(features, dim=-1)
-        return self.node_model(features)
+
+        updated_nodes = self.node_model(features[:hyper_node_offset])
+        updated_hyper_nodes = self.hyper_node_model(features[hyper_node_offset:])
+        return [updated_nodes, updated_hyper_nodes]
 
     def forward(self, graph, mask=None):
         """Applies GraphNetBlock and returns updated MultiGraph."""
@@ -143,17 +161,19 @@ class GraphNet(nn.Module):
             new_edge_sets.append(edge_set._replace(features=updated_features))
 
         # apply node function
-        new_node_features = self._update_node_features(
-            graph.node_features, new_edge_sets)
+        new_node_features = self._update_node_features(graph.node_features, new_edge_sets)
 
         # add residual connections
-        new_node_features += graph.node_features
+        new_node_features = list(map(sum, zip(new_node_features, graph.node_features)))
         if mask is not None:
-            mask = mask.repeat(new_node_features.shape[-1])
-            mask = mask.view(
-                new_node_features.shape[0], new_node_features.shape[1])
-            new_node_features = torch.where(
-                mask, new_node_features, graph.node_features)
+            new_node_features = self._mask_operation(mask, new_node_features, graph)
         new_edge_sets = [es._replace(features=es.features + old_es.features)
                          for es, old_es in zip(new_edge_sets, graph.edge_sets)]
         return MultiGraph(new_node_features, new_edge_sets)
+
+    @staticmethod
+    def _mask_operation(mask, new_node_features, graph):
+        # TODO: why is this function necessary?
+        mask = mask.repeat(new_node_features.shape[-1])
+        mask = mask.view(new_node_features.shape[0], new_node_features.shape[1])
+        return torch.where(mask, new_node_features, graph.node_features)

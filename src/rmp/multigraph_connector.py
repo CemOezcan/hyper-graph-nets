@@ -33,7 +33,7 @@ class MultigraphConnector(AbstractConnector):
         snd = list()
         rcv = list()
         for cluster in core_nodes:
-            senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, cluster, cluster)
+            senders, receivers, edge_features = self._get_subgraph(model_type, [target_feature], cluster, cluster)
             snd.append(senders)
             rcv.append(receivers)
             edges.append(edge_features)
@@ -42,7 +42,7 @@ class MultigraphConnector(AbstractConnector):
         snd = torch.cat(snd, dim=0)
         rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
-            name='remote_edges',
+            name='intra_cluster',
             features=self._normalizer(edges, None, is_training),
             receivers=rcv,
             senders=snd)
@@ -52,11 +52,11 @@ class MultigraphConnector(AbstractConnector):
         # Inter cluster communication
         core_size = 1
         core_nodes = torch.tensor(sum(self._get_representatives(core_nodes, core_size), list()))
-        senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, core_nodes, core_nodes)
+        senders, receivers, edge_features = self._get_subgraph(model_type, [target_feature], core_nodes, core_nodes)
 
         edge_features = self._normalizer(edge_features)
         world_edges = EdgeSet(
-            name='remote_edges',
+            name='inter_cluster',
             features=self._normalizer(edge_features, None, is_training),
             receivers=receivers,
             senders=senders)
@@ -67,8 +67,8 @@ class MultigraphConnector(AbstractConnector):
         edge_sets = graph.edge_sets
         edge_sets.extend(remote_edges)
 
-        return MultiGraphWithPos(node_features=graph.node_features,
-                                 edge_sets=edge_sets, target_feature=graph.target_feature,
+        return MultiGraphWithPos(node_features=[graph.node_features],
+                                 edge_sets=edge_sets, target_feature=[graph.target_feature],
                                  model_type=graph.model_type, node_dynamic=graph.node_dynamic)
 
     @staticmethod
@@ -88,24 +88,3 @@ class MultigraphConnector(AbstractConnector):
             core_nodes.append(list(map(lambda x: x[1], tuples)))
 
         return core_nodes
-
-    @staticmethod
-    def _get_subgraph(model_type: str, target_feature: Tensor, senders_list: Tensor, receivers_list: Tensor) \
-            -> Tuple[Tensor, Tensor, Tensor]:
-
-        senders = torch.cat(
-            (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
-        receivers = torch.cat(
-            (receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
-
-        # TODO: Make model independent
-        if model_type == 'flag' or model_type == 'deform_model':
-            relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
-                                       torch.index_select(input=target_feature, dim=0, index=receivers))
-            edge_features = torch.cat(
-                (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
-        else:
-            raise Exception("Model type is not specified in RippleNodeConnector.")
-
-        return senders, receivers, edge_features
-

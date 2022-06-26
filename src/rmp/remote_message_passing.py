@@ -1,4 +1,5 @@
 from src.migration.normalizer import Normalizer
+from src.rmp.hierarchical_connector import HierarchicalConnector
 from src.rmp.random_clustering import RandomClustering
 from src.rmp.hdbscan import HDBSCAN
 from src.rmp.multigraph_connector import MultigraphConnector
@@ -19,7 +20,7 @@ class RemoteMessagePassing:
         """
         # TODO: Parameterize
         self._clustering_algorithm = HDBSCAN()
-        self._node_connector = MultigraphConnector(normalizer)
+        self._node_connector = HierarchicalConnector(normalizer)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraphWithPos:
         """
@@ -34,6 +35,7 @@ class RemoteMessagePassing:
         -------
 
         """
+        # TODO: Replace lists with tensors
         clusters = self._clustering_algorithm.run(graph)
         new_graph = self._node_connector.run(graph, clusters, is_training)
 
