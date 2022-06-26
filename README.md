@@ -1,23 +1,3 @@
-# Why should I care?
-Developing machine learning algorithms is complicated. Without proper countermeasures,
-projects quickly become messy over their lifespan, eventually leading to slower development and more accidental bugs. 
-Even if things work out fine code-wise, running the "right" experiments and interpreting the results of a 
-sufficiently complex method is often more art than science. 
-
-This repository is a starting point for your project at the ALR. It natively integrates `wandb`, `cw2` and `optuna`, all
-of which are packages that most of us use regularly, and that otherwise require some work to properly set it. We also
-provide a flexible but extensive recording utility to allow for a range of different things to be tracked for each of
-your runs.
-
-Lastly, there are some testing templates provided to allow you to write quick and efficient unit tests.
-
-# Getting Started
-## Copying the template
-Navigate to the main page of [this repository](https:github.com/ALRhub/ALRProject), 
-select "Use this template" in the menu bar and follow the instructions afterwards. For more
-information on how to create a repository from a template, see
-[here](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-on-github/creating-a-repository-from-a-template)
-
 ## Setting up the environment
 This project uses poetry (https://python-poetry.org/) and conda (https://docs.conda.io/en/latest/) for handling packages
 and dependencies.
