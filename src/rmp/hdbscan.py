@@ -1,6 +1,9 @@
 from typing import List
 
 import hdbscan
+import torch
+from torch import Tensor
+
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
 
@@ -15,7 +18,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos) -> List[List]:
+    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
         # TODO: More features
         X = graph.target_feature
         clustering = hdbscan.HDBSCAN().fit(X)
@@ -25,4 +28,4 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         clusters = [list(map(lambda x: x[1], filter(lambda x: x[0] == label, enum))) for label in set(labels)]
         # TODO: Special case for clusters[0] (noise)
 
-        return clusters[1:]
+        return [torch.Tensor(cluster) for cluster in clusters[1:]]

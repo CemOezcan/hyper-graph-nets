@@ -19,7 +19,7 @@ class HierarchicalConnector(AbstractConnector):
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraphWithPos:
         target_feature = graph.target_feature
         node_feature = graph.node_features
         model_type = graph.model_type
@@ -34,10 +34,11 @@ class HierarchicalConnector(AbstractConnector):
         target_feature_means = list()
         node_feature_means = list()
         for cluster in clusters:
+            # TODO: tensor operation?
             target_feature_means.append(
-                list(torch.mean(torch.index_select(input=target_feature, dim=0, index=torch.tensor(cluster)), dim=0)))
+                list(torch.mean(torch.index_select(input=target_feature, dim=0, index=cluster), dim=0)))
             node_feature_means.append(
-                list(torch.mean(torch.index_select(input=node_feature, dim=0, index=torch.tensor(cluster)), dim=0)))
+                list(torch.mean(torch.index_select(input=node_feature, dim=0, index=cluster), dim=0)))
 
         target_feature_means = torch.tensor(target_feature_means)
         node_feature_means = torch.tensor(node_feature_means)
@@ -53,7 +54,6 @@ class HierarchicalConnector(AbstractConnector):
         rcv = list()
         for hyper_node, cluster in zip(hyper_nodes, clusters):
             hyper_node = torch.tensor([hyper_node] * len(cluster))
-            cluster = torch.tensor(cluster)
 
             senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_node, cluster)
             snd.append(senders)
