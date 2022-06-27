@@ -36,12 +36,12 @@ class HierarchicalConnector(AbstractConnector):
         for cluster in clusters:
             # TODO: tensor operation?
             target_feature_means.append(
-                list(torch.mean(torch.index_select(input=target_feature, dim=0, index=cluster), dim=0)))
+                list(torch.mean(torch.index_select(input=target_feature, dim=0, index=cluster), dim=0).to(device)))
             node_feature_means.append(
-                list(torch.mean(torch.index_select(input=node_feature, dim=0, index=cluster), dim=0)))
+                list(torch.mean(torch.index_select(input=node_feature, dim=0, index=cluster), dim=0).to(device)))
 
-        target_feature_means = torch.tensor(target_feature_means)
-        node_feature_means = torch.tensor(node_feature_means)
+        target_feature_means = torch.tensor(target_feature_means).to(device)
+        node_feature_means = torch.tensor(node_feature_means).to(device)
 
         graph = graph._replace(target_feature=[target_feature, target_feature_means])
         graph = graph._replace(node_features=[node_feature, node_feature_means])
@@ -56,16 +56,16 @@ class HierarchicalConnector(AbstractConnector):
             hyper_node = torch.tensor([hyper_node] * len(cluster))
 
             senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_node, cluster)
-            snd.append(senders)
-            rcv.append(receivers)
-            edges.append(edge_features)
+            snd.append(senders.to(device))
+            rcv.append(receivers.to(device))
+            edges.append(edge_features.to(device))
 
-        edges = self._normalizer(torch.cat(edges, dim=0))
-        snd = torch.cat(snd, dim=0)
-        rcv = torch.cat(rcv, dim=0)
+        edges = self._normalizer(torch.cat(edges, dim=0).to(device)).to(device)
+        snd = torch.cat(snd, dim=0).to(device)
+        rcv = torch.cat(rcv, dim=0).to(device)
         world_edges = EdgeSet(
             name='intra_cluster',
-            features=self._normalizer(edges, None, is_training),
+            features=self._normalizer(edges, None, is_training).to(device),
             receivers=rcv,
             senders=snd)
 
@@ -74,12 +74,12 @@ class HierarchicalConnector(AbstractConnector):
         # Inter cluster communication
         senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_nodes, hyper_nodes)
 
-        edge_features = self._normalizer(edge_features)
+        edge_features = self._normalizer(edge_features.to(device)).to(device)
         world_edges = EdgeSet(
             name='inter_cluster',
-            features=self._normalizer(edge_features, None, is_training),
-            receivers=receivers,
-            senders=senders)
+            features=self._normalizer(edge_features, None, is_training).to(device),
+            receivers=receivers.to(device),
+            senders=senders.to(device))
 
         hyper_edges.append(world_edges)
 
