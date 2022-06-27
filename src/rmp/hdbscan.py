@@ -28,4 +28,4 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         clusters = [list(map(lambda x: x[1], filter(lambda x: x[0] == label, enum))) for label in set(labels)]
         # TODO: Special case for clusters[0] (noise)
 
-        return [torch.Tensor(cluster) for cluster in clusters[1:]]
+        return [torch.Tensor(cluster).type(torch.int32) for cluster in clusters[1:]]
