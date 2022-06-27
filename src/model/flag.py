@@ -128,10 +128,9 @@ class FlagModel(nn.Module):
                                                            operation='min').to(device)
         node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)
 
-        graph = MultiGraphWithPos(node_features=self._node_normalizer(node_features),
-                                                  edge_sets=[mesh_edges], target_feature=world_pos,
-                                                  model_type=self._model_type,
-                                                  node_dynamic=node_dynamic)
+        graph = MultiGraphWithPos(node_features=[self._node_normalizer(node_features)],
+                                  edge_sets=[mesh_edges], target_feature=world_pos,
+                                  model_type=self._model_type, node_dynamic=node_dynamic)
 
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
         # TODO: Expand Graph
