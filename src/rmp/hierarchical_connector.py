@@ -53,7 +53,7 @@ class HierarchicalConnector(AbstractConnector):
         snd = list()
         rcv = list()
         for hyper_node, cluster in zip(hyper_nodes, clusters):
-            hyper_node = torch.tensor([hyper_node] * len(cluster))
+            hyper_node = torch.tensor([hyper_node] * len(cluster)).to(device)
 
             senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_node, cluster)
             snd.append(senders.to(device))
