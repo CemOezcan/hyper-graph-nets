@@ -1,4 +1,4 @@
-
+import torch
 from torch import nn
 
 from src.util import MultiGraph
@@ -21,8 +21,12 @@ class Encoder(nn.Module):
         self.intra_cluster_model = self._make_mlp(latent_size)
 
     def forward(self, graph):
-        node_latents = self.node_model(graph.node_features[0])
-        hyper_node_latents = self.hyper_node_model(graph.node_features[1])
+        node_latents = [self.node_model(graph.node_features[0])]
+        try:
+            node_latents.append(self.hyper_node_model(graph.node_features[1]))
+        except IndexError:
+            pass
+
         new_edges_sets = []
 
         for index, edge_set in enumerate(graph.edge_sets):
@@ -37,4 +41,4 @@ class Encoder(nn.Module):
                 latent = self.world_edge_model(feature)
             new_edges_sets.append(edge_set._replace(features=latent))
 
-        return MultiGraph([node_latents, hyper_node_latents], new_edges_sets)
+        return MultiGraph(node_latents, new_edges_sets)
