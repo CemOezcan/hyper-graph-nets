@@ -6,7 +6,7 @@ from torch import Tensor
 
 from src.migration.normalizer import Normalizer
 from src.rmp.abstract_connector import AbstractConnector
-from src.util import MultiGraphWithPos, EdgeSet
+from src.util import MultiGraphWithPos, EdgeSet, device
 
 
 class HierarchicalConnector(AbstractConnector):
@@ -30,7 +30,7 @@ class HierarchicalConnector(AbstractConnector):
         # Intra cluster communication
         # TODO: Parameter: num. representatives
         # TODO: Maybe change the current convention of appending hypernodes to normal nodes --> Use separate MLPs for different node types
-        hyper_nodes = list(range(num_nodes, len(clusters) + num_nodes))
+        hyper_nodes = torch.tensor(range(num_nodes, len(clusters) + num_nodes)).to(device)
         target_feature_means = list()
         node_feature_means = list()
         for cluster in clusters:
@@ -71,8 +71,7 @@ class HierarchicalConnector(AbstractConnector):
 
         hyper_edges.append(world_edges)
 
-        # Inter cluster communication+
-        hyper_nodes = torch.tensor(hyper_nodes)
+        # Inter cluster communication
         senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_nodes, hyper_nodes)
 
         edge_features = self._normalizer(edge_features)
