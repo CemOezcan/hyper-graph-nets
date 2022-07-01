@@ -56,12 +56,12 @@ class HierarchicalConnector(AbstractConnector):
             edges.append(edge_features)
 
         # TODO: Why is normalization applied twice?
-        edges = self._normalizer(torch.cat(edges, dim=0).to(device)).to(device)
-        snd = torch.cat(snd, dim=0).to(device)
-        rcv = torch.cat(rcv, dim=0).to(device)
+        edges = self._normalizer(torch.cat(edges, dim=0))
+        snd = torch.cat(snd, dim=0)
+        rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
             name='intra_cluster',
-            features=self._normalizer(edges, None, is_training).to(device),
+            features=self._normalizer(edges, is_training),
             receivers=rcv,
             senders=snd)
 
@@ -70,12 +70,12 @@ class HierarchicalConnector(AbstractConnector):
         # Inter cluster communication
         senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_nodes, hyper_nodes)
 
-        edge_features = self._normalizer(edge_features.to(device)).to(device)
+        edge_features = self._normalizer(edge_features)
         world_edges = EdgeSet(
             name='inter_cluster',
-            features=self._normalizer(edge_features, None, is_training).to(device),
-            receivers=receivers.to(device),
-            senders=senders.to(device))
+            features=self._normalizer(edge_features, is_training),
+            receivers=receivers,
+            senders=senders)
 
         hyper_edges.append(world_edges)
 
@@ -84,3 +84,4 @@ class HierarchicalConnector(AbstractConnector):
         edge_sets.extend(hyper_edges)
 
         return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
+
