@@ -56,17 +56,21 @@ class HierarchicalConnector(AbstractConnector):
             edges.append(edge_features)
 
         # TODO: Why is normalization applied twice?
+        edges = self._normalizer(torch.cat(edges, dim=0))
+        snd = torch.cat(snd, dim=0)
+        rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
             name='intra_cluster',
-            features=self._normalizer(torch.cat(edges, dim=0), is_training),
-            receivers=torch.cat(snd, dim=0),
-            senders=torch.cat(rcv, dim=0))
+            features=self._normalizer(edges, is_training),
+            receivers=rcv,
+            senders=snd)
 
         hyper_edges.append(world_edges)
 
         # Inter cluster communication
         senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_nodes, hyper_nodes)
 
+        edge_features = self._normalizer(edge_features)
         world_edges = EdgeSet(
             name='inter_cluster',
             features=self._normalizer(edge_features, is_training),
