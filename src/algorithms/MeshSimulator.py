@@ -63,6 +63,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
 
         for i, data in enumerate(train_dataloader):  # for each batch
+            print('Batch: {}'.format(i))
             if i >= self._trajectories:
                 break
             trajectory = self._process_trajectory(
