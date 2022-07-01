@@ -1,7 +1,9 @@
 from typing import List
 
+import torch
+
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
-from src.util import MultiGraphWithPos
+from src.util import MultiGraphWithPos, device
 
 
 class RandomClustering(AbstractClusteringAlgorithm):
@@ -32,7 +34,7 @@ class RandomClustering(AbstractClusteringAlgorithm):
         indices.append(range((self._num_clusters - 1) * cluster_size,
                              self._num_clusters * cluster_size + cluster_size_rest))
 
-        indices = [list(x) for x in indices]
+        indices = [torch.tensor(x).to(device) for x in indices]
 
         # TODO: Differentiate between core and border
         return indices
