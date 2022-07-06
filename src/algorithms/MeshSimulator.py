@@ -250,14 +250,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def _process_trajectory(self, trajectory_data, params, dataset_dir, add_targets_bool=False,
                             split_and_preprocess_bool=False):
-        loaded_meta = False
-        shapes = {}
-        dtypes = {}
-        types = {}
-        steps = None
+        batch_size = trajectory_data['node_type'].shape[0]
 
-        shapes, dtypes, types, steps, meta = self._load_model(
-            dataset_dir, loaded_meta)
+        shapes, dtypes, types, steps, meta = self._load_model(dataset_dir)
         trajectory = {}
         # decode bytes into corresponding dtypes
         for key, value in trajectory_data.items():
@@ -282,22 +277,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return trajectory
 
     @staticmethod
-    def _load_model(dataset_dir, loaded_meta):
-        if not loaded_meta:
-            try:
-                with open(os.path.join(dataset_dir, 'meta.json'), 'r') as fp:
-                    meta = json.loads(fp.read())
-                shapes = {}
-                dtypes = {}
-                types = {}
-                steps = meta['trajectory_length'] - 2
-                for key, field in meta['features'].items():
-                    shapes[key] = field['shape']
-                    dtypes[key] = field['dtype']
-                    types[key] = field['type']
-            except FileNotFoundError as e:
-                print(e)
-                quit()
+    def _load_model(dataset_dir):
+        try:
+            with open(os.path.join(dataset_dir, 'meta.json'), 'r') as fp:
+                meta = json.loads(fp.read())
+            shapes = {}
+            dtypes = {}
+            types = {}
+            steps = meta['trajectory_length'] - 2
+            for key, field in meta['features'].items():
+                shapes[key] = field['shape']
+                dtypes[key] = field['dtype']
+                types[key] = field['type']
+        except FileNotFoundError as e:
+            print(e)
+            quit()
+
         return shapes, dtypes, types, steps, meta
 
     @staticmethod
