@@ -137,12 +137,13 @@ class FlagModel(nn.Module):
 
         return graph
 
-    def forward(self, inputs, is_training):
+    def forward(self, inputs, is_training, graph=None):
         # TODO: Get rid of parameter: is_training
-        graph = inputs # self._build_graph(inputs, is_training=is_training)
+        # graph = self._build_graph(inputs, is_training=is_training)
         if is_training:
             return self.learned_model(graph)
         else:
+            graph = self._build_graph(inputs, is_training=is_training)
             return self._update(inputs, self.learned_model(graph))
 
     def _update(self, inputs, per_node_network_output):
