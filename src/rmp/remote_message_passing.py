@@ -38,7 +38,7 @@ class RemoteMessagePassing:
         # TODO: Replace lists with tensors
         graph = graph._replace(node_features=graph.node_features[0])
         clusters = self._clustering_algorithm.run(graph)
-        clusters = [x.to(device) for x in clusters]
+        # clusters = [x.to(device) for x in clusters]
         # graph = self._graph_to_device(graph._replace(node_features=graph.node_features[0]), device)
         new_graph = self._node_connector.run(graph, clusters, is_training)
 
