@@ -21,8 +21,8 @@ class HierarchicalConnector(AbstractConnector):
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
-        target_feature = graph.target_feature
-        node_feature = graph.node_features
+        target_feature = graph.target_feature.to(device_0)
+        node_feature = graph.node_features.to(device_0)
         model_type = graph.model_type
         num_nodes = len(graph.node_features)
 
@@ -70,7 +70,7 @@ class HierarchicalConnector(AbstractConnector):
 
         world_edges = EdgeSet(
             name='inter_cluster',
-            features=self._normalizer(edge_features, is_training).to(device),
+            features=self._normalizer(edge_features.to(device), is_training),
             receivers=receivers,
             senders=senders)
 
