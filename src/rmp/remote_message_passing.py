@@ -19,7 +19,7 @@ class RemoteMessagePassing:
         normalizer : Normalizer for remote edges
         """
         # TODO: Parameterize
-        self._clustering_algorithm = RandomClustering()
+        self._clustering_algorithm = HDBSCAN()
         self._node_connector = HierarchicalConnector(normalizer)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
