@@ -18,7 +18,7 @@ CONFIG_NAME = 'flag'
 def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):
     dataset_name = get_from_nested_dict(config, list_of_keys=["task", "dataset"], raise_error=True)
     batch_size = config.get('task').get('batch_size')
-    if dataset_name == 'flag_minimal':
+    if dataset_name == 'flag_simple':
         dataset = FlagDatasetIterative(path=IN_DIR, split=split, add_targets=add_targets,
                                        split_and_preprocess=split_and_preprocess, batch_size=batch_size)
         return DataLoader(dataset, batch_size=batch_size,

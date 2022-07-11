@@ -25,7 +25,7 @@ optuna:
 
 params:
   task:
-    dataset: flag_minimal
+    dataset: flag_simple
     rollout_split: valid
     batch_size: 1 # TODO: Batch size != 1 raises an error
     epochs: 1
