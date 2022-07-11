@@ -1,6 +1,7 @@
 import copy
 import os
 import pickle
+import sys
 
 import numpy as np
 import torch
@@ -61,6 +62,7 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
                 print("Failed finalizing recorder: {}".format(e))
 """
 
+
 def main(load_model: bool, compute_rollout: bool):
     params = read_yaml(CONFIG_NAME)['params']
 
@@ -85,4 +87,10 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    main(False, True)
+    args = [False, True]
+    try:
+        args[0] = sys.argv[1] == 'True'
+        args[1] = sys.argv[2] == 'True'
+    except IndexError:
+        pass
+    main(*args)
