@@ -15,7 +15,7 @@ from src.algorithms.MeshSimulator import MeshSimulator
 from src.tasks.AbstractTask import AbstractTask
 from src.tasks.get_task import get_task
 from src.tasks.MeshTask import MeshTask
-from src.util import read_yaml
+from src.util import read_yaml, device
 from util.InitializeConfig import initialize_config
 from util.Types import ConfigDict, ScalarDict
 from src.data.data_loader import OUT_DIR, CONFIG_NAME
@@ -65,6 +65,7 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
 
 def main(load_model: bool, compute_rollout: bool):
     params = read_yaml(CONFIG_NAME)['params']
+    print(device)
 
     if load_model:
         model_path = os.path.join(OUT_DIR, 'model.pkl')
