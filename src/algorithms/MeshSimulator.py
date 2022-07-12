@@ -72,13 +72,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             graphs = list()
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
-                graph = self._network.build_graph(data_frame, True)
+                graph = self._network.build_graph(data_frame, is_training=True)
                 graphs.append(graph)
-
 
             for graph, data_frame in zip(graphs, trajectory):
                 # data_frame = self._squeeze_data_frame(data_frame)
-                network_output = self._network(data_frame, is_training=True, graph=graph)
+                network_output = self._network(graph)
                 #################################################################
 
                 cur_position = data_frame['world_pos']
@@ -240,11 +239,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 initial_state, prev_pos, cur_pos, trajectory)
         return torch.stack(trajectory)
 
-    def _step_fn(self, initial_state,  prev_pos, cur_pos, trajectory):
+    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory):
         with torch.no_grad():
-            prediction = self._network({**initial_state,
-                                        'prev|world_pos': prev_pos,
-                                        'world_pos': cur_pos}, is_training=False)
+            input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+            graph = self._network.build_graph(input, is_training=False)
+            prediction = self._network.update(input, self._network(graph))
         next_pos = torch.where(self.mask, torch.squeeze(
             prediction), torch.squeeze(cur_pos))
         trajectory.append(cur_pos)

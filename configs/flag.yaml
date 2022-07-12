@@ -25,11 +25,11 @@ optuna:
 
 params:
   task:
-    dataset: flag_simple
+    dataset: flag_minimal
     rollout_split: valid
     batch_size: 1 # TODO: Batch size != 1 raises an error
     epochs: 1
-    trajectories: 10000
+    trajectories: 1
     rollouts: 1
     mode: all
     prefetch_factor: 2

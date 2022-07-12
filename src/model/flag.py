@@ -137,14 +137,9 @@ class FlagModel(nn.Module):
 
         return graph
 
-    def forward(self, inputs, is_training, graph=None):
+    def forward(self, graph):
         # TODO: Get rid of parameter: is_training
-        # graph = self._build_graph(inputs, is_training=is_training)
-        if is_training:
-            return self.learned_model(graph)
-        else:
-            graph = self._build_graph(inputs, is_training=is_training)
-            return self._update(inputs, self.learned_model(graph))
+        return self.learned_model(graph)
 
     def _update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
@@ -162,6 +157,9 @@ class FlagModel(nn.Module):
 
     def build_graph(self, data, is_training):
         return self._build_graph(data, is_training)
+
+    def update(self, inputs, prediction):
+        return self._update(inputs, prediction)
 
     def save_model(self, path):
         torch.save(self.learned_model, path + "_learned_model.pth")
