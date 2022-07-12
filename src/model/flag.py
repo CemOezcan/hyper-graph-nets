@@ -43,7 +43,7 @@ class FlagModel(nn.Module):
             message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
 
         # TODO: Parameterize clustering algorithm and node connector
-        self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
+        # self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
 
     # TODO check if redundant: see graphnet.py_world_edge_normalizer
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
@@ -133,18 +133,13 @@ class FlagModel(nn.Module):
                                   model_type=self._model_type, node_dynamic=node_dynamic)
 
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
-        # TODO: Expand Graph
-        graph = self._remote_graph.create_graph(graph, is_training)
+        # graph = self._remote_graph.create_graph(graph, is_training)
 
         return graph
 
-    def forward(self, inputs, is_training):
+    def forward(self, graph):
         # TODO: Get rid of parameter: is_training
-        graph = self._build_graph(inputs, is_training=is_training)
-        if is_training:
-            return self.learned_model(graph)
-        else:
-            return self._update(inputs, self.learned_model(graph))
+        return self.learned_model(graph)
 
     def _update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
@@ -159,6 +154,12 @@ class FlagModel(nn.Module):
 
     def get_output_normalizer(self):
         return self._output_normalizer
+
+    def build_graph(self, data, is_training):
+        return self._build_graph(data, is_training)
+
+    def update(self, inputs, prediction):
+        return self._update(inputs, prediction)
 
     def save_model(self, path):
         torch.save(self.learned_model, path + "_learned_model.pth")

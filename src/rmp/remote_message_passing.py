@@ -3,7 +3,7 @@ from src.rmp.hierarchical_connector import HierarchicalConnector
 from src.rmp.random_clustering import RandomClustering
 from src.rmp.hdbscan import HDBSCAN
 from src.rmp.multigraph_connector import MultigraphConnector
-from src.util import MultiGraphWithPos, device, EdgeSet
+from src.util import MultiGraphWithPos, device, EdgeSet, MultiGraph
 
 
 class RemoteMessagePassing:
@@ -22,7 +22,7 @@ class RemoteMessagePassing:
         self._clustering_algorithm = HDBSCAN()
         self._node_connector = HierarchicalConnector(normalizer)
 
-    def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraphWithPos:
+    def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """
         Template method: Identify clusters and connect them using remote edges.
 
@@ -38,6 +38,7 @@ class RemoteMessagePassing:
         # TODO: Replace lists with tensors
         graph = graph._replace(node_features=graph.node_features[0])
         clusters = self._clustering_algorithm.run(graph)
+        # clusters = [x.to(device) for x in clusters]
         # graph = self._graph_to_device(graph._replace(node_features=graph.node_features[0]), device)
         new_graph = self._node_connector.run(graph, clusters, is_training)
 

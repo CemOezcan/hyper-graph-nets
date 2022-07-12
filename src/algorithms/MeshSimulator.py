@@ -63,14 +63,20 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
 
         for i, data in enumerate(train_dataloader):  # for each batch
+            print('Batch: {}'.format(i))
             if i >= self._trajectories:
                 break
             trajectory = self._process_trajectory(
                 data, self._network_config, self._dataset_dir, True, True)
-
+            # TODO: Prefetch
+            graphs = list()
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
-                network_output = self._network(data_frame, is_training=True)
+                graph = self._network.build_graph(data_frame, is_training=True)
+                graphs.append(graph)
+
+            for graph, data_frame in zip(graphs, trajectory):
+                network_output = self._network(graph)
 
                 cur_position = data_frame['world_pos']
                 prev_position = data_frame['prev|world_pos']
@@ -231,11 +237,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 initial_state, prev_pos, cur_pos, trajectory)
         return torch.stack(trajectory)
 
-    def _step_fn(self, initial_state,  prev_pos, cur_pos, trajectory):
+    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory):
         with torch.no_grad():
-            prediction = self._network({**initial_state,
-                                        'prev|world_pos': prev_pos,
-                                        'world_pos': cur_pos}, is_training=False)
+            input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+            graph = self._network.build_graph(input, is_training=False)
+            prediction = self._network.update(input, self._network(graph))
         next_pos = torch.where(self.mask, torch.squeeze(
             prediction), torch.squeeze(cur_pos))
         trajectory.append(cur_pos)
@@ -249,14 +255,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def _process_trajectory(self, trajectory_data, params, dataset_dir, add_targets_bool=False,
                             split_and_preprocess_bool=False):
-        loaded_meta = False
-        shapes = {}
-        dtypes = {}
-        types = {}
-        steps = None
+        batch_size = trajectory_data['node_type'].shape[0]
 
-        shapes, dtypes, types, steps, meta = self._load_model(
-            dataset_dir, loaded_meta)
+        shapes, dtypes, types, steps, meta = self._load_model(dataset_dir)
         trajectory = {}
         # decode bytes into corresponding dtypes
         for key, value in trajectory_data.items():
@@ -281,22 +282,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return trajectory
 
     @staticmethod
-    def _load_model(dataset_dir, loaded_meta):
-        if not loaded_meta:
-            try:
-                with open(os.path.join(dataset_dir, 'meta.json'), 'r') as fp:
-                    meta = json.loads(fp.read())
-                shapes = {}
-                dtypes = {}
-                types = {}
-                steps = meta['trajectory_length'] - 2
-                for key, field in meta['features'].items():
-                    shapes[key] = field['shape']
-                    dtypes[key] = field['dtype']
-                    types[key] = field['type']
-            except FileNotFoundError as e:
-                print(e)
-                quit()
+    def _load_model(dataset_dir):
+        try:
+            with open(os.path.join(dataset_dir, 'meta.json'), 'r') as fp:
+                meta = json.loads(fp.read())
+            shapes = {}
+            dtypes = {}
+            types = {}
+            steps = meta['trajectory_length'] - 2
+            for key, field in meta['features'].items():
+                shapes[key] = field['shape']
+                dtypes[key] = field['dtype']
+                types[key] = field['type']
+        except FileNotFoundError as e:
+            print(e)
+            quit()
+
         return shapes, dtypes, types, steps, meta
 
     @staticmethod

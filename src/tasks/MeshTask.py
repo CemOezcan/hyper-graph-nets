@@ -46,6 +46,7 @@ class MeshTask(AbstractTask):
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
+        # TODO: Bottleneck !!!
         return self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:

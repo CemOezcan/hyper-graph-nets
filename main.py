@@ -1,11 +1,12 @@
 import copy
 import os
 import pickle
+import sys
 
 import numpy as np
 import torch
-from cw2 import cluster_work, cw_error, experiment
-from cw2.cw_data import cw_logging
+# from cw2 import cluster_work, cw_error, experiment
+# from cw2.cw_data import cw_logging
 
 from recording.get_recorder import get_recorder
 from recording.Recorder import Recorder
@@ -14,12 +15,12 @@ from src.algorithms.MeshSimulator import MeshSimulator
 from src.tasks.AbstractTask import AbstractTask
 from src.tasks.get_task import get_task
 from src.tasks.MeshTask import MeshTask
-from src.util import read_yaml
+from src.util import read_yaml, device
 from util.InitializeConfig import initialize_config
 from util.Types import ConfigDict, ScalarDict
 from src.data.data_loader import OUT_DIR, CONFIG_NAME
 
-
+"""
 class IterativeExperiment(experiment.AbstractIterativeExperiment):
     def __init__(self):
         super(IterativeExperiment, self).__init__()
@@ -59,14 +60,15 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
                 self._recorder.finalize()
             except Exception as e:
                 print("Failed finalizing recorder: {}".format(e))
+"""
 
 
 def main(load_model: bool, compute_rollout: bool):
     params = read_yaml(CONFIG_NAME)['params']
-    dataset_name = params['task']['dataset']
+    print(device)
 
     if load_model:
-        model_path = os.path.join(OUT_DIR, dataset_name) + '/model.pkl'
+        model_path = os.path.join(OUT_DIR, 'model.pkl')
         with open(model_path, 'rb') as file:
             algorithm = pickle.load(file)
     else:
@@ -86,4 +88,10 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    main(False, True)
+    args = [False, True]
+    try:
+        args[0] = sys.argv[1] == 'True'
+        args[1] = sys.argv[2] == 'True'
+    except IndexError:
+        pass
+    main(*args)
