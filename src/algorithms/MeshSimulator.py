@@ -68,7 +68,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 break
             trajectory = self._process_trajectory(
                 data, self._network_config, self._dataset_dir, True, True)
-            ############################### TODO: Prefetch
+            # TODO: Prefetch
             graphs = list()
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
@@ -76,9 +76,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 graphs.append(graph)
 
             for graph, data_frame in zip(graphs, trajectory):
-                # data_frame = self._squeeze_data_frame(data_frame)
                 network_output = self._network(graph)
-                #################################################################
 
                 cur_position = data_frame['world_pos']
                 prev_position = data_frame['prev|world_pos']
