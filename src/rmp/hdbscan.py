@@ -22,7 +22,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
         # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
         X = graph.target_feature
-        clustering = hdbscan.HDBSCAN().fit(X.to('cpu'))
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1).fit(X.to('cpu'))
         labels = clustering.labels_ + 1
 
         enum = list(zip(labels, range(len(X))))
