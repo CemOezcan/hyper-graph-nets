@@ -21,6 +21,7 @@ class RemoteMessagePassing:
         # TODO: Parameterize
         self._clustering_algorithm = HDBSCAN()
         self._node_connector = HierarchicalConnector(normalizer)
+        self._clusters = None
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """
@@ -37,10 +38,10 @@ class RemoteMessagePassing:
         """
         # TODO: Replace lists with tensors
         graph = graph._replace(node_features=graph.node_features[0])
-        clusters = self._clustering_algorithm.run(graph)
+        self._clusters = self._clustering_algorithm.run(graph) if self._clusters is None else self._clusters
         # clusters = [x.to(device) for x in clusters]
         # graph = self._graph_to_device(graph._replace(node_features=graph.node_features[0]), device)
-        new_graph = self._node_connector.run(graph, clusters, is_training)
+        new_graph = self._node_connector.run(graph, self._clusters, is_training)
 
         return new_graph
 

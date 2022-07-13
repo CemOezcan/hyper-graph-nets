@@ -70,7 +70,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 data, self._network_config, self._dataset_dir, True, True)
             # TODO: Prefetch
             graphs = list()
-            for data_frame in trajectory:
+            for i, data_frame in enumerate(trajectory):
+                if i == 0:
+                    self._network.reset_remote_graph()
                 data_frame = self._squeeze_data_frame(data_frame)
                 graph = self._network.build_graph(data_frame, is_training=True)
                 graphs.append(graph)

@@ -29,6 +29,7 @@ class HierarchicalConnector(AbstractConnector):
         hyper_edges = list()
 
         # Intra cluster communication
+        # TODO: Decouple computation of senders and receivers from the computation of edge features
         hyper_nodes = torch.arange(num_nodes, len(clusters) + num_nodes).to(device_0)
         target_feature_means = list()
         node_feature_means = list()

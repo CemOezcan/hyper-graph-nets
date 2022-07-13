@@ -19,7 +19,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         pass
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
-        # TODO: More features
+        # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
+        # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
         X = graph.target_feature
         clustering = hdbscan.HDBSCAN().fit(X.to('cpu'))
         labels = clustering.labels_ + 1

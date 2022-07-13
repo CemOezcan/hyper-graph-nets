@@ -43,7 +43,7 @@ class FlagModel(nn.Module):
             message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
 
         # TODO: Parameterize clustering algorithm and node connector
-        # self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
+        self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
 
     # TODO check if redundant: see graphnet.py_world_edge_normalizer
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
@@ -133,7 +133,7 @@ class FlagModel(nn.Module):
                                   model_type=self._model_type, node_dynamic=node_dynamic)
 
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
-        # graph = self._remote_graph.create_graph(graph, is_training)
+        graph = self._remote_graph.create_graph(graph, is_training)
 
         return graph
 
@@ -154,6 +154,9 @@ class FlagModel(nn.Module):
 
     def get_output_normalizer(self):
         return self._output_normalizer
+
+    def reset_remote_graph(self):
+        self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
 
     def build_graph(self, data, is_training):
         return self._build_graph(data, is_training)
