@@ -60,8 +60,8 @@ class HierarchicalConnector(AbstractConnector):
         world_edges = EdgeSet(
             name='intra_cluster',
             features=self._normalizer(torch.cat(edges, dim=0).to(device), is_training),
-            receivers=torch.cat(snd, dim=0),
-            senders=torch.cat(rcv, dim=0))
+            senders=torch.cat(snd, dim=0),
+            receivers=torch.cat(rcv, dim=0))
 
         hyper_edges.append(world_edges)
 
@@ -71,8 +71,8 @@ class HierarchicalConnector(AbstractConnector):
         world_edges = EdgeSet(
             name='inter_cluster',
             features=self._normalizer(edge_features.to(device), is_training),
-            receivers=receivers,
-            senders=senders)
+            senders=senders,
+            receivers=receivers)
 
         hyper_edges.append(world_edges)
 
