@@ -65,6 +65,7 @@ class HierarchicalConnector(AbstractConnector):
 
         hyper_edges.append(world_edges)
 
+        # TODO: try connecting close hyper nodes only (instead of fully connecting)
         # Inter cluster communication
         senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_nodes, hyper_nodes)
 
