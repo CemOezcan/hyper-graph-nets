@@ -6,7 +6,7 @@ from torch import Tensor
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device
-
+from sklearn.cluster import KMeans
 
 class HDBSCAN(AbstractClusteringAlgorithm):
     """
