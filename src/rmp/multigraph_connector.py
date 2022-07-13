@@ -39,12 +39,12 @@ class MultigraphConnector(AbstractConnector):
             rcv.append(receivers)
             edges.append(edge_features)
 
-        edges = self._normalizer(torch.cat(edges, dim=0).to(device))
+        edges = torch.cat(edges, dim=0).to(device)
         snd = torch.cat(snd, dim=0)
         rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
             name='intra_cluster',
-            features=self._normalizer(edges, None, is_training),
+            features=self._normalizer(edges, is_training),
             receivers=rcv,
             senders=snd)
 
@@ -55,10 +55,10 @@ class MultigraphConnector(AbstractConnector):
         core_nodes = torch.tensor(sum(self._get_representatives(core_nodes, core_size), list())).to(device_0)
         senders, receivers, edge_features = self._get_subgraph(model_type, [target_feature], core_nodes, core_nodes)
 
-        edge_features = self._normalizer(edge_features.to(device))
+        edge_features = edge_features.to(device)
         world_edges = EdgeSet(
             name='inter_cluster',
-            features=self._normalizer(edge_features, None, is_training),
+            features=self._normalizer(edge_features, is_training),
             receivers=receivers,
             senders=senders)
 
