@@ -239,8 +239,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
             graph = self._network.build_graph(input, is_training=False)
             prediction = self._network.update(input, self._network(graph))
-        next_pos = torch.where(self.mask, torch.squeeze(
-            prediction), torch.squeeze(cur_pos))
+        next_pos = torch.where(self.mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
         trajectory.append(cur_pos)
         return cur_pos, next_pos, trajectory
 

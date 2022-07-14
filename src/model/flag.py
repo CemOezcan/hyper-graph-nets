@@ -85,7 +85,7 @@ class FlagModel(nn.Module):
         result = result.type(data.dtype)
         return result
 
-    def _build_graph(self, inputs, is_training):
+    def build_graph(self, inputs, is_training):
         """Builds input graph."""
         world_pos = inputs['world_pos']
         prev_world_pos = inputs['prev|world_pos']
@@ -141,7 +141,7 @@ class FlagModel(nn.Module):
         # TODO: Get rid of parameter: is_training
         return self.learned_model(graph)
 
-    def _update(self, inputs, per_node_network_output):
+    def update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
 
         acceleration = self._output_normalizer.inverse(per_node_network_output) # TODO: generalize to multiple node types  [:len(inputs['world_pos'])]
@@ -157,12 +157,6 @@ class FlagModel(nn.Module):
 
     def reset_remote_graph(self):
         self._remote_graph.reset_clusters()
-
-    def build_graph(self, data, is_training):
-        return self._build_graph(data, is_training)
-
-    def update(self, inputs, prediction):
-        return self._update(inputs, prediction)
 
     def save_model(self, path):
         torch.save(self.learned_model, path + "_learned_model.pth")
