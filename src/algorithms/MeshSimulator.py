@@ -61,12 +61,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-
-        for i, data in enumerate(train_dataloader):  # for each batch
+        ################################################################## TODO
+        for i, data_frame in enumerate(train_dataloader):  # for each batch
+            graphs, trajectory = data_frame
             print('Batch: {}'.format(i))
             if i >= self._trajectories:
                 break
-            trajectory = self._process_trajectory(
+            """trajectory = self._process_trajectory(
                 data, self._network_config, self._dataset_dir, True, True)
             # TODO: Prefetch
             graphs = list()
@@ -74,7 +75,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
                 graph = self._network.build_graph(data_frame, is_training=True)
-                graphs.append(graph)
+                graphs.append(graph)"""
 
             for graph, data_frame in zip(graphs, trajectory):
                 network_output = self._network(graph)
