@@ -63,9 +63,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
         ################################################################## TODO
-        import threading as thread
+        import multiprocessing as mp
         i = 0
-        queue = Queue()
+        queue = mp.Queue()
         self.wrapper(train_dataloader, queue)
         while True:
             if i >= self._trajectories:
@@ -73,10 +73,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             print('Batch: {}'.format(i))
             try:
                 graph, trajectory = queue.get()
-                thread_1 = thread.Thread(target=self.wrapper, args=(train_dataloader, queue))
-                thread_1.start()
+                process_1 = mp.Process(target=self.wrapper, args=(train_dataloader, queue))
+                process_1.start()
                 self.helper(graph, trajectory)
-                thread_1.join()
+                process_1.join()
                 i += 1
             except StopIteration:
                 break
