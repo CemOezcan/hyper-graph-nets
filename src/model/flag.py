@@ -156,7 +156,7 @@ class FlagModel(nn.Module):
         return self._output_normalizer
 
     def reset_remote_graph(self):
-        self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
+        self._remote_graph.reset_clusters()
 
     def build_graph(self, data, is_training):
         return self._build_graph(data, is_training)

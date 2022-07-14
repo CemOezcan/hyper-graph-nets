@@ -45,6 +45,13 @@ class RemoteMessagePassing:
 
         return new_graph
 
+    def reset_clusters(self):
+        """
+        Reset the current clustering structure and therefore force its recomputation
+        on the next call of :func:`RemoteMessagePassing.create_graph`
+        """
+        self._clusters = None
+
     @staticmethod
     def _graph_to_device(graph, dev):
         return MultiGraphWithPos(node_features=graph.node_features.to(dev),

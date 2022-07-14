@@ -70,9 +70,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 data, self._network_config, self._dataset_dir, True, True)
             # TODO: Prefetch
             graphs = list()
-            for i, data_frame in enumerate(trajectory):
-                if i == 0:
-                    self._network.reset_remote_graph()
+            self._network.reset_remote_graph()
+            for data_frame in trajectory:
                 data_frame = self._squeeze_data_frame(data_frame)
                 graph = self._network.build_graph(data_frame, is_training=True)
                 graphs.append(graph)
@@ -110,10 +109,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         l1_losses = []
 
         for _ in range(rollouts):
-            for trajectory in ds_loader:
-                trajectory = self._process_trajectory(
-                    trajectory, self._network_config, self._dataset_dir, True)
-
+            for data in ds_loader:
+                trajectory = self._process_trajectory(data, self._network_config, self._dataset_dir, True)
                 _, prediction_trajectory = self.evaluate(trajectory)
                 mse_loss_fn = torch.nn.MSELoss()
                 l1_loss_fn = torch.nn.L1Loss()
@@ -155,8 +152,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def evaluate(self, trajectory, num_steps=None):
         """Performs model rollouts and create stats."""
-        initial_state = {k: torch.squeeze(
-            v, 0)[0] for k, v in trajectory.items()}
+        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
         if num_steps is None:
             num_steps = trajectory['cells'].shape[0]
 
@@ -227,16 +223,15 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def _rollout(self, initial_state, num_steps):
         """Rolls out a model trajectory."""
         node_type = initial_state['node_type']
-        self.mask = torch.eq(node_type[:, 0], torch.tensor(
-            [NodeType.NORMAL.value], device=device))
+        self.mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
         self.mask = torch.stack((self.mask, self.mask, self.mask), dim=1)
 
         prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
-        trajectory = []
+        self._network.reset_remote_graph()
+        trajectory = list()
         for _ in range(num_steps):
-            prev_pos, cur_pos, trajectory = self._step_fn(
-                initial_state, prev_pos, cur_pos, trajectory)
+            prev_pos, cur_pos, trajectory = self._step_fn(initial_state, prev_pos, cur_pos, trajectory)
         return torch.stack(trajectory)
 
     def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory):
