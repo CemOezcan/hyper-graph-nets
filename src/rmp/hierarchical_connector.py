@@ -29,6 +29,7 @@ class HierarchicalConnector(AbstractConnector):
         hyper_edges = list()
 
         # Intra cluster communication
+        # TODO: Decouple computation of senders and receivers from the computation of edge features
         hyper_nodes = torch.arange(num_nodes, len(clusters) + num_nodes).to(device_0)
         target_feature_means = list()
         node_feature_means = list()
@@ -60,19 +61,20 @@ class HierarchicalConnector(AbstractConnector):
         world_edges = EdgeSet(
             name='intra_cluster',
             features=self._normalizer(torch.cat(edges, dim=0).to(device), is_training),
-            receivers=torch.cat(snd, dim=0),
-            senders=torch.cat(rcv, dim=0))
+            senders=torch.cat(snd, dim=0),
+            receivers=torch.cat(rcv, dim=0))
 
         hyper_edges.append(world_edges)
 
+        # TODO: try connecting close hyper nodes only (instead of fully connecting)
         # Inter cluster communication
         senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_nodes, hyper_nodes)
 
         world_edges = EdgeSet(
             name='inter_cluster',
             features=self._normalizer(edge_features.to(device), is_training),
-            receivers=receivers,
-            senders=senders)
+            senders=senders,
+            receivers=receivers)
 
         hyper_edges.append(world_edges)
 
