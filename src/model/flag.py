@@ -141,6 +141,12 @@ class FlagModel(nn.Module):
 
         return graph
 
+    def normalize(self, graph, is_training):
+        normalized_edges = [edge_set._replace(features=self._world_edge_normalizer(edge_set.features, is_training))
+                            if edge_set.name != 'mesh_edges' else edge_set for edge_set in graph.edge_sets]
+        graph = graph._replace(edge_sets=normalized_edges)
+        return graph
+
     def forward(self, graph):
         # TODO: Get rid of parameter: is_training
         return self.learned_model(graph)

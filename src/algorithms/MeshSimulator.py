@@ -78,6 +78,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 graphs.append(graph)"""
 
             for graph, data_frame in zip(graphs, trajectory):
+                graph = self._network.normalize(graph, True)
                 network_output = self._network(graph)
 
                 cur_position = data_frame['world_pos']

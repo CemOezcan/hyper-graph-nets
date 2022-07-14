@@ -13,7 +13,6 @@ from src.data.graphloader import GraphDataLoader
 from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.util import device, NodeType, EdgeSet, MultiGraphWithPos, MultiGraph
 from util.Types import ConfigDict
-from torch_geometric.data import HeteroData
 
 
 class Preprocessing():
@@ -24,11 +23,12 @@ class Preprocessing():
         self._add_targets_b = add_targets
         self._network_config = config.get("model")
         self._dataset_dir = in_dir
-        # self._remote_graph = RemoteMessagePassing(None)
+        self._remote_graph = RemoteMessagePassing()
 
     def preprocess(self, raw_trajectory):
         graphs = list()
         trajectory = self._process_trajectory(raw_trajectory, self._split_and_preprocess_b, self._add_targets_b)
+        self._remote_graph.reset_clusters()
         for data_frame in trajectory:
             graphs.append(self._build_graph(data_frame))
 
@@ -175,9 +175,9 @@ class Preprocessing():
                                   edge_sets=[mesh_edges], target_feature=world_pos,
                                   model_type=self._model_type, node_dynamic=node_dynamic)
 
-        # graph = self._remote_graph.create_graph(graph)
+        graph = self._remote_graph.create_graph(graph)
         # TODO: Replace
-        graph = MultiGraph(node_features=[node_features], edge_sets=[mesh_edges])
+        # graph = MultiGraph(node_features=[node_features], edge_sets=[mesh_edges])
 
         return graph
 
