@@ -18,6 +18,7 @@ from util.Types import ConfigDict
 class Preprocessing():
 
     def __init__(self, config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True, in_dir=None):
+        self._is_train = split == 'train'
         self._model_type = 'flag'
         self._split_and_preprocess_b = split_and_preprocess
         self._add_targets_b = add_targets
@@ -27,10 +28,11 @@ class Preprocessing():
 
     def preprocess(self, raw_trajectory):
         graphs = list()
-        trajectory = self._process_trajectory(raw_trajectory, self._split_and_preprocess_b, self._add_targets_b)
-        self._remote_graph.reset_clusters()
-        for data_frame in trajectory:
-            graphs.append(self._build_graph(data_frame))
+        trajectory = self._process_trajectory(raw_trajectory)
+        if self._is_train:
+            self._remote_graph.reset_clusters()
+            for data_frame in trajectory:
+                graphs.append(self._build_graph(data_frame))
 
         return graphs, trajectory
 
@@ -53,7 +55,7 @@ class Preprocessing():
 
         return shapes, dtypes, types, steps, meta
 
-    def _process_trajectory(self, trajectory_data, add_targets_bool=False, split_and_preprocess_bool=False):
+    def _process_trajectory(self, trajectory_data):
         shapes, dtypes, types, steps, meta = self._load_model()
         trajectory = {}
 
@@ -73,9 +75,9 @@ class Preprocessing():
                 raise ValueError('invalid data format')
             trajectory[key] = reshaped_data
 
-        if add_targets_bool:
+        if self._add_targets_b:
             trajectory = self._add_targets(steps)(trajectory)
-        if split_and_preprocess_bool:
+        if self._split_and_preprocess_b:
             trajectory = self._split_and_preprocess(steps)(trajectory)
         return trajectory
 

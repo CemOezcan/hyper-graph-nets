@@ -1,9 +1,10 @@
 import json
 import os
 import pickle
-from queue import Queue
+from queue import Queue, Empty
 
 import numpy as np
+import threading as thread
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -62,12 +63,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        ################################################################## TODO
-        import threading as thread
         i = 0
         queue = Queue()
         self.wrapper(train_dataloader, queue)
         while True:
+            # TODO: break preprocessing one iteration earlier
             if i >= self._trajectories:
                 break
             print('Batch: {}'.format(i))
@@ -78,14 +78,17 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 self.helper(graph, trajectory)
                 thread_1.join()
                 i += 1
-            except StopIteration:
+            except Empty:
                 break
 
             self.save()
 
     def wrapper(self, loader, queue):
-        data = next(loader)
-        queue.put(data)
+        try:
+            data = next(loader)
+            queue.put(data)
+        except StopIteration:
+            return
 
     def helper(self, graphs, trajectory):
         for graph, data_frame in zip(graphs, trajectory):
@@ -115,13 +118,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def evaluator(self, ds_loader, rollouts):
         """Run a model rollout trajectory."""
         trajectories = []
-
         mse_losses = []
         l1_losses = []
-
         for _ in range(rollouts):
-            for data in ds_loader:
-                trajectory = self._process_trajectory(data, self._network_config, self._dataset_dir, True)
+            for _, trajectory in ds_loader:
                 _, prediction_trajectory = self.evaluate(trajectory)
                 mse_loss_fn = torch.nn.MSELoss()
                 l1_loss_fn = torch.nn.L1Loss()
