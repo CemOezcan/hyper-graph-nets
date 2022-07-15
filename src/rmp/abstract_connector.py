@@ -13,11 +13,13 @@ class AbstractConnector(ABC):
     Abstract superclass for the expansion of the input graph with remote edges.
     """
 
-    def __init__(self):
+    def __init__(self, intra, inter):
         """
         Initializes the remote message passing strategy.
 
         """
+        self._intra_normalizer = intra
+        self._inter_normalizer = inter
         self._initialize()
 
     @abstractmethod
@@ -32,7 +34,7 @@ class AbstractConnector(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run(self, graph: MultiGraph, clusters: List[List]) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraph, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         """
         Adds remote edges to the input graph.
 
@@ -40,6 +42,7 @@ class AbstractConnector(ABC):
         ----------
         graph : Input graph
         clusters : Clustering of the graph
+        is_training: Training or test sample
 
         Returns the input graph including remote edges.
         -------

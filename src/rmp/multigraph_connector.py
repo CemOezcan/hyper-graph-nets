@@ -13,13 +13,13 @@ class MultigraphConnector(AbstractConnector):
     Naive remote message passing with fully connected clusters.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, intra, inter):
+        super().__init__(intra, inter)
 
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[List]) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         device_0 = 'cpu'
         target_feature = graph.target_feature.to(device_0)
         model_type = graph.model_type
@@ -44,7 +44,7 @@ class MultigraphConnector(AbstractConnector):
         rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
             name='intra_cluster',
-            features=edges,
+            features=self._intra_normalizer(edges, is_training),
             receivers=rcv,
             senders=snd)
 
@@ -58,7 +58,7 @@ class MultigraphConnector(AbstractConnector):
         edge_features = edge_features.to(device)
         world_edges = EdgeSet(
             name='inter_cluster',
-            features=edge_features,
+            features=self._inter_normalizer(edge_features, is_training),
             receivers=receivers,
             senders=senders)
 
