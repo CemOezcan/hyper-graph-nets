@@ -235,6 +235,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             pickle.dump(self, file)
 
     def save_rollouts(self, rollouts):
+        rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
         with open(os.path.join(OUT_DIR, 'rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
 
