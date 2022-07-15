@@ -67,14 +67,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         queue = Queue()
         self.fetch_data(train_dataloader, queue)
         while True:
-            # TODO: break preprocessing one iteration earlier
-            if i >= self._trajectories:
-                break
             print('Batch: {}'.format(i))
+            thread_1 = thread.Thread(target=self.fetch_data, args=(train_dataloader, queue))
+            if i < self._trajectories - 1:
+                thread_1.start()
             try:
                 graphs, trajectory = queue.get()
-                thread_1 = thread.Thread(target=self.fetch_data, args=(train_dataloader, queue))
-                thread_1.start()
                 for graph, data_frame in zip(graphs, trajectory):
                     graph = self._network.normalize(graph, True)
                     network_output = self._network(graph)
@@ -98,12 +96,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     self._optimizer.zero_grad()
                     loss.backward()
                     self._optimizer.step()
-                thread_1.join()
-                i += 1
             except Empty:
                 break
-
-            self.save()
+            finally:
+                thread_1.join()
+                self.save()
+                i += 1
 
     @staticmethod
     def fetch_data(loader, queue):
