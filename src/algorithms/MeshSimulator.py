@@ -185,9 +185,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         # Take n_traj trajectories from valid set for n_step loss calculation
         for i in range(n_traj):
-            for trajectory in ds_loader:
-                trajectory = self._process_trajectory(
-                    trajectory, self._network_config, self._dataset_dir, True)
+            for _, trajectory in ds_loader:
                 for n_step in n_step_list:
                     self.n_step_computation(
                         n_step_mse_losses, n_step_l1_losses, trajectory, n_step)
@@ -262,7 +260,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def _process_trajectory(self, trajectory_data, params, dataset_dir, add_targets_bool=False,
                             split_and_preprocess_bool=False):
-        batch_size = trajectory_data['node_type'].shape[0]
 
         shapes, dtypes, types, steps, meta = self._load_model(dataset_dir)
         trajectory = {}
