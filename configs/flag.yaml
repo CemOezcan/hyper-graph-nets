@@ -28,8 +28,8 @@ params:
     dataset: flag_minimal
     rollout_split: valid
     batch_size: 1 # TODO: Batch size != 1 raises an error
-    epochs: 10
-    trajectories: 1
+    epochs: 1
+    trajectories: 10
     rollouts: 1
     mode: all
     prefetch_factor: 2
