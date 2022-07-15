@@ -10,16 +10,16 @@ class RemoteMessagePassing:
     """
     Remote message passing for graph neural networks.
     """
-    def __init__(self):
+    def __init__(self, intra, inter):
         """
         Initialize the remote message passing strategy.
         """
         # TODO: Parameterize
         self._clustering_algorithm = HDBSCAN()
-        self._node_connector = HierarchicalConnector()
+        self._node_connector = HierarchicalConnector(intra, inter)
         self._clusters = None
 
-    def create_graph(self, graph: MultiGraphWithPos) -> MultiGraph:
+    def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """
         Template method: Identify clusters and connect them using remote edges.
 
@@ -37,7 +37,7 @@ class RemoteMessagePassing:
         self._clusters = self._clustering_algorithm.run(graph) if self._clusters is None else self._clusters
         # clusters = [x.to(device) for x in clusters]
         # graph = self._graph_to_device(graph._replace(node_features=graph.node_features[0]), device)
-        new_graph = self._node_connector.run(graph, self._clusters)
+        new_graph = self._node_connector.run(graph, self._clusters, is_training)
 
         return new_graph
 

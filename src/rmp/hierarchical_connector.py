@@ -13,13 +13,13 @@ class HierarchicalConnector(AbstractConnector):
     """
     Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, intra, inter):
+        super().__init__(intra, inter)
 
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor]) -> MultiGraph:
+    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
         target_feature = graph.target_feature.to(device_0)
         node_feature = graph.node_features.to(device_0)
@@ -60,7 +60,7 @@ class HierarchicalConnector(AbstractConnector):
         # TODO: Why is normalization applied twice?
         world_edges = EdgeSet(
             name='intra_cluster',
-            features=torch.cat(edges, dim=0).to(device),
+            features=self._intra_normalizer(torch.cat(edges, dim=0).to(device), is_training),
             senders=torch.cat(snd, dim=0),
             receivers=torch.cat(rcv, dim=0))
 
@@ -72,7 +72,7 @@ class HierarchicalConnector(AbstractConnector):
 
         world_edges = EdgeSet(
             name='inter_cluster',
-            features=edge_features.to(device),
+            features=self._inter_normalizer(edge_features.to(device), is_training),
             senders=senders,
             receivers=receivers)
 
