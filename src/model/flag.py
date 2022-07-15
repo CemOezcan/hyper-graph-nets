@@ -142,9 +142,11 @@ class FlagModel(nn.Module):
         return graph
 
     def normalize(self, graph, is_training):
+        normalized_nodes = [self._node_normalizer(x) for x in graph.node_features]
         normalized_edges = [edge_set._replace(features=self._world_edge_normalizer(edge_set.features, is_training))
                             if edge_set.name != 'mesh_edges' else edge_set for edge_set in graph.edge_sets]
         graph = graph._replace(edge_sets=normalized_edges)
+        graph = graph._replace(node_features=normalized_nodes)
         return graph
 
     def forward(self, graph):

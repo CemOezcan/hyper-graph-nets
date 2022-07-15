@@ -23,8 +23,7 @@ class FlagDatasetIterative(IterableDataset):
 
 
         ####################################################################### TODO
-        self.loader = torch.utils.data.DataLoader(tf_dataset, batch_size=batch_size, prefetch_factor=2,
-                                                  num_workers=0)
+        self.loader = torch.utils.data.DataLoader(tf_dataset, batch_size=batch_size, prefetch_factor=2, num_workers=0)
         # use list to make list from iterable so that the order of elements is ensured
         self._iterator = iter(self.loader)
         self.pp = Preprocessing(config, split, split_and_preprocess, add_targets, in_dir=in_dir)
