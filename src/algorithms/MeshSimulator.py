@@ -67,9 +67,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         queue = Queue()
         self.fetch_data(train_dataloader, queue)
         while True:
+            i += 1
             print('Batch: {}'.format(i))
             thread_1 = thread.Thread(target=self.fetch_data, args=(train_dataloader, queue))
-            if i < self._trajectories - 1:
+            if i < self._trajectories:
                 thread_1.start()
             try:
                 graphs, trajectory = queue.get()
@@ -99,9 +100,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             except Empty:
                 break
             finally:
-                thread_1.join()
                 self.save()
-                i += 1
+                if thread_1.is_alive():
+                    thread_1.join()
 
     @staticmethod
     def fetch_data(loader, queue):
