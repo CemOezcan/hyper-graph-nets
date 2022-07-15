@@ -104,11 +104,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 if thread_1.is_alive():
                     thread_1.join()
 
-    @staticmethod
-    def fetch_data(loader, queue):
+    def fetch_data(self, loader, queue):
         try:
-            data = next(loader)
-            queue.put(data)
+            graphs = list()
+            trajectory = next(loader)
+            self._network.reset_remote_graph()
+            for data_frame in trajectory:
+                graphs.append(self._network.build_graph(data_frame, True))
+            queue.put((graphs, trajectory))
         except StopIteration:
             return
 
@@ -118,7 +121,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         mse_losses = []
         l1_losses = []
         for _ in range(rollouts):
-            for _, trajectory in ds_loader:
+            for trajectory in ds_loader:
+                self._network.reset_remote_graph()
                 _, prediction_trajectory = self.evaluate(trajectory)
                 mse_loss_fn = torch.nn.MSELoss()
                 l1_loss_fn = torch.nn.L1Loss()
@@ -160,7 +164,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
-        self._network.reset_remote_graph()
         trajectory = list()
         for _ in range(num_steps):
             prev_pos, cur_pos, trajectory = self._step_fn(initial_state, prev_pos, cur_pos, trajectory)
@@ -181,7 +184,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         # Take n_traj trajectories from valid set for n_step loss calculation
         for i in range(n_traj):
-            for _, trajectory in ds_loader:
+            for trajectory in ds_loader:
+                self._network.reset_remote_graph()
                 for n_step in n_step_list:
                     self.n_step_computation(
                         n_step_mse_losses, n_step_l1_losses, trajectory, n_step)
