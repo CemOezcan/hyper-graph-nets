@@ -66,7 +66,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         i = 0
         queue = Queue()
         self.fetch_data(train_dataloader, queue)
-        while True:
+        while i < self._trajectories:
             i += 1
             print('Batch: {}'.format(i))
             thread_1 = thread.Thread(target=self.fetch_data, args=(train_dataloader, queue))
