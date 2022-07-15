@@ -65,17 +65,39 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
         i = 0
         queue = Queue()
-        self.wrapper(train_dataloader, queue)
+        self.fetch_data(train_dataloader, queue)
         while True:
             # TODO: break preprocessing one iteration earlier
             if i >= self._trajectories:
                 break
             print('Batch: {}'.format(i))
             try:
-                graph, trajectory = queue.get()
-                thread_1 = thread.Thread(target=self.wrapper, args=(train_dataloader, queue))
+                graphs, trajectory = queue.get()
+                thread_1 = thread.Thread(target=self.fetch_data, args=(train_dataloader, queue))
                 thread_1.start()
-                self.helper(graph, trajectory)
+                for graph, data_frame in zip(graphs, trajectory):
+                    graph = self._network.normalize(graph, True)
+                    network_output = self._network(graph)
+
+                    cur_position = data_frame['world_pos']
+                    prev_position = data_frame['prev|world_pos']
+                    target_position = data_frame['target|world_pos']
+                    # TODO check if applicable for other tasks, refactor to model itself
+                    target_acceleration = target_position - 2 * cur_position + prev_position
+                    target_normalized = self._network.get_output_normalizer()(
+                        target_acceleration).to(device)
+                    network_output = network_output  # TODO: generalize to multiple node types [:len(target_normalized)]
+
+                    node_type = data_frame['node_type']
+                    loss_mask = torch.eq(node_type[:, 0], torch.tensor(
+                        [NodeType.NORMAL.value], device=device).int())
+                    error = torch.sum(
+                        (target_normalized - network_output) ** 2, dim=1)
+                    loss = torch.mean(error[loss_mask])
+
+                    self._optimizer.zero_grad()
+                    loss.backward()
+                    self._optimizer.step()
                 thread_1.join()
                 i += 1
             except Empty:
@@ -83,37 +105,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             self.save()
 
-    def wrapper(self, loader, queue):
+    @staticmethod
+    def fetch_data(loader, queue):
         try:
             data = next(loader)
             queue.put(data)
         except StopIteration:
             return
-
-    def helper(self, graphs, trajectory):
-        for graph, data_frame in zip(graphs, trajectory):
-            graph = self._network.normalize(graph, True)
-            network_output = self._network(graph)
-
-            cur_position = data_frame['world_pos']
-            prev_position = data_frame['prev|world_pos']
-            target_position = data_frame['target|world_pos']
-            # TODO check if applicable for other tasks, refactor to model itself
-            target_acceleration = target_position - 2 * cur_position + prev_position
-            target_normalized = self._network.get_output_normalizer()(
-                target_acceleration).to(device)
-            network_output = network_output  # TODO: generalize to multiple node types [:len(target_normalized)]
-
-            node_type = data_frame['node_type']
-            loss_mask = torch.eq(node_type[:, 0], torch.tensor(
-                [NodeType.NORMAL.value], device=device).int())
-            error = torch.sum(
-                (target_normalized - network_output) ** 2, dim=1)
-            loss = torch.mean(error[loss_mask])
-
-            self._optimizer.zero_grad()
-            loss.backward()
-            self._optimizer.step()
 
     def evaluator(self, ds_loader, rollouts):
         """Run a model rollout trajectory."""
