@@ -43,7 +43,7 @@ class FlagModel(nn.Module):
             message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
 
         # TODO: Parameterize clustering algorithm and node connector
-        self._remote_graph = RemoteMessagePassing(self._world_edge_normalizer)
+        self._remote_graph = RemoteMessagePassing()
 
     # TODO check if redundant: see graphnet.py_world_edge_normalizer
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
@@ -133,8 +133,20 @@ class FlagModel(nn.Module):
                                   model_type=self._model_type, node_dynamic=node_dynamic)
 
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
-        graph = self._remote_graph.create_graph(graph, is_training)
+        # TODO: Normalize hyper nodes
+        graph = self._remote_graph.create_graph(graph)
+        normalized_edges = [edge_set._replace(features=self._world_edge_normalizer(edge_set.features, is_training))
+                            if edge_set.name != 'mesh_edges' else edge_set for edge_set in graph.edge_sets]
+        graph = graph._replace(edge_sets=normalized_edges)
 
+        return graph
+
+    def normalize(self, graph, is_training):
+        normalized_nodes = [self._node_normalizer(x) for x in graph.node_features]
+        normalized_edges = [edge_set._replace(features=self._world_edge_normalizer(edge_set.features, is_training))
+                            if edge_set.name != 'mesh_edges' else edge_set for edge_set in graph.edge_sets]
+        graph = graph._replace(edge_sets=normalized_edges)
+        graph = graph._replace(node_features=normalized_nodes)
         return graph
 
     def forward(self, graph):

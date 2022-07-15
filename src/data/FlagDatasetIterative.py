@@ -5,9 +5,11 @@ import os
 from torch.utils.data import IterableDataset
 from tfrecord.torch.dataset import TFRecordDataset
 
+from src.data.preprocessing import Preprocessing
+
 
 class FlagDatasetIterative(IterableDataset):
-    def __init__(self, path, split, add_targets=False, split_and_preprocess=False, batch_size=1):
+    def __init__(self, path, split, add_targets=False, split_and_preprocess=False, batch_size=1, config=None, in_dir=None):
         self.path = path
         self.split = split
         self._add_targets = add_targets
@@ -18,9 +20,16 @@ class FlagDatasetIterative(IterableDataset):
         tf_dataset = TFRecordDataset(tfrecord_path, index_path, None)
         # loader and iter(loader) have size 1000, which is the number of all training trajectories
         # TODO Batch Size is set to 1 here, maybe this is what causes the error
-        loader = torch.utils.data.DataLoader(tf_dataset, batch_size=batch_size)
+        ####################################################################### TODO
+        self.loader = torch.utils.data.DataLoader(tf_dataset, batch_size=batch_size, prefetch_factor=2, num_workers=0)
         # use list to make list from iterable so that the order of elements is ensured
-        self.dataset = iter(loader)
+        self._iterator = iter(self.loader)
+        self.pp = Preprocessing(config, split, split_and_preprocess, add_targets, in_dir=in_dir)
 
     def __iter__(self):
-        return self.dataset
+        return self._iterator
+
+    def __next__(self):
+        batch = next(self._iterator)
+        trajectory = self.pp.preprocess(batch)
+        return trajectory

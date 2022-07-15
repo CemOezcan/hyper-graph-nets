@@ -1,4 +1,6 @@
 import os
+
+from src.data.graphloader import GraphDataLoader
 from src.util import read_yaml
 
 from util.Types import ConfigDict
@@ -20,8 +22,8 @@ def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_t
     batch_size = config.get('task').get('batch_size')
     if dataset_name == 'flag_minimal':
         dataset = FlagDatasetIterative(path=IN_DIR, split=split, add_targets=add_targets,
-                                       split_and_preprocess=split_and_preprocess, batch_size=batch_size)
-        return DataLoader(dataset, batch_size=batch_size,
-                          prefetch_factor=config.get('task').get('prefetch_factor'), shuffle=False, num_workers=0)
+                                       split_and_preprocess=split_and_preprocess, batch_size=batch_size, config=config, in_dir=IN_DIR)
+        ################################################################################## TODO
+        return GraphDataLoader(dataset, batch_size=batch_size, prefetch_factor=config.get('task').get('prefetch_factor'), shuffle=False, num_workers=8)
     else:
         raise NotImplementedError("Implement your data loading here!")
