@@ -18,6 +18,7 @@ class AbstractConnector(ABC):
         Initializes the remote message passing strategy.
 
         """
+        # TODO: Set normalizers in initialization method
         self._intra_normalizer = intra
         self._inter_normalizer = inter
         self._initialize()

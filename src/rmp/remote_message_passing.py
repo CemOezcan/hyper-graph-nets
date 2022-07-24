@@ -15,6 +15,7 @@ class RemoteMessagePassing:
         Initialize the remote message passing strategy.
         """
         # TODO: Parameterize
+        # TODO: Set normalizers in initialization method
         self._clustering_algorithm = HDBSCAN()
         self._node_connector = HierarchicalConnector(intra, inter)
         self._clusters = None
