@@ -13,11 +13,8 @@ class MultigraphConnector(AbstractConnector):
     Naive remote message passing with fully connected clusters.
     """
 
-    def __init__(self, intra, inter):
-        super().__init__(intra, inter)
-
-    def _initialize(self):
-        pass
+    def __init__(self):
+        super().__init__()
 
     def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         device_0 = 'cpu'

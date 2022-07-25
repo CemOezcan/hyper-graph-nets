@@ -10,14 +10,19 @@ class RemoteMessagePassing:
     """
     Remote message passing for graph neural networks.
     """
-    def __init__(self, intra, inter):
+
+    def __init__(self, clustering_algorithm, connector):
         """
         Initialize the remote message passing strategy.
         """
         # TODO: Parameterize
-        self._clustering_algorithm = HDBSCAN()
-        self._node_connector = HierarchicalConnector(intra, inter)
+        # TODO: Set normalizers in initialization method
+        self._clustering_algorithm = clustering_algorithm
+        self._node_connector = connector
         self._clusters = None
+
+    def initialize(self, intra, inter):
+        self._node_connector.initialize(intra, inter)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """

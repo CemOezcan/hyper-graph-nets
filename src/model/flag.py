@@ -5,7 +5,7 @@ import torch_scatter
 import torch.nn.functional as F
 
 from torch import nn
-
+import src.rmp.get_rmp as rmp
 from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
@@ -41,7 +41,8 @@ class FlagModel(nn.Module):
             message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
 
         # TODO: Parameterize clustering algorithm and node connector
-        self._remote_graph = RemoteMessagePassing(self._intra_edge_normalizer, self._inter_edge_normalizer)
+        self._remote_graph = rmp.get_rmp(params)
+        self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
 
     # TODO check if redundant: see graphnet.py_world_edge_normalizer
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):

@@ -13,25 +13,30 @@ class AbstractConnector(ABC):
     Abstract superclass for the expansion of the input graph with remote edges.
     """
 
-    def __init__(self, intra, inter):
+    def __init__(self):
         """
         Initializes the remote message passing strategy.
 
         """
-        self._intra_normalizer = intra
-        self._inter_normalizer = inter
-        self._initialize()
+        # TODO: Set normalizers in initialization method
+        self._intra_normalizer = None
+        self._inter_normalizer = None
 
-    @abstractmethod
-    def _initialize(self):
+    def initialize(self, intra, inter):
         """
-        Special initialization function if parameterized preprocessing is necessary.
+        Initialize normalizers after fetching the subclass according to the given configuration file
+
+        Parameters
+        ----------
+        intra : Normalizer for intra cluster edges
+        inter : Normalizer for inter cluster edges
 
         Returns
         -------
 
         """
-        raise NotImplementedError
+        self._intra_normalizer = intra
+        self._inter_normalizer = inter
 
     @abstractmethod
     def run(self, graph: MultiGraph, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
