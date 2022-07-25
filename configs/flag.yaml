@@ -29,7 +29,7 @@ params:
     rollout_split: valid
     batch_size: 1 # TODO: Batch size != 1 raises an error
     epochs: 1
-    trajectories: 10
+    trajectories: 1
     rollouts: 1
     mode: all
     prefetch_factor: 2
@@ -46,6 +46,9 @@ params:
     attention: False
     load: None
     stochastic_message_passing_used: False
+    rmp:
+      clustering: hdbscan
+      connector: hierarchical
 
 ---
 name: optuna_exp
