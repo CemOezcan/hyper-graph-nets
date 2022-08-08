@@ -19,18 +19,16 @@ class GraphNet(nn.Module):
         self.hyper_node_model = model_fn(output_size)
 
         self.mesh_edge_model = model_fn(output_size)
-        self.world_edge_model = model_fn(output_size)
         self.intra_cluster_model = model_fn(output_size)
         self.inter_cluster_model = model_fn(output_size)
 
         self.attention = attention
         if attention:
             self.attention_model = AttentionModel()
+            self.linear_layer = nn.LazyLinear(1)
+            self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
         self.message_passing_aggregator = message_passing_aggregator
-
-        self.linear_layer = nn.LazyLinear(1)
-        self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
 
     def _update_edge_features(self, node_features, edge_set):
         """Aggregrates node features, and applies edge function."""
@@ -51,7 +49,7 @@ class GraphNet(nn.Module):
         elif edge_set.name == "intra_cluster":
             return self.intra_cluster_model(features)
         else:
-            return self.world_edge_model(features)
+            raise IndexError('Edge type {} unknown.'.format(edge_set.name))
 
     # TODO refactor
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):

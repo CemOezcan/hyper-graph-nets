@@ -116,6 +116,7 @@ class FlagModel(nn.Module):
             receivers=receivers,
             senders=senders)
 
+        # TODO: Add world_edges here? (FlagDynamic instead of FlagSimple)
         # TODO: Change data structure
 
         num_nodes = node_type.shape[0]
