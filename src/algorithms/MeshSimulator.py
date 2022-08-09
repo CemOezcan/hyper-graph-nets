@@ -8,6 +8,8 @@ import threading as thread
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+import wandb
+
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
@@ -33,6 +35,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._learning_rate = self._network_config.get("learning_rate")
         self._scheduler_learning_rate = self._network_config.get(
             "scheduler_learning_rate")
+        wandb.init(project='rmp')
+        wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         self._network = FlagModel(self._network_config)
@@ -96,6 +100,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     self._optimizer.zero_grad()
                     loss.backward()
                     self._optimizer.step()
+                    wandb.log({'loss': loss})
+                    wandb.watch(self._network)
             except Empty:
                 break
             finally:

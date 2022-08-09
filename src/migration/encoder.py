@@ -16,7 +16,6 @@ class Encoder(nn.Module):
         self.hyper_node_model = self._make_mlp(latent_size)
 
         self.mesh_edge_model = self._make_mlp(latent_size)
-        self.world_edge_model = self._make_mlp(latent_size)
         self.inter_cluster_model = self._make_mlp(latent_size)
         self.intra_cluster_model = self._make_mlp(latent_size)
 
@@ -38,7 +37,8 @@ class Encoder(nn.Module):
             elif edge_set.name == "intra_cluster":
                 latent = self.intra_cluster_model(feature)
             else:
-                latent = self.world_edge_model(feature)
+                raise IndexError('Edge type {} unknown.'.format(edge_set.name))
+
             new_edges_sets.append(edge_set._replace(features=latent))
 
         return MultiGraph(node_latents, new_edges_sets)

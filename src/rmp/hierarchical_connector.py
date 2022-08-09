@@ -13,11 +13,8 @@ class HierarchicalConnector(AbstractConnector):
     """
     Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
     """
-    def __init__(self, intra, inter):
-        super().__init__(intra, inter)
-
-    def _initialize(self):
-        pass
+    def __init__(self):
+        super().__init__()
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
