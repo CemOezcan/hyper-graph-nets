@@ -46,6 +46,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._scheduler = torch.optim.lr_scheduler.ExponentialLR(
             self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
 
+    def set_network(self, network):
+        self._network = network
+
     def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:  # TODO check usability
         with torch.no_grad():
             inputs = torch.Tensor(inputs)

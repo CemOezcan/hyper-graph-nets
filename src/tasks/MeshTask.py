@@ -16,7 +16,7 @@ from util.Types import ConfigDict, ScalarDict
 
 class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
-    def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
+    def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict, initialize_algorithm=True):
         """
         Initializes all necessary data for a classification task.
 
@@ -34,7 +34,8 @@ class MeshTask(AbstractTask):
 
         self.mask = None
 
-        self._algorithm.initialize(task_information=config)
+        if initialize_algorithm:
+            self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
