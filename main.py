@@ -69,17 +69,15 @@ def main(train: bool, compute_rollout: bool):
 
     if train:
         algorithm = MeshSimulator(params)
-    else:
-        model_path = os.path.join(OUT_DIR, 'model.pkl')
-        with open(model_path, 'rb') as file:
-            algorithm = pickle.load(file)
-
-    task = MeshTask(algorithm, params, initialize_algorithm=train)
-
-    if train:
+        task = MeshTask(algorithm, params)
         task.run_iteration()
-    if compute_rollout:
+
+    model_path = os.path.join(OUT_DIR, 'model.pkl')
+    with open(model_path, 'rb') as file:
+        algorithm = pickle.load(file)
+        task = MeshTask(algorithm, params)
         task.get_scalars()
+
     task.plot()
 
 

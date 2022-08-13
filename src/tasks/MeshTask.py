@@ -16,7 +16,7 @@ from util.Types import ConfigDict, ScalarDict
 
 class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
-    def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict, initialize_algorithm=True):
+    def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
         """
         Initializes all necessary data for a classification task.
 
@@ -34,8 +34,7 @@ class MeshTask(AbstractTask):
 
         self.mask = None
 
-        if initialize_algorithm:
-            self._algorithm.initialize(task_information=config)
+        self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
@@ -48,7 +47,9 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
-        return self._algorithm.evaluator(self._test_loader, self._rollouts)
+        self._algorithm.evaluator(self._test_loader, self._rollouts)
+        self._algorithm.n_step_evaluator(self._test_loader, self._rollouts)
+        return None
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
