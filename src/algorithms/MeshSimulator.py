@@ -136,28 +136,34 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         trajectories = []
         mse_losses = []
         l1_losses = []
+        num_steps = 20
         wandb.init(project='rmp', id=self._id)
-        for _ in range(rollouts):
-            for trajectory in ds_loader:
-                self._network.reset_remote_graph()
-                _, prediction_trajectory = self.evaluate(trajectory)
-                mse_loss_fn = torch.nn.MSELoss()
-                l1_loss_fn = torch.nn.L1Loss()
+        for trajectory in ds_loader:
+            self._network.reset_remote_graph()
+            _, prediction_trajectory = self.evaluate(trajectory, num_steps=num_steps)
+            trajectories.append(prediction_trajectory)
+            mse_loss_fn = torch.nn.MSELoss(reduction='none')
+            l1_loss_fn = torch.nn.L1Loss(reduction='none')
 
-                mse_loss = mse_loss_fn(torch.squeeze(
-                    trajectory['world_pos'], dim=0), prediction_trajectory['pred_pos'])
-                l1_loss = l1_loss_fn(torch.squeeze(
-                    trajectory['world_pos'], dim=0), prediction_trajectory['pred_pos'])
+            mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], prediction_trajectory['pred_pos'])
+            l1_loss = l1_loss_fn(trajectory['world_pos'][:num_steps], prediction_trajectory['pred_pos'])
+            mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1)
+            l1_loss = torch.mean(torch.mean(l1_loss, dim=-1), dim=-1)
+            mse_losses.append(mse_loss.cpu())
+            l1_losses.append(l1_loss.cpu())
 
-                wandb.log({'mse': mse_loss})
-                wandb.log({'l1_loss': l1_loss})
-                mse_losses.append(mse_loss.cpu())
-                l1_losses.append(l1_loss.cpu())
-                trajectories.append(prediction_trajectory)
-        self.save_losses(wandb.run, mse_losses, l1_losses)
+        mse_losses = torch.mean(torch.stack(mse_losses), dim=0)
+        l1_losses = torch.mean(torch.stack(l1_losses), dim=0)
+
+        for i, (mse, l1) in enumerate(zip(mse_losses, l1_losses)):
+            wandb.log({'mse_loss': mse.item()})
+            wandb.log({'l1_loss': l1.item()})
+
+        # TODO: Save losses
+        # self.save_losses(wandb.run, mse_losses, l1_losses)
         self.save_rollouts(trajectories)
 
-    def evaluate(self, trajectory, num_steps=None):
+    def evaluate(self, trajectory, num_steps=20):
         """Performs model rollouts and create stats."""
         initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
         if num_steps is None:
