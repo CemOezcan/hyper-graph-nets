@@ -15,6 +15,7 @@ from torch_geometric.utils import (
     to_undirected,
 )
 
+
 class Ricci(AbstractGraphProcessor):
     def __init__(self):
         super().__init__()
@@ -24,16 +25,19 @@ class Ricci(AbstractGraphProcessor):
         pass
 
     def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool):
-        new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(graph), loops = 10, remove_edges = False, removal_bound = 0.5, tau = 1, is_undirected = True)
-        new_graph = self.transform_pyg_to_multigraph(added_edges, inputs, mesh_edge_normalizer, is_training)
+        new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
+            graph), loops=10, remove_edges=False, removal_bound=0.5, tau=1, is_undirected=True)
+        new_graph = self.transform_pyg_to_multigraph(
+            added_edges, inputs, mesh_edge_normalizer, is_training)
         return new_graph
-
 
     def transform_multigraph_to_pyg(self, graph: MultiGraphWithPos) -> Data:
         self.g = graph
-        edge_index = torch.stack((graph.edge_sets[0].senders, graph.edge_sets[0].receivers), dim=0)
+        edge_index = torch.stack(
+            (graph.edge_sets[0].senders, graph.edge_sets[0].receivers), dim=0)
         node_features = graph.node_features[0]
-        pyg = Data(x=node_features, edge_index=edge_index, edge_attr=graph.edge_sets[0].features)
+        pyg = Data(x=node_features, edge_index=edge_index,
+                   edge_attr=graph.edge_sets[0].features)
         return pyg
 
     def transform_pyg_to_multigraph(self, added_edges: Dict, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
@@ -48,17 +52,18 @@ class Ricci(AbstractGraphProcessor):
             torch.norm(relative_world_pos, dim=-1, keepdim=True),
             relative_mesh_pos,
             torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
-        self.g.edge_sets.append(EdgeSet(name='ricci',features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
+        self.g.edge_sets.append(EdgeSet(name='ricci', features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(
+            added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
         return self.g
 
     @staticmethod
     def sdrf(
-    data,
-    loops=10,
-    remove_edges=False,
-    removal_bound=0.5,
-    tau=1,
-    is_undirected=True,
+        data,
+        loops=10,
+        remove_edges=False,
+        removal_bound=0.5,
+        tau=1,
+        is_undirected=True,
     ):
         edge_index = data.edge_index
         if is_undirected:
@@ -77,7 +82,7 @@ class Ricci(AbstractGraphProcessor):
             ix_min = C.argmin().item()
             x = ix_min // N
             y = ix_min % N
-            
+
             if is_undirected:
                 x_neighbors = list(G.neighbors(x)) + [x]
                 y_neighbors = list(G.neighbors(y)) + [y]
@@ -91,11 +96,13 @@ class Ricci(AbstractGraphProcessor):
                         candidates.append((i, j))
 
             if len(candidates):
-                D = Ricci.balanced_forman_post_delta(A, x, y, x_neighbors, y_neighbors)
+                D = Ricci.balanced_forman_post_delta(
+                    A, x, y, x_neighbors, y_neighbors)
                 improvements = []
                 for (i, j) in candidates:
                     improvements.append(
-                        (D - C[x, y])[x_neighbors.index(i), y_neighbors.index(j)].item()
+                        (D - C[x, y])[x_neighbors.index(i),
+                                      y_neighbors.index(j)].item()
                     )
 
                 k, l = candidates[
@@ -130,7 +137,7 @@ class Ricci(AbstractGraphProcessor):
                         break
 
         return from_networkx(G), added_edges
-   
+
     @staticmethod
     def balanced_forman_curvature(A, C=None):
         N = A.shape[0]
@@ -145,12 +152,13 @@ class Ricci(AbstractGraphProcessor):
         blockspergrid_y = math.ceil(N / threadsperblock[1])
         blockspergrid = (blockspergrid_x, blockspergrid_y)
 
-        Ricci._balanced_forman_curvature[blockspergrid, threadsperblock](A, A2, d_in, d_out, N, C)
+        Ricci._balanced_forman_curvature[blockspergrid, threadsperblock](
+            A, A2, d_in, d_out, N, C)
         return C
 
     @staticmethod
     @cuda.jit(
-    "void(float32[:,:], float32[:,:], float32[:], float32[:], int32, float32[:,:])"
+        "void(float32[:,:], float32[:,:], float32[:], float32[:], int32, float32[:,:])"
     )
     def _balanced_forman_curvature(A, A2, d_in, d_out, N, C):
         i, j = cuda.grid(2)
@@ -187,14 +195,15 @@ class Ricci(AbstractGraphProcessor):
                         lambda_ij = TMP
 
             C[i, j] = (
-                (2 / d_max) + (2 / d_min) - 2 + (2 / d_max + 1 / d_min) * A2[i, j] * A[i, j]
+                (2 / d_max) + (2 / d_min) - 2 +
+                (2 / d_max + 1 / d_min) * A2[i, j] * A[i, j]
             )
             if lambda_ij > 0:
                 C[i, j] += sharp_ij / (d_max * lambda_ij)
 
     @staticmethod
     @cuda.jit(
-    "void(float32[:,:], float32[:,:], float32, float32, int32, float32[:,:], int32, int32, int32[:], int32[:], int32, int32)"
+        "void(float32[:,:], float32[:,:], float32, float32, int32, float32[:,:], int32, int32, int32[:], int32[:], int32, int32)"
     )
     def _balanced_forman_post_delta(
         A, A2, d_in_x, d_out_y, N, D, x, y, i_neighbors, j_neighbors, dim_i, dim_j
@@ -268,7 +277,8 @@ class Ricci(AbstractGraphProcessor):
                         lambda_ij = TMP
 
             D[I, J] = (
-                (2 / d_max) + (2 / d_min) - 2 + (2 / d_max + 1 / d_min) * A2_x_y * A[x, y]
+                (2 / d_max) + (2 / d_min) - 2 +
+                (2 / d_max + 1 / d_min) * A2_x_y * A[x, y]
             )
             if lambda_ij > 0:
                 D[I, J] += sharp_ij / (d_max * lambda_ij)
