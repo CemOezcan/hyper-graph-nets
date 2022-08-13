@@ -1,6 +1,6 @@
 from typing import Dict
 from src.rmp.abstract_graph_processing import AbstractGraphProcessor
-from src.util import EdgeSet, MultiGraphWithPos
+from src.util import EdgeSet, MultiGraphWithPos, device
 from torch_geometric.data import Data
 import torch
 import math
@@ -23,21 +23,32 @@ class Ricci(AbstractGraphProcessor):
     def _initialize(self):
         pass
 
-    def run(self, graph):
+    def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool):
         new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(graph), loops = 10, remove_edges = False, removal_bound = 0.5, tau = 1, is_undirected = True)
-        new_graph = self.transform_pyg_to_multigraph(added_edges)
+        new_graph = self.transform_pyg_to_multigraph(added_edges, inputs, mesh_edge_normalizer, is_training)
         return new_graph
 
 
     def transform_multigraph_to_pyg(self, graph: MultiGraphWithPos) -> Data:
         self.g = graph
-        edge_index = (torch.cat((graph.edge_sets[0].senders, graph.edge_sets[0].receivers), dim=0), torch.cat((graph.edge_sets[0].receivers, graph.edge_sets[0].senders), dim=0))
+        edge_index = torch.stack((graph.edge_sets[0].senders, graph.edge_sets[0].receivers), dim=0)
         node_features = graph.node_features[0]
         pyg = Data(x=node_features, edge_index=edge_index, edge_attr=graph.edge_sets[0].features)
         return pyg
 
-    def transform_pyg_to_multigraph(self, added_edges: Dict) -> MultiGraphWithPos:
-        self.g.edge_sets.append(EdgeSet(name='ricci',feautures=None, senders=torch.tensor(added_edges['senders'], dtype=torch.long), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long)))
+    def transform_pyg_to_multigraph(self, added_edges: Dict, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+        mesh_pos = inputs['mesh_pos']
+        world_pos = inputs['world_pos']
+        relative_world_pos = (torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
+                              torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
+        relative_mesh_pos = (torch.index_select(mesh_pos, 0, torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
+                             torch.index_select(mesh_pos, 0, torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
+        edge_features = torch.cat((
+            relative_world_pos,
+            torch.norm(relative_world_pos, dim=-1, keepdim=True),
+            relative_mesh_pos,
+            torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
+        self.g.edge_sets.append(EdgeSet(name='ricci',features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
         return self.g
 
     @staticmethod
@@ -59,7 +70,7 @@ class Ricci(AbstractGraphProcessor):
             G = G.to_undirected()
         A = A.cuda()
         C = torch.zeros(N, N).cuda()
-        added_edges = {}
+        added_edges = {'senders': [], 'receivers': []}
         for x in range(loops):
             can_add = True
             Ricci.balanced_forman_curvature(A, C=C)
@@ -119,8 +130,9 @@ class Ricci(AbstractGraphProcessor):
                         break
 
         return from_networkx(G), added_edges
-
-    def balanced_forman_curvature(self, A, C=None):
+   
+    @staticmethod
+    def balanced_forman_curvature(A, C=None):
         N = A.shape[0]
         A2 = torch.matmul(A, A)
         d_in = A.sum(axis=0)
@@ -133,7 +145,7 @@ class Ricci(AbstractGraphProcessor):
         blockspergrid_y = math.ceil(N / threadsperblock[1])
         blockspergrid = (blockspergrid_x, blockspergrid_y)
 
-        self._balanced_forman_curvature[blockspergrid, threadsperblock](A, A2, d_in, d_out, N, C)
+        Ricci._balanced_forman_curvature[blockspergrid, threadsperblock](A, A2, d_in, d_out, N, C)
         return C
 
     @staticmethod
@@ -260,6 +272,36 @@ class Ricci(AbstractGraphProcessor):
             )
             if lambda_ij > 0:
                 D[I, J] += sharp_ij / (d_max * lambda_ij)
+
+    @staticmethod
+    def balanced_forman_post_delta(A, x, y, i_neighbors, j_neighbors, D=None):
+        N = A.shape[0]
+        A2 = torch.matmul(A, A)
+        d_in = A[:, x].sum()
+        d_out = A[y].sum()
+        if D is None:
+            D = torch.zeros(len(i_neighbors), len(j_neighbors)).cuda()
+
+        threadsperblock = (16, 16)
+        blockspergrid_x = math.ceil(D.shape[0] / threadsperblock[0])
+        blockspergrid_y = math.ceil(D.shape[1] / threadsperblock[1])
+        blockspergrid = (blockspergrid_x, blockspergrid_y)
+
+        Ricci._balanced_forman_post_delta[blockspergrid, threadsperblock](
+            A,
+            A2,
+            d_in,
+            d_out,
+            N,
+            D,
+            x,
+            y,
+            np.array(i_neighbors),
+            np.array(j_neighbors),
+            D.shape[0],
+            D.shape[1],
+        )
+        return D
 
     @staticmethod
     def softmax(a, tau=1):

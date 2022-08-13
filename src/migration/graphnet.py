@@ -21,6 +21,7 @@ class GraphNet(nn.Module):
         self.mesh_edge_model = model_fn(output_size)
         self.intra_cluster_model = model_fn(output_size)
         self.inter_cluster_model = model_fn(output_size)
+        self.ricci_model = model_fn(output_size)
 
         self.attention = attention
         if attention:
@@ -48,6 +49,8 @@ class GraphNet(nn.Module):
             return self.inter_cluster_model(features)
         elif edge_set.name == "intra_cluster":
             return self.intra_cluster_model(features)
+        elif edge_set.name == "ricci":
+            return self.ricci_model(features)
         else:
             raise IndexError('Edge type {} unknown.'.format(edge_set.name))
 

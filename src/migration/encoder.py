@@ -18,6 +18,7 @@ class Encoder(nn.Module):
         self.mesh_edge_model = self._make_mlp(latent_size)
         self.inter_cluster_model = self._make_mlp(latent_size)
         self.intra_cluster_model = self._make_mlp(latent_size)
+        self.ricci_model = self._make_mlp(latent_size)
 
     def forward(self, graph):
         node_latents = [self.node_model(graph.node_features[0])]
@@ -36,6 +37,8 @@ class Encoder(nn.Module):
                 latent = self.inter_cluster_model(feature)
             elif edge_set.name == "intra_cluster":
                 latent = self.intra_cluster_model(feature)
+            elif edge_set.name == "ricci":
+                latent = self.ricci_model(feature)
             else:
                 raise IndexError('Edge type {} unknown.'.format(edge_set.name))
 

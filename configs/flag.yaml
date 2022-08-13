@@ -47,6 +47,7 @@ params:
     load: None
     stochastic_message_passing_used: False
     rmp:
+      ricci: True
       clustering: hdbscan
       connector: hierarchical
 
