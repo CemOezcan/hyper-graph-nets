@@ -1,6 +1,7 @@
 import json
 import os
 import pickle
+import time
 from queue import Queue, Empty
 
 import numpy as np
@@ -81,7 +82,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 thread_1.start()
             try:
                 graphs, trajectory = queue.get()
+                start_trajectory = time.time()
                 for graph, data_frame in zip(graphs, trajectory):
+                    start_instance = time.time()
                     network_output = self._network(graph)
 
                     cur_position = data_frame['world_pos']
@@ -103,8 +106,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     self._optimizer.zero_grad()
                     loss.backward()
                     self._optimizer.step()
+                    end_instance = time.time()
                     wandb.log({'loss': loss})
+                    wandb.log({'training time per instance': end_instance - start_instance})
                     wandb.watch(self._network)
+                end_trajectory = time.time()
+                wandb.log({'training time per trajectory': end_trajectory - start_trajectory})
             except Empty:
                 break
             finally:
