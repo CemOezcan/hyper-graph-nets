@@ -138,6 +138,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         l1_losses = []
         num_steps = 20
         wandb.init(project='rmp', id=self._id)
+        # TODO: Compute one step loss
         for trajectory in ds_loader:
             self._network.reset_remote_graph()
             _, prediction_trajectory = self.evaluate(trajectory, num_steps=num_steps)
