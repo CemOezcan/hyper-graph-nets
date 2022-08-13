@@ -10,6 +10,7 @@ from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
+from src.rmp.ricci import Ricci
 from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
@@ -134,6 +135,8 @@ class FlagModel(nn.Module):
 
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
         # TODO: Normalize hyper nodes
+        ricci = Ricci()
+        graph = ricci.run(graph)
         graph = self._remote_graph.create_graph(graph, is_training)
         return graph
 
