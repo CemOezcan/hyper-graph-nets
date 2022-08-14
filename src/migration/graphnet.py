@@ -12,16 +12,27 @@ from src.util import device, MultiGraph
 class GraphNet(nn.Module):
     """Multi-Edge Interaction Network with residual connections."""
 
-    def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False):
+    def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False,
+                 hierarchical=True, multi=False, ricci=True):
         super().__init__()
-        # TODO: Additional hypernode model
-        self.node_model = model_fn(output_size)
-        self.hyper_node_model = model_fn(output_size)
+        self.hierarchical = hierarchical
 
+        self.node_model_cross = model_fn(output_size)
         self.mesh_edge_model = model_fn(output_size)
-        self.intra_cluster_model = model_fn(output_size)
-        self.inter_cluster_model = model_fn(output_size)
-        self.ricci_model = model_fn(output_size)
+
+        if ricci:
+            self.ricci_model = model_fn(output_size)
+
+        if hierarchical:
+            self.hyper_node_model_up = model_fn(output_size)
+            self.hyper_node_model_cross = model_fn(output_size)
+            self.node_model_down = model_fn(output_size)
+            self.intra_cluster_to_mesh_model = model_fn(output_size)
+            self.intra_cluster_to_cluster_model = model_fn(output_size)
+            self.inter_cluster_model = model_fn(output_size)
+        elif multi:
+            self.intra_cluster_multi_model = model_fn(output_size)
+            self.inter_cluster_multi_model = model_fn(output_size)
 
         self.attention = attention
         if attention:
@@ -44,11 +55,18 @@ class GraphNet(nn.Module):
         features = torch.cat(features, dim=-1)
 
         if edge_set.name == "mesh_edges":
+            print()
             return self.mesh_edge_model(features)
         elif edge_set.name == "inter_cluster":
             return self.inter_cluster_model(features)
-        elif edge_set.name == "intra_cluster":
-            return self.intra_cluster_model(features)
+        elif edge_set.name == "intra_cluster_to_mesh":
+            return self.intra_cluster_to_mesh_model(features)
+        elif edge_set.name == "intra_cluster_to_cluster":
+            return self.intra_cluster_to_cluster_model(features)
+        elif edge_set.name == "intra_cluster_multi":
+            return self.intra_cluster_multi_model(features)
+        elif edge_set.name == "inter_cluster_multi":
+            return self.inter_cluster_multi_model(features)
         elif edge_set.name == "ricci":
             return self.ricci_model(features)
         else:
@@ -105,6 +123,44 @@ class GraphNet(nn.Module):
         node_features = torch.cat(tuple(node_features), dim=0)
         num_nodes = node_features.shape[0]
         features = [node_features]
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'mesh_edges' or x.name == 'ricci_edges' or 'multi' in x.name, edge_sets)),
+            features,
+            num_nodes
+        )
+        updated_nodes_cross = self.node_model_cross(features[:hyper_node_offset])
+        node_features_2 = torch.cat((updated_nodes_cross, node_features[hyper_node_offset:]), dim=0)
+
+        if not self.hierarchical:
+            return [updated_nodes_cross, node_features[hyper_node_offset:]]
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'intra_cluster_to_cluster', edge_sets)),
+            [node_features_2],
+            num_nodes
+        )
+        updated_hyper_nodes_up = self.hyper_node_model_up(features[hyper_node_offset:])
+        node_features_3 = torch.cat((node_features_2[:hyper_node_offset], updated_hyper_nodes_up), dim=0)
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'inter_cluster', edge_sets)),
+            [node_features_3],
+            num_nodes
+        )
+        updated_hyper_nodes_cross = self.hyper_node_model_cross(features[hyper_node_offset:])
+        node_features_4 = torch.cat((node_features_3[:hyper_node_offset], updated_hyper_nodes_cross), dim=0)
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'intra_cluster_to_mesh', edge_sets)),
+            [node_features_4],
+            num_nodes
+        )
+        updated_nodes_down = self.node_model_down(features[:hyper_node_offset])
+
+        return [updated_nodes_down, node_features_4[hyper_node_offset:]]
+
+    def aggregation(self, edge_sets, features, num_nodes):
         for edge_set in edge_sets:
             if self.attention and self.message_passing_aggregator == 'pna':
                 attention_input = self.linear_layer(edge_set.features)
@@ -146,19 +202,15 @@ class GraphNet(nn.Module):
                 features.append(
                     self.unsorted_segment_operation(edge_set.features, edge_set.receivers, num_nodes,
                                                     operation=self.message_passing_aggregator))
-        features = torch.cat(features, dim=-1)
 
-        updated_nodes = self.node_model(features[:hyper_node_offset])
-        updated_hyper_nodes = self.hyper_node_model(features[hyper_node_offset:])
-        return [updated_nodes, updated_hyper_nodes]
+        return torch.cat(features, dim=-1)
 
     def forward(self, graph, mask=None):
         """Applies GraphNetBlock and returns updated MultiGraph."""
         # apply edge functions
         new_edge_sets = []
         for edge_set in graph.edge_sets:
-            updated_features = self._update_edge_features(
-                graph.node_features, edge_set)
+            updated_features = self._update_edge_features(graph.node_features, edge_set)
             new_edge_sets.append(edge_set._replace(features=updated_features))
 
         # apply node function

@@ -14,14 +14,15 @@ class Processor(nn.Module):
     """
 
     def __init__(self, make_mlp, output_size, message_passing_steps, message_passing_aggregator, attention=False,
-                 stochastic_message_passing_used=False):
+                 stochastic_message_passing_used=False, hierarchical=True, multi=False, ricci=True):
         super().__init__()
         self.stochastic_message_passing_used = stochastic_message_passing_used
         self.graphnet_blocks = nn.ModuleList()
         for index in range(message_passing_steps):
             self.graphnet_blocks.append(GraphNet(model_fn=make_mlp, output_size=output_size,
                                                  message_passing_aggregator=message_passing_aggregator,
-                                                 attention=attention))
+                                                 attention=attention, hierarchical=hierarchical, multi=multi,
+                                                 ricci=ricci))
 
     def forward(self, latent_graph, normalized_adj_mat=None, mask=None):
         for graphnet_block in self.graphnet_blocks:

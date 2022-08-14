@@ -41,7 +41,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             "scheduler_learning_rate")
         wandb.init(project='rmp')
         wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
-        self._id = wandb.run.id
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:

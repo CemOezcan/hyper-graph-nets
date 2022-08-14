@@ -17,7 +17,7 @@ class MeshGraphNet(nn.Module):
                  output_size,
                  latent_size,
                  num_layers,
-                 message_passing_aggregator, message_passing_steps, attention):
+                 message_passing_aggregator, message_passing_steps, attention, hierarchical, ricci, multi):
         super().__init__()
         self._latent_size = latent_size
         self._output_size = output_size
@@ -27,12 +27,18 @@ class MeshGraphNet(nn.Module):
         self._attention = attention
 
         self.encoder = Encoder(make_mlp=self._make_mlp,
-                               latent_size=self._latent_size)
+                               latent_size=self._latent_size,
+                               hierarchical=hierarchical,
+                               multi=multi,
+                               ricci=ricci)
         self.processor = Processor(make_mlp=self._make_mlp, output_size=self._latent_size,
                                    message_passing_steps=self._message_passing_steps,
                                    message_passing_aggregator=self._message_passing_aggregator,
                                    attention=self._attention,
-                                   stochastic_message_passing_used=False)
+                                   stochastic_message_passing_used=False,
+                                   hierarchical=hierarchical,
+                                   multi=multi,
+                                   ricci=ricci)
         self.decoder = Decoder(make_mlp=functools.partial(self._make_mlp, layer_norm=False),
                                output_size=self._output_size)
 
