@@ -12,7 +12,8 @@ from src.util import device, MultiGraph
 class GraphNet(nn.Module):
     """Multi-Edge Interaction Network with residual connections."""
 
-    def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False, hierarchical=True, ricci=True):
+    def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False,
+                 hierarchical=True, multi=False, ricci=True):
         super().__init__()
         self.hierarchical = hierarchical
 
@@ -29,7 +30,7 @@ class GraphNet(nn.Module):
             self.intra_cluster_to_mesh_model = model_fn(output_size)
             self.intra_cluster_to_cluster_model = model_fn(output_size)
             self.inter_cluster_model = model_fn(output_size)
-        else:
+        elif multi:
             self.intra_cluster_multi_model = model_fn(output_size)
             self.inter_cluster_multi_model = model_fn(output_size)
 
@@ -54,6 +55,7 @@ class GraphNet(nn.Module):
         features = torch.cat(features, dim=-1)
 
         if edge_set.name == "mesh_edges":
+            print()
             return self.mesh_edge_model(features)
         elif edge_set.name == "inter_cluster":
             return self.inter_cluster_model(features)

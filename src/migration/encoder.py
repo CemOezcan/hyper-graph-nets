@@ -7,7 +7,7 @@ from src.util import MultiGraph
 class Encoder(nn.Module):
     """Encodes node and edge features into latent features."""
 
-    def __init__(self, make_mlp, latent_size, hierarchical=True, ricci=True):
+    def __init__(self, make_mlp, latent_size, hierarchical=True, multi=False, ricci=True):
         super().__init__()
         self._make_mlp = make_mlp
         self._latent_size = latent_size
@@ -23,7 +23,7 @@ class Encoder(nn.Module):
             self.intra_cluster_to_mesh_model = self._make_mlp(latent_size)
             self.intra_cluster_to_cluster_model = self._make_mlp(latent_size)
             self.inter_cluster_model = self._make_mlp(latent_size)
-        else:
+        elif multi:
             self.intra_cluster_multi_model = self._make_mlp(latent_size)
             self.inter_cluster_multi_model = self._make_mlp(latent_size)
 
