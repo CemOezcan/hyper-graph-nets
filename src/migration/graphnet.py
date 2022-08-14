@@ -104,10 +104,46 @@ class GraphNet(nn.Module):
 
     def _update_node_features(self, node_features, edge_sets):
         """Aggregrates edge features, and applies node function."""
+        # TODO: different node models !!!
         hyper_node_offset = len(node_features[0])
         node_features = torch.cat(tuple(node_features), dim=0)
         num_nodes = node_features.shape[0]
         features = [node_features]
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'mesh_edges' or x.name == 'ricci_edges', edge_sets)),
+            features,
+            num_nodes
+        )
+        updated_nodes_cross = self.node_model(features[:hyper_node_offset])
+        node_features_2 = torch.cat((updated_nodes_cross, node_features[hyper_node_offset:]), dim=0)
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'intra_cluster_to_cluster', edge_sets)),
+            [node_features_2],
+            num_nodes
+        )
+        updated_hyper_nodes_up = self.hyper_node_model(features[hyper_node_offset:])
+        node_features_3 = torch.cat((node_features_2[:hyper_node_offset], updated_hyper_nodes_up), dim=0)
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'inter_cluster', edge_sets)),
+            [node_features_3],
+            num_nodes
+        )
+        updated_hyper_nodes_cross = self.hyper_node_model(features[hyper_node_offset:])
+        node_features_4 = torch.cat((node_features_3[:hyper_node_offset], updated_hyper_nodes_cross), dim=0)
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name == 'intra_cluster_to_mesh', edge_sets)),
+            [node_features_4],
+            num_nodes
+        )
+        updated_nodes_down = self.node_model(features[:hyper_node_offset])
+
+        return [updated_nodes_down, node_features_4[hyper_node_offset:]]
+
+    def aggregation(self, edge_sets, features, num_nodes):
         for edge_set in edge_sets:
             if self.attention and self.message_passing_aggregator == 'pna':
                 attention_input = self.linear_layer(edge_set.features)
@@ -149,16 +185,14 @@ class GraphNet(nn.Module):
                 features.append(
                     self.unsorted_segment_operation(edge_set.features, edge_set.receivers, num_nodes,
                                                     operation=self.message_passing_aggregator))
-        features = torch.cat(features, dim=-1)
 
-        updated_nodes = self.node_model(features[:hyper_node_offset])
-        updated_hyper_nodes = self.hyper_node_model(features[hyper_node_offset:])
-        return [updated_nodes, updated_hyper_nodes]
+        return torch.cat(features, dim=-1)
 
     def forward(self, graph, mask=None):
         """Applies GraphNetBlock and returns updated MultiGraph."""
         # apply edge functions
         new_edge_sets = []
+        # TODO: Ordered updates !!!
         for edge_set in graph.edge_sets:
             updated_features = self._update_edge_features(
                 graph.node_features, edge_set)
