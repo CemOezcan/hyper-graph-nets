@@ -60,23 +60,21 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
 """
 
 
-def main(load_model: bool, compute_rollout: bool):
+def main(train: bool, compute_rollout: bool):
     params = read_yaml(CONFIG_NAME)['params']
     print(device)
 
-    if load_model:
-        model_path = os.path.join(OUT_DIR, 'model.pkl')
-        with open(model_path, 'rb') as file:
-            algorithm = pickle.load(file)
-    else:
+    if train:
         algorithm = MeshSimulator(params)
-
-    task = MeshTask(algorithm, params)
-
-    if not load_model:
+        task = MeshTask(algorithm, params)
         task.run_iteration()
-    if compute_rollout:
+
+    model_path = os.path.join(OUT_DIR, 'model.pkl')
+    with open(model_path, 'rb') as file:
+        algorithm = pickle.load(file)
+        task = MeshTask(algorithm, params)
         task.get_scalars()
+
     task.plot()
 
 

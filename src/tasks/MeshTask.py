@@ -29,8 +29,8 @@ class MeshTask(AbstractTask):
         self._rollouts = config.get('task').get('rollouts')
         self.train_loader = get_data(config=config)
 
-        self._test_loader = get_data(
-            config=config, split='test', split_and_preprocess=False)
+        self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
+        self._valid_loader = get_data(config=config, split='valid')
 
         self.mask = None
 
@@ -47,7 +47,8 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
-        return self._algorithm.evaluator(self._test_loader, self._rollouts)
+        loss = self._algorithm.one_step_evaluator(self._valid_loader, self._rollouts)
+        rollouts = self._algorithm.evaluator(self._test_loader, self._rollouts)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
@@ -58,7 +59,7 @@ class MeshTask(AbstractTask):
         fig = plt.figure(figsize=(19.2, 10.8))
         ax = fig.add_subplot(111, projection='3d')
         skip = 10
-        num_steps = rollout_data[0]['gt_pos'].shape[0]
+        num_steps = rollout_data[0]['pred_pos'].shape[0]
         num_frames = num_steps
 
         # compute bounds

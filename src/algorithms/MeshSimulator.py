@@ -1,10 +1,13 @@
 import json
 import os
 import pickle
+import time
 from queue import Queue, Empty
 
 import numpy as np
 import threading as thread
+
+import pandas as pd
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -30,6 +33,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network = None
         self._optimizer = None
         self._scheduler = None
+        self._initialized = False
 
         self.loss_function = F.mse_loss
         self._learning_rate = self._network_config.get("learning_rate")
@@ -37,14 +41,17 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             "scheduler_learning_rate")
         wandb.init(project='rmp')
         wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
+        self._id = wandb.run.id
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
-        self._network = FlagModel(self._network_config)
+        if not self._initialized:
+            self._network = FlagModel(self._network_config)
+            self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
+            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
+            self._initialized = True
 
-        self._optimizer = optim.Adam(
-            self._network.parameters(), lr=self._learning_rate)
-        self._scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
+    def set_network(self, network):
+        self._network = network
 
     def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:  # TODO check usability
         with torch.no_grad():
@@ -78,7 +85,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 thread_1.start()
             try:
                 graphs, trajectory = queue.get()
+                start_trajectory = time.time()
                 for graph, data_frame in zip(graphs, trajectory):
+                    start_instance = time.time()
                     network_output = self._network(graph)
 
                     cur_position = data_frame['world_pos']
@@ -100,8 +109,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     self._optimizer.zero_grad()
                     loss.backward()
                     self._optimizer.step()
+                    end_instance = time.time()
                     wandb.log({'loss': loss})
-                    wandb.watch(self._network)
+                    wandb.log({'training time per instance': end_instance - start_instance})
+                    # self._run.watch(self._network)
+                end_trajectory = time.time()
+                wandb.log({'training time per trajectory': end_trajectory - start_trajectory})
             except Empty:
                 break
             finally:
@@ -120,31 +133,75 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         except StopIteration:
             return
 
+    def one_step_evaluator(self, ds_loader, instances):
+        with torch.no_grad():
+            trajectory_loss = list()
+            for i, trajectory in enumerate(ds_loader):
+                if i >= instances:
+                    break
+                self._network.reset_remote_graph()
+                instance_loss = list()
+                for data_frame in trajectory:
+                    graph = self._network.build_graph(data_frame, False)
+                    prediction = self._network(graph)
+                    cur_position = data_frame['world_pos']
+                    prev_position = data_frame['prev|world_pos']
+                    target_position = data_frame['target|world_pos']
+                    target_acceleration = target_position - 2 * cur_position + prev_position
+                    target_normalized = self._network.get_output_normalizer()(target_acceleration, False).to(device)
+
+                    node_type = data_frame['node_type']
+                    loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+                    error = torch.sum((target_normalized - prediction) ** 2, dim=1)
+                    loss = torch.mean(error[loss_mask])
+                    instance_loss.append(loss)
+                trajectory_loss.append(instance_loss)
+
+        mean = np.mean(trajectory_loss, axis=0)
+        std = np.std(trajectory_loss, axis=0)
+        data_frame = pd.DataFrame.from_dict({'mean': mean, 'std': std})
+        data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
+
+        return mean, std
+
     def evaluator(self, ds_loader, rollouts):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
         l1_losses = []
-        for _ in range(rollouts):
-            for trajectory in ds_loader:
-                self._network.reset_remote_graph()
-                _, prediction_trajectory = self.evaluate(trajectory)
-                mse_loss_fn = torch.nn.MSELoss()
-                l1_loss_fn = torch.nn.L1Loss()
+        num_steps = 100
+        # TODO: Compute one step loss
+        for trajectory in ds_loader:
+            self._network.reset_remote_graph()
+            _, prediction_trajectory = self.evaluate(trajectory, num_steps=num_steps)
+            trajectories.append(prediction_trajectory)
+            mse_loss_fn = torch.nn.MSELoss(reduction='none')
+            l1_loss_fn = torch.nn.L1Loss(reduction='none')
 
-                mse_loss = mse_loss_fn(torch.squeeze(
-                    trajectory['world_pos'], dim=0), prediction_trajectory['pred_pos'])
-                l1_loss = l1_loss_fn(torch.squeeze(
-                    trajectory['world_pos'], dim=0), prediction_trajectory['pred_pos'])
+            mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], prediction_trajectory['pred_pos'])
+            l1_loss = l1_loss_fn(trajectory['world_pos'][:num_steps], prediction_trajectory['pred_pos'])
+            mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1)
+            l1_loss = torch.mean(torch.mean(l1_loss, dim=-1), dim=-1)
+            mse_losses.append(mse_loss.cpu())
+            l1_losses.append(l1_loss.cpu())
 
-                mse_losses.append(mse_loss.cpu())
-                l1_losses.append(l1_loss.cpu())
-                trajectories.append(prediction_trajectory)
-        loss_record = self.save_losses(mse_losses, l1_losses)
+        mse_means = torch.mean(torch.stack(mse_losses), dim=0)
+        mse_stds = torch.std(torch.stack(mse_losses), dim=0)
+        l1_means = torch.mean(torch.stack(l1_losses), dim=0)
+        l1_stds = torch.std(torch.stack(l1_losses), dim=0)
+
+        rollout_losses = {'mse_loss': [mse.item() for mse in mse_means],
+                          'mse_std': [mse.item() for mse in mse_stds],
+                          'l1_loss': [l1.item() for l1 in l1_means],
+                          'l1_std': [l1.item() for l1 in l1_stds]}
+        data_frame = pd.DataFrame.from_dict(rollout_losses)
+        # TODO: Save losses
+        # self.save_losses(wandb.run, mse_losses, l1_losses)
+        data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
         self.save_rollouts(trajectories)
-        return loss_record
+        return rollout_losses
 
-    def evaluate(self, trajectory, num_steps=None):
+    def evaluate(self, trajectory, num_steps=20):
         """Performs model rollouts and create stats."""
         initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
         if num_steps is None:
@@ -249,27 +306,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             pickle.dump(rollouts, file)
 
     @staticmethod
-    def save_losses(mse_losses, l1_losses):
-        loss_record = {}
-        loss_record['eval_total_mse_loss'] = torch.sum(
-            torch.stack(mse_losses)).item()
-        loss_record['eval_total_l1_loss'] = torch.sum(
-            torch.stack(l1_losses)).item()
-        loss_record['eval_mean_mse_loss'] = torch.mean(
-            torch.stack(mse_losses)).item()
-        loss_record['eval_max_mse_loss'] = torch.max(
-            torch.stack(mse_losses)).item()
-        loss_record['eval_min_mse_loss'] = torch.min(
-            torch.stack(mse_losses)).item()
-        loss_record['eval_mean_l1_loss'] = torch.mean(
-            torch.stack(l1_losses)).item()
-        loss_record['eval_max_l1_loss'] = torch.max(
-            torch.stack(l1_losses)).item()
-        loss_record['eval_min_l1_loss'] = torch.min(
-            torch.stack(l1_losses)).item()
-        loss_record['eval_mse_losses'] = mse_losses
-        loss_record['eval_l1_losses'] = l1_losses
-        return loss_record
+    def save_losses(run, mse_losses, l1_losses):
+        run.summary['mean_1_step_mse_loss'] = torch.mean(torch.stack(mse_losses)).item()
+        run.summary['mean_1_step_l1_loss'] = torch.mean(torch.stack(l1_losses)).item()
+        run.summary['max_1_step_mse_loss'] = torch.max(torch.stack(mse_losses)).item()
+        run.summary['max_1_step_l1_loss'] = torch.max(torch.stack(l1_losses)).item()
+        run.summary['min_1_step_mse_loss'] = torch.min(torch.stack(mse_losses)).item()
+        run.summary['min_1_step_l1_loss'] = torch.min(torch.stack(l1_losses)).item()
+        run.summary.update()
 
     @staticmethod
     def _squeeze_data_frame(data_frame):
