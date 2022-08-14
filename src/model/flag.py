@@ -33,13 +33,18 @@ class FlagModel(nn.Module):
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
         self._attention = params.get('attention') == 'True'
+        self._hierarchical = params.get('rmp').get('connector') == 'hierarchical'
+        self._ricci = params.get('rmp').get('ricci') == 'True'
 
         self.learned_model = MeshGraphNet(
             output_size=params.get('size'),
             latent_size=128,
             num_layers=2,
             message_passing_steps=self.message_passing_steps,
-            message_passing_aggregator=self.message_passing_aggregator, attention=self._attention).to(device)
+            message_passing_aggregator=self.message_passing_aggregator,
+            attention=self._attention,
+            hierarchical=self._hierarchical,
+            ricci=self._ricci).to(device)
 
         # TODO: Parameterize clustering algorithm and node connector
         self._remote_graph = rmp.get_rmp(params)
