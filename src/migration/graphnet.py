@@ -19,7 +19,8 @@ class GraphNet(nn.Module):
         self.hyper_node_model = model_fn(output_size)
 
         self.mesh_edge_model = model_fn(output_size)
-        self.intra_cluster_model = model_fn(output_size)
+        self.intra_cluster_to_mesh_model = model_fn(output_size)
+        self.intra_cluster_to_cluster_model = model_fn(output_size)
         self.inter_cluster_model = model_fn(output_size)
         self.ricci_model = model_fn(output_size)
 
@@ -47,8 +48,10 @@ class GraphNet(nn.Module):
             return self.mesh_edge_model(features)
         elif edge_set.name == "inter_cluster":
             return self.inter_cluster_model(features)
-        elif edge_set.name == "intra_cluster":
-            return self.intra_cluster_model(features)
+        elif edge_set.name == "intra_cluster_to_mesh":
+            return self.intra_cluster_to_mesh_model(features)
+        elif edge_set.name == "intra_cluster_to_cluster":
+            return self.intra_cluster_to_cluster_model(features)
         elif edge_set.name == "ricci":
             return self.ricci_model(features)
         else:

@@ -17,7 +17,8 @@ class Encoder(nn.Module):
 
         self.mesh_edge_model = self._make_mlp(latent_size)
         self.inter_cluster_model = self._make_mlp(latent_size)
-        self.intra_cluster_model = self._make_mlp(latent_size)
+        self.intra_cluster_to_mesh_model = self._make_mlp(latent_size)
+        self.intra_cluster_to_cluster_model = self._make_mlp(latent_size)
         self.ricci_model = self._make_mlp(latent_size)
 
     def forward(self, graph):
@@ -35,8 +36,10 @@ class Encoder(nn.Module):
                 latent = self.mesh_edge_model(feature)
             elif edge_set.name == "inter_cluster":
                 latent = self.inter_cluster_model(feature)
-            elif edge_set.name == "intra_cluster":
-                latent = self.intra_cluster_model(feature)
+            elif edge_set.name == "intra_cluster_to_mesh":
+                latent = self.intra_cluster_to_mesh_model(feature)
+            elif edge_set.name == "intra_cluster_to_cluster":
+                latent = self.intra_cluster_to_cluster_model(feature)
             elif edge_set.name == "ricci":
                 latent = self.ricci_model(feature)
             else:

@@ -44,24 +44,50 @@ class HierarchicalConnector(AbstractConnector):
 
         target_feature = graph.target_feature
 
-        snd = list()
-        rcv = list()
-        edges = list()
+        snd_to_cluster = list()
+        snd_to_mesh = list()
+        rcv_to_cluster = list()
+        rcv_to_mesh = list()
+        edges_to_cluster = list()
+        edges_to_mesh = list()
         for hyper_node, cluster in zip(hyper_nodes, clusters):
             hyper_node = torch.tensor([hyper_node] * len(cluster)).to(device_0)
             senders, receivers, edge_features = self._get_subgraph(model_type, target_feature, hyper_node, cluster)
-            snd.append(senders)
-            rcv.append(receivers)
-            edges.append(edge_features)
 
-        # TODO: Why is normalization applied twice?
-        world_edges = EdgeSet(
-            name='intra_cluster',
-            features=self._intra_normalizer(torch.cat(edges, dim=0).to(device), is_training),
-            senders=torch.cat(snd, dim=0),
-            receivers=torch.cat(rcv, dim=0))
+            senders_to_mesh, senders_to_cluster = torch.split(senders, int(len(senders) / 2))
+            receivers_to_mesh, receivers_to_cluster = torch.split(receivers, int(len(receivers) / 2))
+            e_m, e_c = torch.split(edge_features, int(len(edge_features) / 2))
 
-        hyper_edges.append(world_edges)
+            snd_to_mesh.append(senders_to_mesh)
+            snd_to_cluster.append(senders_to_cluster)
+            rcv_to_mesh.append(receivers_to_mesh)
+            rcv_to_cluster.append(receivers_to_cluster)
+            edges_to_cluster.append(e_c)
+            edges_to_mesh.append(e_m)
+
+        snd_to_cluster = torch.cat(snd_to_cluster, dim=0)
+        rcv_to_cluster = torch.cat(rcv_to_cluster, dim=0)
+        edges_to_cluster = self._intra_normalizer(torch.cat(edges_to_cluster, dim=0).to(device), is_training)
+
+        world_edges_to_cluster = EdgeSet(
+            name='intra_cluster_to_cluster',
+            features=edges_to_cluster,
+            senders=snd_to_cluster,
+            receivers=rcv_to_cluster)
+
+        hyper_edges.append(world_edges_to_cluster)
+
+        snd_to_mesh = torch.cat(snd_to_mesh, dim=0)
+        rcv_to_mesh = torch.cat(rcv_to_mesh, dim=0)
+        edges_to_mesh = self._intra_normalizer(torch.cat(edges_to_mesh, dim=0).to(device), is_training)
+
+        world_edges_to_mesh = EdgeSet(
+            name='intra_cluster_to_mesh',
+            features=edges_to_mesh,
+            senders=snd_to_mesh,
+            receivers=rcv_to_mesh)
+
+        hyper_edges.append(world_edges_to_mesh)
 
         # TODO: try connecting close hyper nodes only (instead of fully connecting)
         # Inter cluster communication
