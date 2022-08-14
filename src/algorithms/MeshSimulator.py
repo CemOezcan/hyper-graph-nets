@@ -6,6 +6,8 @@ from queue import Queue, Empty
 
 import numpy as np
 import threading as thread
+
+import pandas as pd
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
@@ -131,13 +133,43 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         except StopIteration:
             return
 
+    def one_step_evaluator(self, ds_loader, instances):
+        with torch.no_grad():
+            trajectory_loss = list()
+            for i, trajectory in enumerate(ds_loader):
+                if i >= instances:
+                    break
+                self._network.reset_remote_graph()
+                instance_loss = list()
+                for data_frame in trajectory:
+                    graph = self._network.build_graph(data_frame, False)
+                    prediction = self._network(graph)
+                    cur_position = data_frame['world_pos']
+                    prev_position = data_frame['prev|world_pos']
+                    target_position = data_frame['target|world_pos']
+                    target_acceleration = target_position - 2 * cur_position + prev_position
+                    target_normalized = self._network.get_output_normalizer()(target_acceleration, False).to(device)
+
+                    node_type = data_frame['node_type']
+                    loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+                    error = torch.sum((target_normalized - prediction) ** 2, dim=1)
+                    loss = torch.mean(error[loss_mask])
+                    instance_loss.append(loss)
+                trajectory_loss.append(instance_loss)
+
+        mean = np.mean(trajectory_loss, axis=0)
+        std = np.std(trajectory_loss, axis=0)
+        data_frame = pd.DataFrame.from_dict({'mean': mean, 'std': std})
+        data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
+
+        return mean, std
+
     def evaluator(self, ds_loader, rollouts):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
         l1_losses = []
-        num_steps = 20
-        wandb.init(project='rmp', id=self._id)
+        num_steps = 100
         # TODO: Compute one step loss
         for trajectory in ds_loader:
             self._network.reset_remote_graph()
@@ -153,16 +185,21 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             mse_losses.append(mse_loss.cpu())
             l1_losses.append(l1_loss.cpu())
 
-        mse_losses = torch.mean(torch.stack(mse_losses), dim=0)
-        l1_losses = torch.mean(torch.stack(l1_losses), dim=0)
+        mse_means = torch.mean(torch.stack(mse_losses), dim=0)
+        mse_stds = torch.std(torch.stack(mse_losses), dim=0)
+        l1_means = torch.mean(torch.stack(l1_losses), dim=0)
+        l1_stds = torch.std(torch.stack(l1_losses), dim=0)
 
-        for i, (mse, l1) in enumerate(zip(mse_losses, l1_losses)):
-            wandb.log({'mse_loss': mse.item()})
-            wandb.log({'l1_loss': l1.item()})
-
+        rollout_losses = {'mse_loss': [mse.item() for mse in mse_means],
+                          'mse_std': [mse.item() for mse in mse_stds],
+                          'l1_loss': [l1.item() for l1 in l1_means],
+                          'l1_std': [l1.item() for l1 in l1_stds]}
+        data_frame = pd.DataFrame.from_dict(rollout_losses)
         # TODO: Save losses
         # self.save_losses(wandb.run, mse_losses, l1_losses)
+        data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
         self.save_rollouts(trajectories)
+        return rollout_losses
 
     def evaluate(self, trajectory, num_steps=20):
         """Performs model rollouts and create stats."""
