@@ -17,16 +17,11 @@ class Processor(nn.Module):
                  stochastic_message_passing_used=False, hierarchical=True, edge_sets=[]):
         super().__init__()
         self.stochastic_message_passing_used = stochastic_message_passing_used
-        self.graphnet_blocks = nn.ModuleList()
+        self.graphnet_blocks = nn.Sequential()
         for index in range(message_passing_steps):
             self.graphnet_blocks.append(GraphNet(model_fn=make_mlp, output_size=output_size,
                                                  message_passing_aggregator=message_passing_aggregator,
                                                  attention=attention, hierarchical=hierarchical, edge_sets=edge_sets))
 
     def forward(self, latent_graph, normalized_adj_mat=None, mask=None):
-        for graphnet_block in self.graphnet_blocks:
-            if mask is not None:
-                latent_graph = graphnet_block(latent_graph, mask)
-            else:
-                latent_graph = graphnet_block(latent_graph)
-        return latent_graph
+        return self.graphnet_blocks(latent_graph, mask)
