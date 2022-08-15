@@ -16,6 +16,10 @@ class HierarchicalConnector(AbstractConnector):
     def __init__(self):
         super().__init__()
 
+    def initialize(self, intra, inter):
+        super().initialize(intra, inter)
+        return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']
+
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
         target_feature = graph.target_feature.to(device_0)

@@ -13,18 +13,14 @@ from src.util import device
 class MeshGraphNet(nn.Module):
     """Encode-Process-Decode GraphNet model."""
 
-    def __init__(self,
-                 output_size,
-                 latent_size,
-                 num_layers,
-                 message_passing_aggregator, message_passing_steps, attention, hierarchical, edge_sets):
+    def __init__(self, output_size, latent_size, num_layers, message_passing_aggregator,
+                 message_passing_steps, hierarchical, edge_sets):
         super().__init__()
         self._latent_size = latent_size
         self._output_size = output_size
         self._num_layers = num_layers
         self._message_passing_steps = message_passing_steps
         self._message_passing_aggregator = message_passing_aggregator
-        self._attention = attention
 
         self.encoder = Encoder(make_mlp=self._make_mlp,
                                latent_size=self._latent_size,
@@ -33,10 +29,8 @@ class MeshGraphNet(nn.Module):
         self.processor = Processor(make_mlp=self._make_mlp, output_size=self._latent_size,
                                    message_passing_steps=self._message_passing_steps,
                                    message_passing_aggregator=self._message_passing_aggregator,
-                                   attention=self._attention,
-                                   stochastic_message_passing_used=False,
-                                   hierarchical=hierarchical,
-                                   edge_sets=edge_sets)
+                                   edge_sets=edge_sets,
+                                   hierarchical=hierarchical)
         self.decoder = Decoder(make_mlp=functools.partial(self._make_mlp, layer_norm=False),
                                output_size=self._output_size)
 

@@ -37,6 +37,7 @@ class AbstractConnector(ABC):
         """
         self._intra_normalizer = intra
         self._inter_normalizer = inter
+        return list()
 
     @abstractmethod
     def run(self, graph: MultiGraph, clusters: List[List], is_training: bool) -> MultiGraphWithPos:

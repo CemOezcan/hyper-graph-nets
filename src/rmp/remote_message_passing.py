@@ -22,7 +22,7 @@ class RemoteMessagePassing:
         self._clusters = None
 
     def initialize(self, intra, inter):
-        self._node_connector.initialize(intra, inter)
+        return self._node_connector.initialize(intra, inter)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """

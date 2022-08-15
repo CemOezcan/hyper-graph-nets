@@ -7,7 +7,7 @@ from src.util import MultiGraph
 class Encoder(nn.Module):
     """Encodes node and edge features into latent features."""
 
-    def __init__(self, make_mlp, latent_size, hierarchical=True, edge_sets=[]):
+    def __init__(self, make_mlp, latent_size, edge_sets, hierarchical=True):
         super().__init__()
         self._make_mlp = make_mlp
         self._latent_size = latent_size
