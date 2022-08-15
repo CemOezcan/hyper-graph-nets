@@ -55,7 +55,6 @@ class GraphNet(nn.Module):
         features = torch.cat(features, dim=-1)
 
         if edge_set.name == "mesh_edges":
-            print()
             return self.mesh_edge_model(features)
         elif edge_set.name == "inter_cluster":
             return self.inter_cluster_model(features)

@@ -109,11 +109,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     loss.backward()
                     self._optimizer.step()
                     end_instance = time.time()
-                    wandb.log({'loss': loss})
-                    wandb.log({'training time per instance': end_instance - start_instance})
+                    wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
                     # self._run.watch(self._network)
                 end_trajectory = time.time()
-                wandb.log({'training time per trajectory': end_trajectory - start_trajectory})
+                wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
             except Empty:
                 break
             finally:
