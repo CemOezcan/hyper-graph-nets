@@ -10,7 +10,7 @@ from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
-# from src.rmp.ricci import Ricci
+from src.rmp.ricci import Ricci
 from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
@@ -37,9 +37,9 @@ class FlagModel(nn.Module):
         self.message_passing_aggregator = params.get('aggregation')
 
         self._edge_sets = ['mesh_edges']
-#        if self._ricci:
- #           self._ricci_flow = Ricci()
-  #          self._edge_sets.append('ricci')
+        if self._ricci:
+            self._ricci_flow = Ricci()
+            self._edge_sets.append('ricci')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
@@ -144,8 +144,8 @@ class FlagModel(nn.Module):
 
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
         # TODO: Normalize hyper nodes
-   #     if self._ricci:
-     #       graph = self._ricci_flow.run(graph, inputs, self._mesh_edge_normalizer, is_training)
+        if self._ricci:
+            graph = self._ricci_flow.run(graph, inputs, self._mesh_edge_normalizer, is_training)
         if self._rmp:
             graph = self._remote_graph.create_graph(graph, is_training)
         return graph
