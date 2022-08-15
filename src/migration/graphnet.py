@@ -1,3 +1,4 @@
+from collections import OrderedDict
 
 import torch
 import torch_scatter
@@ -13,28 +14,19 @@ class GraphNet(nn.Module):
     """Multi-Edge Interaction Network with residual connections."""
 
     def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False,
-                 hierarchical=True, multi=False, ricci=True):
+                 hierarchical=True, edge_sets=[]):
         super().__init__()
         self.hierarchical = hierarchical
+        self.attention = attention
 
         self.node_model_cross = model_fn(output_size)
-        self.mesh_edge_model = model_fn(output_size)
-
-        if ricci:
-            self.ricci_model = model_fn(output_size)
+        self.edge_models = nn.ModuleDict({name: model_fn(output_size) for name in edge_sets})
 
         if hierarchical:
             self.hyper_node_model_up = model_fn(output_size)
             self.hyper_node_model_cross = model_fn(output_size)
             self.node_model_down = model_fn(output_size)
-            self.intra_cluster_to_mesh_model = model_fn(output_size)
-            self.intra_cluster_to_cluster_model = model_fn(output_size)
-            self.inter_cluster_model = model_fn(output_size)
-        elif multi:
-            self.intra_cluster_multi_model = model_fn(output_size)
-            self.inter_cluster_multi_model = model_fn(output_size)
 
-        self.attention = attention
         if attention:
             self.attention_model = AttentionModel()
             self.linear_layer = nn.LazyLinear(1)
@@ -54,22 +46,7 @@ class GraphNet(nn.Module):
         features = [sender_features, receiver_features, edge_set.features]
         features = torch.cat(features, dim=-1)
 
-        if edge_set.name == "mesh_edges":
-            return self.mesh_edge_model(features)
-        elif edge_set.name == "inter_cluster":
-            return self.inter_cluster_model(features)
-        elif edge_set.name == "intra_cluster_to_mesh":
-            return self.intra_cluster_to_mesh_model(features)
-        elif edge_set.name == "intra_cluster_to_cluster":
-            return self.intra_cluster_to_cluster_model(features)
-        elif edge_set.name == "intra_cluster_multi":
-            return self.intra_cluster_multi_model(features)
-        elif edge_set.name == "inter_cluster_multi":
-            return self.inter_cluster_multi_model(features)
-        elif edge_set.name == "ricci":
-            return self.ricci_model(features)
-        else:
-            raise IndexError('Edge type {} unknown.'.format(edge_set.name))
+        return self.edge_models[edge_set.name](features)
 
     # TODO refactor
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
@@ -124,7 +101,7 @@ class GraphNet(nn.Module):
         features = [node_features]
 
         features = self.aggregation(
-            list(filter(lambda x: x.name == 'mesh_edges' or x.name == 'ricci_edges' or 'multi' in x.name, edge_sets)),
+            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
             features,
             num_nodes
         )

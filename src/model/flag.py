@@ -32,11 +32,22 @@ class FlagModel(nn.Module):
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
         self._hierarchical = params.get('rmp').get('connector') == 'hierarchical' and self._rmp
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
+        self._attention = params.get('attention') == 'True'
+        self._ricci = params.get('rmp').get('ricci') == 'True'
+
+        self._edge_sets = ['mesh_edges']
+        if self._multi:
+            self._edge_sets.append('intra_cluster')
+            self._edge_sets.append('inter_cluster')
+        elif self._hierarchical:
+            self._edge_sets.append('intra_cluster_to_mesh')
+            self._edge_sets.append('intra_cluster_to_cluster')
+            self._edge_sets.append('inter_cluster')
+        if self._ricci:
+            self._edge_sets.append('ricci')
 
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
-        self._attention = params.get('attention') == 'True'
-        self._ricci = params.get('rmp').get('ricci') == 'True'
 
         self.learned_model = MeshGraphNet(
             output_size=params.get('size'),
@@ -46,8 +57,8 @@ class FlagModel(nn.Module):
             message_passing_aggregator=self.message_passing_aggregator,
             attention=self._attention,
             hierarchical=self._hierarchical,
-            multi=self._multi,
-            ricci=self._ricci).to(device)
+            edge_sets=self._edge_sets
+        ).to(device)
 
         # TODO: Parameterize clustering algorithm and node connector
         if self._rmp:
