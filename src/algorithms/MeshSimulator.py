@@ -152,7 +152,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     node_type = data_frame['node_type']
                     loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
                     error = torch.sum((target_normalized - prediction) ** 2, dim=1)
-                    loss = torch.mean(error[loss_mask])
+                    loss = torch.mean(error[loss_mask]).to('cpu')
                     instance_loss.append(loss)
                 trajectory_loss.append(instance_loss)
 
