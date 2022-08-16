@@ -20,6 +20,8 @@ class FlagModel(nn.Module):
     def __init__(self, params):
         super(FlagModel, self).__init__()
         self._params = params
+        self.loss_fn = torch.nn.MSELoss()
+
         self._output_normalizer = Normalizer(size=3, name='output_normalizer')
         self._node_normalizer = Normalizer(size=3 + NodeType.SIZE, name='node_normalizer')
         self._node_dynamic_normalizer = Normalizer(size=1, name='node_dynamic_normalizer')
@@ -53,46 +55,6 @@ class FlagModel(nn.Module):
             hierarchical=self._hierarchical,
             edge_sets=self._edge_sets
         ).to(device)
-
-    # TODO check if redundant: see graphnet.py_world_edge_normalizer
-    def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
-        """
-        Computes the sum along segments of a tensor. Analogous to tf.unsorted_segment_sum.
-
-        :param data: A tensor whose segments are to be summed.
-        :param segment_ids: The segment indices tensor.
-        :param num_segments: The number of segments.
-        :return: A tensor of same data type as the data argument.
-        """
-        assert all([i in data.shape for i in segment_ids.shape]
-                   ), "segment_ids.shape should be a prefix of data.shape"
-
-        # segment_ids is a 1-D tensor repeat it to have the same shape as data
-        if len(segment_ids.shape) == 1:
-            s = torch.prod(torch.tensor(data.shape[1:])).long().to(device)
-            segment_ids = segment_ids.repeat_interleave(s).view(
-                segment_ids.shape[0], *data.shape[1:]).to(device)
-
-        assert data.shape == segment_ids.shape, "data.shape and segment_ids.shape should be equal"
-
-        shape = [num_segments] + list(data.shape[1:])
-        result = torch.zeros(*shape)
-        if operation == 'sum':
-            result = torch_scatter.scatter_add(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        elif operation == 'max':
-            result, _ = torch_scatter.scatter_max(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        elif operation == 'mean':
-            result = torch_scatter.scatter_mean(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        elif operation == 'min':
-            result, _ = torch_scatter.scatter_min(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        else:
-            raise Exception('Invalid operation type!')
-        result = result.type(data.dtype)
-        return result
 
     def build_graph(self, inputs, is_training):
         """Builds input graph."""
@@ -130,10 +92,10 @@ class FlagModel(nn.Module):
         # TODO: Change data structure
 
         num_nodes = node_type.shape[0]
-        max_node_dynamic = self.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
+        max_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
                                                            num_nodes,
                                                            operation='max').to(device)
-        min_node_dynamic = self.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
+        min_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
                                                            num_nodes,
                                                            operation='min').to(device)
         node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)
@@ -151,19 +113,107 @@ class FlagModel(nn.Module):
         return graph
 
     def forward(self, graph):
-        # TODO: Get rid of parameter: is_training
         return self.learned_model(graph)
+
+    def training_step(self, graph, data_frame):
+        network_output = self(graph)
+        target_normalized = self.get_target(data_frame)
+
+        node_type = data_frame['node_type']
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
+
+        return loss
+
+    @torch.no_grad()
+    def validation_step(self, graph, data_frame):
+        prediction = self(graph)
+        target_normalized = self.get_target(data_frame, False)
+
+        node_type = data_frame['node_type']
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        acc_loss = self.loss_fn(target_normalized[loss_mask], prediction[loss_mask]).item()
+
+        predicted_position = self.update(data_frame, prediction)
+        pos_error = self.loss_fn(data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
+
+        return acc_loss, pos_error
 
     def update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
-
-        acceleration = self._output_normalizer.inverse(per_node_network_output) # TODO: generalize to multiple node types  [:len(inputs['world_pos'])]
+        acceleration = self._output_normalizer.inverse(per_node_network_output)
 
         # integrate forward
         cur_position = inputs['world_pos']
         prev_position = inputs['prev|world_pos']
+
+        # vel. = cur_pos - prev_pos
         position = 2 * cur_position + acceleration - prev_position
+
         return position
+
+    def get_target(self, data_frame, is_training=True):
+        cur_position = data_frame['world_pos']
+        prev_position = data_frame['prev|world_pos']
+        target_position = data_frame['target|world_pos']
+
+        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
+        target_acceleration = target_position - 2 * cur_position + prev_position
+
+        return self._output_normalizer(target_acceleration, is_training).to(device)
+
+    @torch.no_grad()
+    def rollout(self, trajectory, num_steps):
+        """Rolls out a model trajectory."""
+        num_steps = trajectory['cells'].shape[0] if num_steps is None else num_steps
+        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
+
+        node_type = initial_state['node_type']
+        mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
+        mask = torch.stack((mask, mask, mask), dim=1)
+
+        prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
+        cur_pos = torch.squeeze(initial_state['world_pos'], 0)
+
+        pred_trajectory = list()
+        for _ in range(num_steps):
+            prev_pos, cur_pos, pred_trajectory = self._step_fn(initial_state, prev_pos, cur_pos, pred_trajectory, mask)
+
+        predictions = torch.stack(pred_trajectory)
+
+        traj_ops = {
+            'faces': trajectory['cells'],
+            'mesh_pos': trajectory['mesh_pos'],
+            'gt_pos': trajectory['world_pos'],
+            'pred_pos': predictions
+        }
+
+        mse_loss_fn = torch.nn.MSELoss(reduction='none')
+        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], predictions)
+        mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
+
+        return traj_ops, mse_loss
+
+    @torch.no_grad()
+    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask):
+        input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+        graph = self.build_graph(input, is_training=False)
+        prediction = self.update(input, self(graph))
+
+        next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
+        trajectory.append(cur_pos)
+
+        return cur_pos, next_pos, trajectory
+
+    @torch.no_grad()
+    def n_step_computation(self, trajectory, n_step):
+        mse_losses = list()
+        for step in range(len(trajectory['world_pos']) - n_step):
+            eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
+            prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
+            mse_losses.append(torch.mean(mse_loss).cpu())
+
+        return torch.mean(torch.stack(mse_losses))
 
     def get_output_normalizer(self):
         return self._output_normalizer
