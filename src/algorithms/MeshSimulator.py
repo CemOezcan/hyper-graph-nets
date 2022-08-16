@@ -90,14 +90,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 random.shuffle(shuffled_graphs)
                 for graph, data_frame in shuffled_graphs:
                     start_instance = time.time()
-                    loss = self._network.training_step(graph, data_frame)
+                    loss, pos_error = self._network.training_step(graph, data_frame)
                     loss.backward()
 
                     self._optimizer.step()
                     self._optimizer.zero_grad()
 
                     end_instance = time.time()
-                    wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+                    wandb.log({'loss': loss, 'pos_error': pos_error, 'training time per instance': end_instance - start_instance})
                     # self._run.watch(self._network)
 
                 end_trajectory = time.time()
@@ -133,7 +133,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for data_frame in trajectory:
                 graph = self._network.build_graph(data_frame, False)
                 loss, pos_error = self._network.validation_step(graph, data_frame)
-                instance_loss.append([loss.to('cpu'), pos_error.to('cpu')])
+                instance_loss.append([loss, pos_error])
 
             trajectory_loss.append(instance_loss)
 

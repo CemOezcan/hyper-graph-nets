@@ -20,6 +20,8 @@ class FlagModel(nn.Module):
     def __init__(self, params):
         super(FlagModel, self).__init__()
         self._params = params
+        self.loss_fn = torch.nn.MSELoss()
+
         self._output_normalizer = Normalizer(size=3, name='output_normalizer')
         self._node_normalizer = Normalizer(size=3 + NodeType.SIZE, name='node_normalizer')
         self._node_dynamic_normalizer = Normalizer(size=1, name='node_dynamic_normalizer')
@@ -116,31 +118,27 @@ class FlagModel(nn.Module):
     def training_step(self, graph, data_frame):
         network_output = self(graph)
         target_normalized = self.get_target(data_frame)
-        error = torch.sum((target_normalized - network_output) ** 2, dim=1)
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-        loss = torch.mean(error[loss_mask])
+        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask]).item()
 
-        return loss
+        predicted_position = self.update(data_frame, network_output)
+        pos_error = self.loss_fn(data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
+
+        return loss, pos_error
 
     @torch.no_grad()
     def validation_step(self, graph, data_frame):
         prediction = self(graph)
         target_normalized = self.get_target(data_frame, False)
-        # TODO: Function for mse
-        # TODO: Mask for pos_error
-        error = torch.sum((target_normalized - prediction) ** 2, dim=1)
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-        acc_loss = torch.mean(error[loss_mask]).detach()
+        acc_loss = self.loss_fn(target_normalized[loss_mask], prediction[loss_mask]).item()
 
         predicted_position = self.update(data_frame, prediction)
-        mse_loss_fn = torch.nn.MSELoss(reduction='none')
-
-        mse_loss = mse_loss_fn(data_frame['target|world_pos'], predicted_position)
-        pos_error = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
+        pos_error = self.loss_fn(data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
 
         return acc_loss, pos_error
 
@@ -193,9 +191,8 @@ class FlagModel(nn.Module):
             'pred_pos': predictions
         }
 
-        mse_loss_fn = torch.nn.MSELoss(reduction='none')
-        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], predictions)
-        mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
+        mask = torch.stack([mask] * 100, dim=0)
+        mse_loss = self.loss_fn(trajectory['world_pos'][:num_steps][mask], predictions[mask]).item()
 
         return traj_ops, mse_loss
 
