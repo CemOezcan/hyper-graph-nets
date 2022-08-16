@@ -85,7 +85,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             try:
                 graphs, trajectory = queue.get()
                 start_trajectory = time.time()
-                for graph, data_frame in zip(graphs, trajectory):
+                shuffled_graphs = list(zip(graphs, trajectory))
+                random.shuffle(shuffled_graphs)
+                for graph, data_frame in shuffled_graphs:
                     start_instance = time.time()
                     loss = self._network.training_step(graph, data_frame)
                     loss.backward()
