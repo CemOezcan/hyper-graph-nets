@@ -27,16 +27,22 @@ class FlagModel(nn.Module):
         self._intra_edge_normalizer = Normalizer(size=4, name='intra_edge_normalizer')
         self._inter_edge_normalizer = Normalizer(size=4, name='intra_edge_normalizer')
 
-        # TODO: Parameterize
         self._model_type = 'flag'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
         self._hierarchical = params.get('rmp').get('connector') == 'hierarchical' and self._rmp
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
-
-        self.message_passing_steps = params.get('message_passing_steps')
-        self.message_passing_aggregator = params.get('aggregation')
         self._attention = params.get('attention') == 'True'
         self._ricci = params.get('rmp').get('ricci') == 'True'
+        self.message_passing_steps = params.get('message_passing_steps')
+        self.message_passing_aggregator = params.get('aggregation')
+
+        self._edge_sets = ['mesh_edges']
+        if self._ricci:
+            self._ricci_flow = Ricci()
+            self._edge_sets.append('ricci')
+        if self._rmp:
+            self._remote_graph = rmp.get_rmp(params)
+            self._edge_sets += self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
 
         self.learned_model = MeshGraphNet(
             output_size=params.get('size'),
@@ -44,15 +50,9 @@ class FlagModel(nn.Module):
             num_layers=2,
             message_passing_steps=self.message_passing_steps,
             message_passing_aggregator=self.message_passing_aggregator,
-            attention=self._attention,
             hierarchical=self._hierarchical,
-            multi=self._multi,
-            ricci=self._ricci).to(device)
-
-        # TODO: Parameterize clustering algorithm and node connector
-        if self._rmp:
-            self._remote_graph = rmp.get_rmp(params)
-            self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
+            edge_sets=self._edge_sets
+        ).to(device)
 
     # TODO check if redundant: see graphnet.py_world_edge_normalizer
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
@@ -145,8 +145,7 @@ class FlagModel(nn.Module):
         # No ripples: graph = MultiGraph(node_features=self._node_normalizer(node_features), edge_sets=[mesh_edges])
         # TODO: Normalize hyper nodes
         if self._ricci:
-            ricci = Ricci()
-            graph = ricci.run(graph, inputs, self._mesh_edge_normalizer, is_training)
+            graph = self._ricci_flow.run(graph, inputs, self._mesh_edge_normalizer, is_training)
         if self._rmp:
             graph = self._remote_graph.create_graph(graph, is_training)
         return graph

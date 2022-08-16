@@ -16,6 +16,10 @@ class MultigraphConnector(AbstractConnector):
     def __init__(self):
         super().__init__()
 
+    def initialize(self, intra, inter):
+        super().initialize(intra, inter)
+        return ['inter_cluster', 'intra_cluster']
+
     def run(self, graph: MultiGraphWithPos, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
         device_0 = 'cpu'
         target_feature = graph.target_feature.to(device_0)
@@ -40,7 +44,7 @@ class MultigraphConnector(AbstractConnector):
         snd = torch.cat(snd, dim=0)
         rcv = torch.cat(rcv, dim=0)
         world_edges = EdgeSet(
-            name='intra_cluster_multi',
+            name='intra_cluster',
             features=self._intra_normalizer(edges, is_training),
             receivers=rcv,
             senders=snd)
@@ -54,7 +58,7 @@ class MultigraphConnector(AbstractConnector):
 
         edge_features = edge_features.to(device)
         world_edges = EdgeSet(
-            name='inter_cluster_multi',
+            name='inter_cluster',
             features=self._inter_normalizer(edge_features, is_training),
             receivers=receivers,
             senders=senders)

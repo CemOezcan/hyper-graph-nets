@@ -2,6 +2,7 @@
 from torch import nn
 
 from src.migration.graphnet import GraphNet
+from src.migration.hypergraphnet import HyperGraphNet
 
 
 class Processor(nn.Module):
@@ -13,21 +14,16 @@ class Processor(nn.Module):
     Option: choose whether to normalize the high rank node connection
     """
 
-    def __init__(self, make_mlp, output_size, message_passing_steps, message_passing_aggregator, attention=False,
-                 stochastic_message_passing_used=False, hierarchical=True, multi=False, ricci=True):
+    def __init__(self, make_mlp, output_size, message_passing_steps, message_passing_aggregator, edge_sets, hierarchical=True):
         super().__init__()
-        self.stochastic_message_passing_used = stochastic_message_passing_used
-        self.graphnet_blocks = nn.ModuleList()
+        graphnet_block = HyperGraphNet if hierarchical else GraphNet
+        self.graphnet_blocks = nn.Sequential()
         for index in range(message_passing_steps):
-            self.graphnet_blocks.append(GraphNet(model_fn=make_mlp, output_size=output_size,
-                                                 message_passing_aggregator=message_passing_aggregator,
-                                                 attention=attention, hierarchical=hierarchical, multi=multi,
-                                                 ricci=ricci))
+            self.graphnet_blocks.append(
+                graphnet_block(model_fn=make_mlp, output_size=output_size,
+                               message_passing_aggregator=message_passing_aggregator,  edge_sets=edge_sets
+                               )
+            )
 
-    def forward(self, latent_graph, normalized_adj_mat=None, mask=None):
-        for graphnet_block in self.graphnet_blocks:
-            if mask is not None:
-                latent_graph = graphnet_block(latent_graph, mask)
-            else:
-                latent_graph = graphnet_block(latent_graph)
-        return latent_graph
+    def forward(self, latent_graph):
+        return self.graphnet_blocks(latent_graph)

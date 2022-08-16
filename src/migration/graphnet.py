@@ -1,3 +1,4 @@
+from collections import OrderedDict
 
 import torch
 import torch_scatter
@@ -12,33 +13,11 @@ from src.util import device, MultiGraph
 class GraphNet(nn.Module):
     """Multi-Edge Interaction Network with residual connections."""
 
-    def __init__(self, model_fn, output_size, message_passing_aggregator, attention=False,
-                 hierarchical=True, multi=False, ricci=True):
+    def __init__(self, model_fn, output_size, message_passing_aggregator, edge_sets):
         super().__init__()
-        self.hierarchical = hierarchical
 
         self.node_model_cross = model_fn(output_size)
-        self.mesh_edge_model = model_fn(output_size)
-
-        if ricci:
-            self.ricci_model = model_fn(output_size)
-
-        if hierarchical:
-            self.hyper_node_model_up = model_fn(output_size)
-            self.hyper_node_model_cross = model_fn(output_size)
-            self.node_model_down = model_fn(output_size)
-            self.intra_cluster_to_mesh_model = model_fn(output_size)
-            self.intra_cluster_to_cluster_model = model_fn(output_size)
-            self.inter_cluster_model = model_fn(output_size)
-        elif multi:
-            self.intra_cluster_multi_model = model_fn(output_size)
-            self.inter_cluster_multi_model = model_fn(output_size)
-
-        self.attention = attention
-        if attention:
-            self.attention_model = AttentionModel()
-            self.linear_layer = nn.LazyLinear(1)
-            self.leaky_relu = nn.LeakyReLU(negative_slope=0.2)
+        self.edge_models = nn.ModuleDict({name: model_fn(output_size) for name in edge_sets})
 
         self.message_passing_aggregator = message_passing_aggregator
 
@@ -54,23 +33,7 @@ class GraphNet(nn.Module):
         features = [sender_features, receiver_features, edge_set.features]
         features = torch.cat(features, dim=-1)
 
-        if edge_set.name == "mesh_edges":
-            print()
-            return self.mesh_edge_model(features)
-        elif edge_set.name == "inter_cluster":
-            return self.inter_cluster_model(features)
-        elif edge_set.name == "intra_cluster_to_mesh":
-            return self.intra_cluster_to_mesh_model(features)
-        elif edge_set.name == "intra_cluster_to_cluster":
-            return self.intra_cluster_to_cluster_model(features)
-        elif edge_set.name == "intra_cluster_multi":
-            return self.intra_cluster_multi_model(features)
-        elif edge_set.name == "inter_cluster_multi":
-            return self.inter_cluster_multi_model(features)
-        elif edge_set.name == "ricci":
-            return self.ricci_model(features)
-        else:
-            raise IndexError('Edge type {} unknown.'.format(edge_set.name))
+        return self.edge_models[edge_set.name](features)
 
     # TODO refactor
     def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
@@ -125,67 +88,17 @@ class GraphNet(nn.Module):
         features = [node_features]
 
         features = self.aggregation(
-            list(filter(lambda x: x.name == 'mesh_edges' or x.name == 'ricci_edges' or 'multi' in x.name, edge_sets)),
+            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
             features,
             num_nodes
         )
         updated_nodes_cross = self.node_model_cross(features[:hyper_node_offset])
-        node_features_2 = torch.cat((updated_nodes_cross, node_features[hyper_node_offset:]), dim=0)
 
-        if not self.hierarchical:
-            return [updated_nodes_cross, node_features[hyper_node_offset:]]
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name == 'intra_cluster_to_cluster', edge_sets)),
-            [node_features_2],
-            num_nodes
-        )
-        updated_hyper_nodes_up = self.hyper_node_model_up(features[hyper_node_offset:])
-        node_features_3 = torch.cat((node_features_2[:hyper_node_offset], updated_hyper_nodes_up), dim=0)
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name == 'inter_cluster', edge_sets)),
-            [node_features_3],
-            num_nodes
-        )
-        updated_hyper_nodes_cross = self.hyper_node_model_cross(features[hyper_node_offset:])
-        node_features_4 = torch.cat((node_features_3[:hyper_node_offset], updated_hyper_nodes_cross), dim=0)
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name == 'intra_cluster_to_mesh', edge_sets)),
-            [node_features_4],
-            num_nodes
-        )
-        updated_nodes_down = self.node_model_down(features[:hyper_node_offset])
-
-        return [updated_nodes_down, node_features_4[hyper_node_offset:]]
+        return [updated_nodes_cross, node_features[hyper_node_offset:]]
 
     def aggregation(self, edge_sets, features, num_nodes):
         for edge_set in edge_sets:
-            if self.attention and self.message_passing_aggregator == 'pna':
-                attention_input = self.linear_layer(edge_set.features)
-                attention_input = self.leaky_relu(attention_input)
-                attention = F.softmax(attention_input, dim=0)
-                features.append(
-                    self.unsorted_segment_operation(torch.mul(edge_set.features, attention), edge_set.receivers,
-                                                    num_nodes, operation='sum'))
-                features.append(
-                    self.unsorted_segment_operation(torch.mul(edge_set.features, attention), edge_set.receivers,
-                                                    num_nodes, operation='mean'))
-                features.append(
-                    self.unsorted_segment_operation(torch.mul(edge_set.features, attention), edge_set.receivers,
-                                                    num_nodes, operation='max'))
-                features.append(
-                    self.unsorted_segment_operation(torch.mul(edge_set.features, attention), edge_set.receivers,
-                                                    num_nodes, operation='min'))
-            elif self.attention:
-                attention_input = self.linear_layer(edge_set.features)
-                attention_input = self.leaky_relu(attention_input)
-                attention = F.softmax(attention_input, dim=0)
-                features.append(
-                    self.unsorted_segment_operation(torch.mul(edge_set.features, attention), edge_set.receivers,
-                                                    num_nodes, operation=self.message_passing_aggregator))
-            elif self.message_passing_aggregator == 'pna':
+            if self.message_passing_aggregator == 'pna':
                 features.append(
                     self.unsorted_segment_operation(edge_set.features, edge_set.receivers,
                                                     num_nodes, operation='sum'))
