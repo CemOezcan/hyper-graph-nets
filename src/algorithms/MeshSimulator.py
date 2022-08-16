@@ -87,30 +87,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 start_trajectory = time.time()
                 for graph, data_frame in zip(graphs, trajectory):
                     start_instance = time.time()
-                    network_output = self._network(graph)
-
-                    cur_position = data_frame['world_pos']
-                    prev_position = data_frame['prev|world_pos']
-                    target_position = data_frame['target|world_pos']
-                    # TODO check if applicable for other tasks, refactor to model itself
-                    target_acceleration = target_position - 2 * cur_position + prev_position
-                    target_normalized = self._network.get_output_normalizer()(
-                        target_acceleration).to(device)
-                    network_output = network_output  # TODO: generalize to multiple node types [:len(target_normalized)]
-
-                    node_type = data_frame['node_type']
-                    loss_mask = torch.eq(node_type[:, 0], torch.tensor(
-                        [NodeType.NORMAL.value], device=device).int())
-                    error = torch.sum(
-                        (target_normalized - network_output) ** 2, dim=1)
-                    loss = torch.mean(error[loss_mask])
-
-                    self._optimizer.zero_grad()
+                    loss = self._network.training_step(graph, data_frame)
                     loss.backward()
+
                     self._optimizer.step()
+                    self._optimizer.zero_grad()
+
                     end_instance = time.time()
                     wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
                     # self._run.watch(self._network)
+
                 end_trajectory = time.time()
                 wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
             except Empty:

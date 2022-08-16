@@ -10,7 +10,7 @@ from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
-from src.rmp.ricci import Ricci
+# from src.rmp.ricci import Ricci
 from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
@@ -37,9 +37,9 @@ class FlagModel(nn.Module):
         self.message_passing_aggregator = params.get('aggregation')
 
         self._edge_sets = ['mesh_edges']
-        if self._ricci:
-            self._ricci_flow = Ricci()
-            self._edge_sets.append('ricci')
+     #   if self._ricci:
+      #      self._ricci_flow = Ricci()
+       #     self._edge_sets.append('ricci')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
@@ -151,19 +151,41 @@ class FlagModel(nn.Module):
         return graph
 
     def forward(self, graph):
-        # TODO: Get rid of parameter: is_training
         return self.learned_model(graph)
+
+    def training_step(self, graph, data_frame):
+        network_output = self(graph)
+        target_normalized = self.get_target(data_frame)
+        error = torch.sum((target_normalized - network_output) ** 2, dim=1)
+
+        node_type = data_frame['node_type']
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        loss = torch.mean(error[loss_mask])
+
+        return loss
 
     def update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
-
-        acceleration = self._output_normalizer.inverse(per_node_network_output) # TODO: generalize to multiple node types  [:len(inputs['world_pos'])]
+        acceleration = self._output_normalizer.inverse(per_node_network_output)
 
         # integrate forward
         cur_position = inputs['world_pos']
         prev_position = inputs['prev|world_pos']
+
+        # vel. = cur_pos - prev_pos
         position = 2 * cur_position + acceleration - prev_position
+
         return position
+
+    def get_target(self, data_frame):
+        cur_position = data_frame['world_pos']
+        prev_position = data_frame['prev|world_pos']
+        target_position = data_frame['target|world_pos']
+
+        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
+        target_acceleration = target_position - 2 * cur_position + prev_position
+
+        return self._output_normalizer(target_acceleration).to(device)
 
     def get_output_normalizer(self):
         return self._output_normalizer
