@@ -37,8 +37,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self.loss_function = F.mse_loss
         self._learning_rate = self._network_config.get("learning_rate")
-        self._scheduler_learning_rate = self._network_config.get(
-            "scheduler_learning_rate")
+        self._scheduler_learning_rate = self._network_config.get("scheduler_learning_rate")
+
         wandb.init(project='rmp')
         wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
 
@@ -121,32 +121,28 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def one_step_evaluator(self, ds_loader, instances):
         trajectory_loss = list()
         for i, trajectory in enumerate(ds_loader):
+            instance_loss = list()
+            self._network.reset_remote_graph()
+
             if i >= instances:
                 break
-            self._network.reset_remote_graph()
-            instance_loss = list()
+
             for data_frame in trajectory:
                 graph = self._network.build_graph(data_frame, False)
-                prediction = self._network(graph)
-                cur_position = data_frame['world_pos']
-                prev_position = data_frame['prev|world_pos']
-                target_position = data_frame['target|world_pos']
-                target_acceleration = target_position - 2 * cur_position + prev_position
-                target_normalized = self._network.get_output_normalizer()(target_acceleration, False).to(device)
+                loss, pos_error = self._network.validation_step(graph, data_frame)
+                instance_loss.append([loss.to('cpu'), pos_error.to('cpu')])
 
-                node_type = data_frame['node_type']
-                loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-                error = torch.sum((target_normalized - prediction) ** 2, dim=1)
-                loss = torch.mean(error[loss_mask]).to('cpu')
-                instance_loss.append(loss)
             trajectory_loss.append(instance_loss)
 
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
-        data_frame = pd.DataFrame.from_dict({'mean': mean, 'std': std})
-        data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
+        data_frame = pd.DataFrame.from_dict(
+            {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
+             'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
+             }
+        )
 
-        return mean, std
+        data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
 
     def evaluator(self, ds_loader, rollouts):
         """Run a model rollout trajectory."""

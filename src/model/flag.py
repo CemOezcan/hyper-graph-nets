@@ -124,6 +124,24 @@ class FlagModel(nn.Module):
 
         return loss
 
+    @torch.no_grad()
+    def validation_step(self, graph, data_frame):
+        prediction = self(graph)
+        target_normalized = self.get_target(data_frame, False)
+        error = torch.sum((target_normalized - prediction) ** 2, dim=1)
+
+        node_type = data_frame['node_type']
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        acc_loss = torch.mean(error[loss_mask]).detach()
+
+        predicted_position = self.update(data_frame, prediction)
+        mse_loss_fn = torch.nn.MSELoss(reduction='none')
+
+        mse_loss = mse_loss_fn(data_frame['target|world_pos'], predicted_position)
+        pos_error = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
+
+        return acc_loss, pos_error
+
     def update(self, inputs, per_node_network_output):
         """Integrate model outputs."""
         acceleration = self._output_normalizer.inverse(per_node_network_output)
@@ -137,7 +155,7 @@ class FlagModel(nn.Module):
 
         return position
 
-    def get_target(self, data_frame):
+    def get_target(self, data_frame, is_training=True):
         cur_position = data_frame['world_pos']
         prev_position = data_frame['prev|world_pos']
         target_position = data_frame['target|world_pos']
@@ -145,7 +163,7 @@ class FlagModel(nn.Module):
         # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
         target_acceleration = target_position - 2 * cur_position + prev_position
 
-        return self._output_normalizer(target_acceleration).to(device)
+        return self._output_normalizer(target_acceleration, is_training).to(device)
 
     def get_output_normalizer(self):
         return self._output_normalizer
