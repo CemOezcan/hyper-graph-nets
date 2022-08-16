@@ -10,7 +10,7 @@ from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
-from src.rmp.ricci import Ricci
+#from src.rmp.ricci import Ricci
 from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
@@ -39,9 +39,9 @@ class FlagModel(nn.Module):
         self.message_passing_aggregator = params.get('aggregation')
 
         self._edge_sets = ['mesh_edges']
-        if self._ricci:
-            self._ricci_flow = Ricci()
-            self._edge_sets.append('ricci')
+    #    if self._ricci:
+     #       self._ricci_flow = Ricci()
+      #      self._edge_sets.append('ricci')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
@@ -121,7 +121,7 @@ class FlagModel(nn.Module):
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask]).item()
+        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
 
         return loss
 
@@ -188,8 +188,9 @@ class FlagModel(nn.Module):
             'pred_pos': predictions
         }
 
-        mask = torch.stack([mask] * 100, dim=0)
-        mse_loss = self.loss_fn(trajectory['world_pos'][:num_steps][mask], predictions[mask]).item()
+        mse_loss_fn = torch.nn.MSELoss(reduction='none')
+        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], predictions)
+        mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
 
         return traj_ops, mse_loss
 

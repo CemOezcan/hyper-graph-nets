@@ -183,7 +183,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 loss = self._network.n_step_computation(trajectory, n_steps)
                 n_step_losses.append(loss)
 
-            losses.append((torch.mean(torch.stack(n_step_losses)).item(), torch.std(torch.stack(n_step_losses)).item()))
+            means = torch.mean(torch.stack(n_step_losses)).item()
+            std = torch.std(torch.stack(n_step_losses)).item()
+            losses.append((means, std))
 
         n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
         data_frame = pd.DataFrame.from_dict(n_step_stats)

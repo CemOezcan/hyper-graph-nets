@@ -25,6 +25,7 @@ class MeshTask(AbstractTask):
                 used by cw2 for the current run.
         """
         super().__init__(algorithm=algorithm, config=config)
+        self._config = config
         self._raw_data = get_data(config=config)
         self._rollouts = config.get('task').get('rollouts')
         self.train_loader = get_data(config=config)
@@ -47,8 +48,10 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
-        loss = self._algorithm.one_step_evaluator(self._valid_loader, self._rollouts)
-        rollouts = self._algorithm.evaluator(self._test_loader, self._rollouts)
+        self._algorithm.one_step_evaluator(self._valid_loader, self._rollouts)
+        self._algorithm.evaluator(self._test_loader, self._rollouts)
+        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+        self._algorithm.n_step_evaluator(self._test_loader)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
