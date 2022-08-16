@@ -10,7 +10,7 @@ from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
-from src.rmp.ricci import Ricci
+#from src.rmp.ricci import Ricci
 from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
@@ -37,9 +37,9 @@ class FlagModel(nn.Module):
         self.message_passing_aggregator = params.get('aggregation')
 
         self._edge_sets = ['mesh_edges']
-        if self._ricci:
-            self._ricci_flow = Ricci()
-            self._edge_sets.append('ricci')
+       # if self._ricci:
+      #      self._ricci_flow = Ricci()
+      #      self._edge_sets.append('ricci')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(self._intra_edge_normalizer, self._inter_edge_normalizer)
@@ -53,46 +53,6 @@ class FlagModel(nn.Module):
             hierarchical=self._hierarchical,
             edge_sets=self._edge_sets
         ).to(device)
-
-    # TODO check if redundant: see graphnet.py_world_edge_normalizer
-    def unsorted_segment_operation(self, data, segment_ids, num_segments, operation):
-        """
-        Computes the sum along segments of a tensor. Analogous to tf.unsorted_segment_sum.
-
-        :param data: A tensor whose segments are to be summed.
-        :param segment_ids: The segment indices tensor.
-        :param num_segments: The number of segments.
-        :return: A tensor of same data type as the data argument.
-        """
-        assert all([i in data.shape for i in segment_ids.shape]
-                   ), "segment_ids.shape should be a prefix of data.shape"
-
-        # segment_ids is a 1-D tensor repeat it to have the same shape as data
-        if len(segment_ids.shape) == 1:
-            s = torch.prod(torch.tensor(data.shape[1:])).long().to(device)
-            segment_ids = segment_ids.repeat_interleave(s).view(
-                segment_ids.shape[0], *data.shape[1:]).to(device)
-
-        assert data.shape == segment_ids.shape, "data.shape and segment_ids.shape should be equal"
-
-        shape = [num_segments] + list(data.shape[1:])
-        result = torch.zeros(*shape)
-        if operation == 'sum':
-            result = torch_scatter.scatter_add(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        elif operation == 'max':
-            result, _ = torch_scatter.scatter_max(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        elif operation == 'mean':
-            result = torch_scatter.scatter_mean(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        elif operation == 'min':
-            result, _ = torch_scatter.scatter_min(
-                data.float(), segment_ids, dim=0, dim_size=num_segments)
-        else:
-            raise Exception('Invalid operation type!')
-        result = result.type(data.dtype)
-        return result
 
     def build_graph(self, inputs, is_training):
         """Builds input graph."""
@@ -130,10 +90,10 @@ class FlagModel(nn.Module):
         # TODO: Change data structure
 
         num_nodes = node_type.shape[0]
-        max_node_dynamic = self.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
+        max_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
                                                            num_nodes,
                                                            operation='max').to(device)
-        min_node_dynamic = self.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
+        min_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
                                                            num_nodes,
                                                            operation='min').to(device)
         node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)

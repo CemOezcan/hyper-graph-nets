@@ -117,29 +117,29 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         except StopIteration:
             return
 
+    @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances):
-        with torch.no_grad():
-            trajectory_loss = list()
-            for i, trajectory in enumerate(ds_loader):
-                if i >= instances:
-                    break
-                self._network.reset_remote_graph()
-                instance_loss = list()
-                for data_frame in trajectory:
-                    graph = self._network.build_graph(data_frame, False)
-                    prediction = self._network(graph)
-                    cur_position = data_frame['world_pos']
-                    prev_position = data_frame['prev|world_pos']
-                    target_position = data_frame['target|world_pos']
-                    target_acceleration = target_position - 2 * cur_position + prev_position
-                    target_normalized = self._network.get_output_normalizer()(target_acceleration, False).to(device)
+        trajectory_loss = list()
+        for i, trajectory in enumerate(ds_loader):
+            if i >= instances:
+                break
+            self._network.reset_remote_graph()
+            instance_loss = list()
+            for data_frame in trajectory:
+                graph = self._network.build_graph(data_frame, False)
+                prediction = self._network(graph)
+                cur_position = data_frame['world_pos']
+                prev_position = data_frame['prev|world_pos']
+                target_position = data_frame['target|world_pos']
+                target_acceleration = target_position - 2 * cur_position + prev_position
+                target_normalized = self._network.get_output_normalizer()(target_acceleration, False).to(device)
 
-                    node_type = data_frame['node_type']
-                    loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-                    error = torch.sum((target_normalized - prediction) ** 2, dim=1)
-                    loss = torch.mean(error[loss_mask]).to('cpu')
-                    instance_loss.append(loss)
-                trajectory_loss.append(instance_loss)
+                node_type = data_frame['node_type']
+                loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+                error = torch.sum((target_normalized - prediction) ** 2, dim=1)
+                loss = torch.mean(error[loss_mask]).to('cpu')
+                instance_loss.append(loss)
+            trajectory_loss.append(instance_loss)
 
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
