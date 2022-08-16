@@ -17,13 +17,14 @@ class Processor(nn.Module):
     def __init__(self, make_mlp, output_size, message_passing_steps, message_passing_aggregator, edge_sets, hierarchical=True):
         super().__init__()
         graphnet_block = HyperGraphNet if hierarchical else GraphNet
-        self.graphnet_blocks = nn.Sequential()
-        for index in range(message_passing_steps):
-            self.graphnet_blocks.append(
+        blocks = []
+        for _ in range(message_passing_steps):
+            blocks.append(
                 graphnet_block(model_fn=make_mlp, output_size=output_size,
                                message_passing_aggregator=message_passing_aggregator,  edge_sets=edge_sets
                                )
             )
+        self.graphnet_blocks = nn.Sequential(*blocks)
 
     def forward(self, latent_graph):
         return self.graphnet_blocks(latent_graph)
