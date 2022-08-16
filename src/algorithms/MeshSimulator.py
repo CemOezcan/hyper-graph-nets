@@ -170,63 +170,24 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return rollout_losses
 
-    def evaluate(self, trajectory, num_steps=20):
-        """Performs model rollouts and create stats."""
-        traj_ops = self._network.rollout(trajectory, num_steps)
-
-        return traj_ops
-
-    def n_step_evaluator(self, ds_loader, n_step_list=[3], n_traj=1):
-        n_step_mse_losses = {}
-        n_step_l1_losses = {}
-
+    def n_step_evaluator(self, ds_loader, n_step_list=[397, 396], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
-        for i in range(n_traj):
-            for trajectory in ds_loader:
+        # TODO: Decide on how to summarize
+        losses = list()
+        for n_steps in n_step_list:
+            n_step_losses = list()
+            for i, trajectory in enumerate(ds_loader):
+                if i >= n_traj:
+                    break
                 self._network.reset_remote_graph()
-                for n_step in n_step_list:
-                    self.n_step_computation(
-                        n_step_mse_losses, n_step_l1_losses, trajectory, n_step)
-        for (kmse, vmse), (kl1, vl1) in zip(n_step_mse_losses.items(), n_step_l1_losses.items()):
-            n_step_mse_losses[kmse] = torch.div(vmse, i + 1)
-            n_step_l1_losses[kl1] = torch.div(vl1, i + 1)
+                loss = self._network.n_step_computation(trajectory, n_steps)
+                n_step_losses.append(loss)
 
-        return {'n_step_mse_loss': n_step_mse_losses, 'n_step_l1_loss': n_step_l1_losses}
+            losses.append((torch.mean(torch.stack(n_step_losses)).item(), torch.std(torch.stack(n_step_losses)).item()))
 
-    # TODO remove hardcoded values
-    def n_step_computation(self, n_step_mse_losses, n_step_l1_losses, trajectory, n_step):
-        mse_losses = []
-        l1_losses = []
-        for step in range(len(trajectory['world_pos']) - n_step):
-            eval_traj = {}
-            for k, v in trajectory.items():
-                eval_traj[k] = v[step:step + n_step + 1]
-            _, prediction_trajectory = self.evaluate(
-                eval_traj, n_step + 1)
-            mse_loss_fn = torch.nn.MSELoss()
-            l1_loss_fn = torch.nn.L1Loss()
-            mse_loss = mse_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
-                                   prediction_trajectory['pred_pos'])
-            l1_loss = l1_loss_fn(torch.squeeze(eval_traj['world_pos'], dim=0),
-                                 prediction_trajectory['pred_pos'])
-
-            mse_losses.append(mse_loss.cpu())
-            l1_losses.append(l1_loss.cpu())
-        self._compute_n_step_losses(
-            n_step_mse_losses, n_step_l1_losses, n_step, mse_losses, l1_losses)
-
-    @staticmethod
-    def _compute_n_step_losses(n_step_mse_losses, n_step_l1_losses, n_step, mse_losses, l1_losses):
-        if n_step not in n_step_mse_losses and n_step not in n_step_l1_losses:
-            n_step_mse_losses[n_step] = torch.stack(mse_losses)
-            n_step_l1_losses[n_step] = torch.stack(l1_losses)
-        elif n_step in n_step_mse_losses and n_step in n_step_l1_losses:
-            n_step_mse_losses[n_step] = n_step_mse_losses[n_step] + \
-                torch.stack(mse_losses)
-            n_step_l1_losses[n_step] = n_step_l1_losses[n_step] + \
-                torch.stack(l1_losses)
-        else:
-            raise Exception('Error when computing n step losses!')
+        n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
+        data_frame = pd.DataFrame.from_dict(n_step_stats)
+        data_frame.to_csv(os.path.join(OUT_DIR, 'n_step_losses.csv'))
 
     @property
     def network(self):

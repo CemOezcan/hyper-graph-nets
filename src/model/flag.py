@@ -210,6 +210,16 @@ class FlagModel(nn.Module):
 
         return cur_pos, next_pos, trajectory
 
+    @torch.no_grad()
+    def n_step_computation(self, trajectory, n_step):
+        mse_losses = list()
+        for step in range(len(trajectory['world_pos']) - n_step):
+            eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
+            prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
+            mse_losses.append(torch.mean(mse_loss).cpu())
+
+        return torch.mean(torch.stack(mse_losses))
+
     def get_output_normalizer(self):
         return self._output_normalizer
 
