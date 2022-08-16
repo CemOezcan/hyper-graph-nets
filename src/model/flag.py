@@ -128,6 +128,8 @@ class FlagModel(nn.Module):
     def validation_step(self, graph, data_frame):
         prediction = self(graph)
         target_normalized = self.get_target(data_frame, False)
+        # TODO: Function for mse
+        # TODO: Mask for pos_error
         error = torch.sum((target_normalized - prediction) ** 2, dim=1)
 
         node_type = data_frame['node_type']
@@ -164,6 +166,49 @@ class FlagModel(nn.Module):
         target_acceleration = target_position - 2 * cur_position + prev_position
 
         return self._output_normalizer(target_acceleration, is_training).to(device)
+
+    @torch.no_grad()
+    def rollout(self, trajectory, num_steps):
+        """Rolls out a model trajectory."""
+        num_steps = trajectory['cells'].shape[0] if num_steps is None else num_steps
+        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
+
+        node_type = initial_state['node_type']
+        mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
+        mask = torch.stack((mask, mask, mask), dim=1)
+
+        prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
+        cur_pos = torch.squeeze(initial_state['world_pos'], 0)
+
+        pred_trajectory = list()
+        for _ in range(num_steps):
+            prev_pos, cur_pos, pred_trajectory = self._step_fn(initial_state, prev_pos, cur_pos, pred_trajectory, mask)
+
+        predictions = torch.stack(pred_trajectory)
+
+        traj_ops = {
+            'faces': trajectory['cells'],
+            'mesh_pos': trajectory['mesh_pos'],
+            'gt_pos': trajectory['world_pos'],
+            'pred_pos': predictions
+        }
+
+        mse_loss_fn = torch.nn.MSELoss(reduction='none')
+        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], predictions)
+        mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
+
+        return traj_ops, mse_loss
+
+    @torch.no_grad()
+    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask):
+        input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+        graph = self.build_graph(input, is_training=False)
+        prediction = self.update(input, self(graph))
+
+        next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
+        trajectory.append(cur_pos)
+
+        return cur_pos, next_pos, trajectory
 
     def get_output_normalizer(self):
         return self._output_normalizer

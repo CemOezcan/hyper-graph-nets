@@ -151,77 +151,30 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
-        l1_losses = []
         num_steps = 100
-        # TODO: Compute one step loss
-        for trajectory in ds_loader:
-            self._network.reset_remote_graph()
-            _, prediction_trajectory = self.evaluate(trajectory, num_steps=num_steps)
-            trajectories.append(prediction_trajectory)
-            mse_loss_fn = torch.nn.MSELoss(reduction='none')
-            l1_loss_fn = torch.nn.L1Loss(reduction='none')
 
-            mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], prediction_trajectory['pred_pos'])
-            l1_loss = l1_loss_fn(trajectory['world_pos'][:num_steps], prediction_trajectory['pred_pos'])
-            mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1)
-            l1_loss = torch.mean(torch.mean(l1_loss, dim=-1), dim=-1)
+        for i, trajectory in enumerate(ds_loader):
+            self._network.reset_remote_graph()
+            prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=num_steps)
+            trajectories.append(prediction_trajectory)
             mse_losses.append(mse_loss.cpu())
-            l1_losses.append(l1_loss.cpu())
 
         mse_means = torch.mean(torch.stack(mse_losses), dim=0)
         mse_stds = torch.std(torch.stack(mse_losses), dim=0)
-        l1_means = torch.mean(torch.stack(l1_losses), dim=0)
-        l1_stds = torch.std(torch.stack(l1_losses), dim=0)
 
-        rollout_losses = {'mse_loss': [mse.item() for mse in mse_means],
-                          'mse_std': [mse.item() for mse in mse_stds],
-                          'l1_loss': [l1.item() for l1 in l1_means],
-                          'l1_std': [l1.item() for l1 in l1_stds]}
+        rollout_losses = {'mse_loss': [mse.item() for mse in mse_means], 'mse_std': [mse.item() for mse in mse_stds]}
         data_frame = pd.DataFrame.from_dict(rollout_losses)
-        # TODO: Save losses
-        # self.save_losses(wandb.run, mse_losses, l1_losses)
+
         data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
         self.save_rollouts(trajectories)
+
         return rollout_losses
 
     def evaluate(self, trajectory, num_steps=20):
         """Performs model rollouts and create stats."""
-        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
-        if num_steps is None:
-            num_steps = trajectory['cells'].shape[0]
+        traj_ops = self._network.rollout(trajectory, num_steps)
 
-        prediction = self._rollout(initial_state, num_steps)
-
-        scalars = None
-        traj_ops = {
-            'faces': trajectory['cells'],
-            'mesh_pos': trajectory['mesh_pos'],
-            'gt_pos': trajectory['world_pos'],
-            'pred_pos': prediction
-        }
-        return scalars, traj_ops
-
-    def _rollout(self, initial_state, num_steps):
-        """Rolls out a model trajectory."""
-        node_type = initial_state['node_type']
-        self.mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
-        self.mask = torch.stack((self.mask, self.mask, self.mask), dim=1)
-
-        prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
-        cur_pos = torch.squeeze(initial_state['world_pos'], 0)
-        trajectory = list()
-        for _ in range(num_steps):
-            prev_pos, cur_pos, trajectory = self._step_fn(initial_state, prev_pos, cur_pos, trajectory)
-        return torch.stack(trajectory)
-
-    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory):
-        with torch.no_grad():
-            input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
-            graph = self._network.build_graph(input, is_training=False)
-            prediction = self._network.update(input, self._network(graph))
-        next_pos = torch.where(self.mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
-        trajectory.append(cur_pos)
-        return cur_pos, next_pos, trajectory
+        return traj_ops
 
     def n_step_evaluator(self, ds_loader, n_step_list=[3], n_traj=1):
         n_step_mse_losses = {}
