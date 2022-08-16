@@ -8,3 +8,4 @@ meta.json
 *.pkl
 *.pyc
 /wandb
+*.csv
