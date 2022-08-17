@@ -111,96 +111,61 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 if thread_1.is_alive():
                     thread_1.join()
 
-
     def get_batched(self, data, batch_size):
-        batches = list()
-        for i in range(0, len(data), batch_size):
-            batches.append(data[i: i + batch_size])
+        batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
+        graph = batches[0][0][0]
+        trajectory_attributes = batches[0][0][1].keys()
 
-        stuff = list()
+        num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
+        num_nodes, num_hyper_nodes = num_nodes if len(num_nodes) > 1 else (num_nodes[0], 0)
+        hyper_node_offset = batch_size * num_nodes
+
+        edge_names = [e.name for e in graph.edge_sets]
+
+        batched_data = list()
         for batch in batches:
+            edge_dict = {name: {'snd': list(), 'rcv': list(), 'features': list()} for name in edge_names}
+            trajectory_dict = {key: list() for key in trajectory_attributes}
+
             node_features = list()
-            edge_features = list()
-            snd = list()
-            rcv = list()
-            name = list()
-            for e in batch[0][0].edge_sets:
-                name.append(e.name)
-
-            num_nodes = batch[0][0].node_features[0].shape[0]
-            num_normal_nodes = batch[0][0].node_features[0].shape[0]
-            num_hyper_nodes = None
-            try:
-                num_hyper_nodes = batch[0][0].node_features[1].shape[0]
-                num_nodes += num_hyper_nodes
-            except IndexError:
-                a = 0
-
-            hyper_node_offset = batch_size * num_normal_nodes
-
-            cur_position = list()
-            prev_position = list()
-            target_position = list()
-            node_types = list()
-            mesh_pos = list()
-            cells = list()
-
-            edge_dict = dict().fromkeys(name)
-            for n in name:
-                edge_dict[n] = {'snd': list(), 'rcv': list(), 'features': list()}
-
             for i, (graph, traj) in enumerate(batch):
-                for e in graph.edge_sets:
-                    senders = [x + i * num_normal_nodes if x < hyper_node_offset else x + num_normal_nodes + i * num_hyper_nodes for x in e.senders.tolist()]
-                    senders = torch.tensor(senders)
-                    edge_dict[e.name]['snd'].append(senders)
-
-                    receivers = [
-                        x + i * num_normal_nodes if x < hyper_node_offset else x + num_normal_nodes + i * num_hyper_nodes
-                        for x in e.senders.tolist()]
-                    receivers = torch.tensor(receivers)
-                    edge_dict[e.name]['rcv'].append(receivers)
-
-                    edge_dict[e.name]['features'].append(e.features)
-                    """edge_dict[e.name]['snd'].append(torch.add(e.senders, i * num_nodes))
-                    edge_dict[e.name]['rcv'].append(torch.add(e.receivers, i * num_nodes))
-                    edge_dict[e.name]['features'].append(e.features)"""
-
                 node_features.append(graph.node_features)
 
-                cur_position.append(traj['world_pos'])
-                prev_position.append(traj['prev|world_pos'])
-                target_position.append(traj['target|world_pos'])
-                node_types.append(traj['node_type'])
-                mesh_pos.append(traj['mesh_pos'])
-                cells.append(traj['cells'])
+                for key, value in traj.items():
+                    trajectory_dict[key].append(value)
 
-            edges = list(zip(name, edge_features, snd, rcv))
-            new_traj = {'mesh_pos': torch.cat(mesh_pos, dim=0), 'cells': torch.cat(cells, dim=0),
-                        'world_pos': torch.cat(cur_position, dim=0), 'prev|world_pos': torch.cat(prev_position, dim=0),
-                        'target|world_pos': torch.cat(target_position, dim=0), 'node_type': torch.cat(node_types, dim=0)}
+                for e in graph.edge_sets:
+                    edge_dict[e.name]['features'].append(e.features)
 
-            nf = [x[0] for x in node_features]
-            nf = torch.cat(nf, dim=0)
-            all_nodes = [nf]
-            try:
-                hnf = [x[1] for x in node_features]
-                hnf = torch.cat(hnf, dim=0)
-                all_nodes.append(hnf)
+                    senders = torch.tensor(
+                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
+                         for x in e.senders.tolist()]
+                    )
+                    edge_dict[e.name]['snd'].append(senders)
 
-            except IndexError:
-                a = 0
+                    receivers = torch.tensor(
+                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
+                         for x in e.senders.tolist()]
+                    )
+                    edge_dict[e.name]['rcv'].append(receivers)
+
+            new_traj = {key: torch.cat(value, dim=0) for key, value in trajectory_dict.items()}
+
+            all_nodes = list(map(lambda x: torch.cat(x, dim=0), zip(*node_features)))
             new_graph = MultiGraph(
-                    node_features=all_nodes,
-                    edge_sets=[EdgeSet(name=n,
-                                       features=torch.cat(edge_dict[n]['features'], dim=0),
-                                       senders=torch.cat(edge_dict[n]['snd'], dim=0),
-                                       receivers=torch.cat(edge_dict[n]['rcv'], dim=0)) for n in edge_dict.keys()])
+                node_features=all_nodes,
+                edge_sets=[
+                    EdgeSet(name=n,
+                            features=torch.cat(edge_dict[n]['features'], dim=0),
+                            senders=torch.cat(edge_dict[n]['snd'], dim=0),
+                            receivers=torch.cat(edge_dict[n]['rcv'], dim=0))
+                    for n in edge_dict.keys()
+                ]
+            )
 
+            batched_data.append((new_graph, new_traj))
 
-            stuff.append((new_graph, new_traj))
-
-        return stuff
+        return batched_data
 
     def fetch_data(self, loader, queue):
         try:
