@@ -31,6 +31,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
 
+        self._batch_size = 1
         self._network = None
         self._optimizer = None
         self._scheduler = None
@@ -45,6 +46,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:
+            self._batch_size = 57 # task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
@@ -74,7 +76,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        batch_size = 57
         i = 0
         queue = Queue()
         self.fetch_data(train_dataloader, queue)
@@ -85,12 +86,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             if i < self._trajectories:
                 thread_1.start()
             try:
-                graphs, trajectory = queue.get()
+                batches = queue.get()
                 start_trajectory = time.time()
-                shuffled_graphs = list(zip(graphs, trajectory))
-                random.shuffle(shuffled_graphs)
-                shuffled_graphs = self.get_batched(shuffled_graphs, batch_size)
-                for graph, data_frame in shuffled_graphs:
+                for graph, data_frame in batches:
                     start_instance = time.time()
                     loss = self._network.training_step(graph, data_frame)
                     loss.backward()
@@ -169,12 +167,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fetch_data(self, loader, queue):
         try:
-            graphs = list()
             trajectory = next(loader)
             self._network.reset_remote_graph()
-            for data_frame in trajectory:
-                graphs.append(self._network.build_graph(data_frame, True))
-            queue.put((graphs, trajectory))
+            graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
+            shuffled_graphs = list(zip(graphs, trajectory))
+            random.shuffle(shuffled_graphs)
+            batches = self.get_batched(shuffled_graphs, self._batch_size)
+            queue.put(batches)
         except StopIteration:
             return
 
