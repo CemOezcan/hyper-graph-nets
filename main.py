@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    args = [False, True]
+    args = [True, True]
     try:
         args[0] = sys.argv[1] == 'True'
         args[1] = sys.argv[2] == 'True'

@@ -18,7 +18,7 @@ from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
-from src.util import NodeType, device, detach
+from src.util import NodeType, device, detach, EdgeSet, MultiGraph
 from torch.utils.data import DataLoader
 from util.Types import ConfigDict, ScalarDict, Union
 
@@ -31,6 +31,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
 
+        self._batch_size = 1
         self._network = None
         self._optimizer = None
         self._scheduler = None
@@ -46,6 +47,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:
+            self._batch_size = 57 # task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
@@ -85,11 +87,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             if i < self._trajectories:
                 thread_1.start()
             try:
-                graphs, trajectory = queue.get()
+                batches = queue.get()
                 start_trajectory = time.time()
-                shuffled_graphs = list(zip(graphs, trajectory))
-                random.shuffle(shuffled_graphs)
-                for graph, data_frame in shuffled_graphs:
+                for graph, data_frame in batches:
                     start_instance = time.time()
                     loss = self._network.training_step(graph, data_frame)
                     loss.backward()
@@ -110,14 +110,71 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 if thread_1.is_alive():
                     thread_1.join()
 
+    def get_batched(self, data, batch_size):
+        batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
+        graph = batches[0][0][0]
+        trajectory_attributes = batches[0][0][1].keys()
+
+        num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
+        num_nodes, num_hyper_nodes = num_nodes if len(num_nodes) > 1 else (num_nodes[0], 0)
+        hyper_node_offset = batch_size * num_nodes
+
+        edge_names = [e.name for e in graph.edge_sets]
+
+        batched_data = list()
+        for batch in batches:
+            edge_dict = {name: {'snd': list(), 'rcv': list(), 'features': list()} for name in edge_names}
+            trajectory_dict = {key: list() for key in trajectory_attributes}
+
+            node_features = list()
+            for i, (graph, traj) in enumerate(batch):
+                node_features.append(graph.node_features)
+
+                for key, value in traj.items():
+                    trajectory_dict[key].append(value)
+
+                for e in graph.edge_sets:
+                    edge_dict[e.name]['features'].append(e.features)
+
+                    senders = torch.tensor(
+                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
+                         for x in e.senders.tolist()]
+                    )
+                    edge_dict[e.name]['snd'].append(senders)
+
+                    receivers = torch.tensor(
+                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
+                         for x in e.senders.tolist()]
+                    )
+                    edge_dict[e.name]['rcv'].append(receivers)
+
+            new_traj = {key: torch.cat(value, dim=0) for key, value in trajectory_dict.items()}
+
+            all_nodes = list(map(lambda x: torch.cat(x, dim=0), zip(*node_features)))
+            new_graph = MultiGraph(
+                node_features=all_nodes,
+                edge_sets=[
+                    EdgeSet(name=n,
+                            features=torch.cat(edge_dict[n]['features'], dim=0),
+                            senders=torch.cat(edge_dict[n]['snd'], dim=0),
+                            receivers=torch.cat(edge_dict[n]['rcv'], dim=0))
+                    for n in edge_dict.keys()
+                ]
+            )
+
+            batched_data.append((new_graph, new_traj))
+
+        return batched_data
+
     def fetch_data(self, loader, queue):
         try:
-            graphs = list()
             trajectory = next(loader)
             self._network.reset_remote_graph()
-            for data_frame in trajectory:
-                graphs.append(self._network.build_graph(data_frame, True))
-            queue.put((graphs, trajectory))
+            graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
+            shuffled_graphs = list(zip(graphs, trajectory))
+            random.shuffle(shuffled_graphs)
+            batches = self.get_batched(shuffled_graphs, self._batch_size)
+            queue.put(batches)
         except StopIteration:
             return
 
