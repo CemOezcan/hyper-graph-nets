@@ -2,12 +2,14 @@
 import functools
 
 from collections import OrderedDict
+
+import torch
 from torch import nn
 
 from src.migration.encoder import Encoder
 from src.migration.processor import Processor
 from src.migration.decoder import Decoder
-from src.util import device
+from src.util import device, MultiGraph, EdgeSet
 
 
 class MeshGraphNet(nn.Module):
@@ -36,6 +38,20 @@ class MeshGraphNet(nn.Module):
 
     def forward(self, graph):
         """Encodes and processes a multigraph, and returns node features."""
+        snd = list()
+        rcv = list()
+        for i in range(100):
+            snd.append(torch.add(graph.edge_sets[0].senders, i * 1579))
+            rcv.append(torch.add(graph.edge_sets[0].receivers, i * 1579))
+
+        graph = MultiGraph(
+            node_features=[torch.cat([graph.node_features[0]] * 100, dim=0)],
+            edge_sets=[EdgeSet(name=e.name,
+                               features=torch.cat([e.features] * 100, dim=0),
+                               senders=torch.cat(snd, dim=0),
+                               receivers=torch.cat(rcv, dim=0)) for e in graph.edge_sets])
+
+
         latent_graph = self.encoder(graph)
         latent_graph = self.processor(latent_graph)
         latent_graph = latent_graph._replace(node_features=latent_graph.node_features[0])
