@@ -52,14 +52,21 @@ class MeshTask(AbstractTask):
             self._algorithm.fit_iteration(train_dataloader=train_data)
 
     def preprocess(self):
-        self._algorithm.preprocess(self.train_loader)
+        self._algorithm.preprocess(self.train_loader, 'train')
+        self._algorithm.preprocess(self._valid_loader, 'valid')
+        # TODO: fix test
+        # self._algorithm.preprocess(self._test_loader, 'test')
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
-        self._algorithm.one_step_evaluator(self._valid_loader, self._rollouts)
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(r'valid_[0-9]+\.pth', file)]
+        with open(os.path.join(IN_DIR, valid_files[0]), 'rb') as f:
+            valid_data = torch.load(f)
+            self._algorithm.one_step_evaluator(valid_data, self._rollouts)
+
         self._algorithm.evaluator(self._test_loader, self._rollouts)
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         self._algorithm.n_step_evaluator(self._test_loader)
