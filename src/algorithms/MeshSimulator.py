@@ -128,8 +128,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self.save()
 
     def get_batched(self, data, batch_size):
-        batches = [data[i: i + batch_size]
-                   for i in range(0, len(data), batch_size)]
+        # TODO: Compatibility with instance-wise clustering
+        batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
 
@@ -157,14 +157,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     edge_dict[e.name]['features'].append(e.features)
 
                     senders = torch.tensor(
-                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
+                        [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
                          for x in e.senders.tolist()]
                     )
                     edge_dict[e.name]['snd'].append(senders)
 
                     receivers = torch.tensor(
-                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
-                         for x in e.senders.tolist()]
+                        [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
+                         for x in e.receivers.tolist()]
                     )
                     edge_dict[e.name]['rcv'].append(receivers)
 
