@@ -28,7 +28,10 @@ class Encoder(nn.Module):
         new_edges_sets = []
         for edge_set in graph.edge_sets:
             feature = edge_set.features
-            latent = self.edge_models[edge_set.name](feature)
-            new_edges_sets.append(edge_set._replace(features=latent))
+            try:
+                latent = self.edge_models[edge_set.name](feature)
+                new_edges_sets.append(edge_set._replace(features=latent))
+            except KeyError:
+                continue
 
         return MultiGraph(node_latents, new_edges_sets)
