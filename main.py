@@ -62,13 +62,15 @@ class IterativeExperiment(experiment.AbstractIterativeExperiment):
 """
 
 
-def main(train: bool, compute_rollout: bool):
+def main(preprocess: bool, train: bool, compute_rollout: bool):
     params = read_yaml(CONFIG_NAME)['params']
     print(device)
 
     if train:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
+        if preprocess:
+            task.preprocess()
         task.run_iteration()
 
     model_path = os.path.join(OUT_DIR, 'model.pkl')
@@ -85,10 +87,11 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    args = [True, True]
+    args = [False, True, True]
     set_start_method('spawn')
     try:
         args[0] = sys.argv[1] == 'True'
+        args[1] = sys.argv[2] == 'True'
         args[1] = sys.argv[2] == 'True'
     except IndexError:
         pass

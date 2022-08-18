@@ -43,7 +43,6 @@ class MeshTask(AbstractTask):
 
     def run_iteration(self):
         assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
-        self._algorithm.preprocess(self.train_loader)
         train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
 
         for train_file in train_files:
@@ -51,6 +50,9 @@ class MeshTask(AbstractTask):
                 train_data = torch.load(f)
 
             self._algorithm.fit_iteration(train_dataloader=train_data)
+
+    def preprocess(self):
+        self._algorithm.preprocess(self.train_loader)
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
