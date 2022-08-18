@@ -31,6 +31,7 @@ class MeshTask(AbstractTask):
         self._config = config
         self._raw_data = get_data(config=config)
         self._rollouts = config.get('task').get('rollouts')
+        self._epochs = config.get('task').get('epochs')
         self.train_loader = get_data(config=config)
 
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
@@ -43,13 +44,15 @@ class MeshTask(AbstractTask):
 
     def run_iteration(self):
         assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
-        train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
+        for e in range(self._epochs):
+            train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
 
-        for train_file in train_files:
-            with open(os.path.join(IN_DIR, train_file), 'rb') as f:
-                train_data = torch.load(f)
+            for train_file in train_files:
+                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
+                    train_data = torch.load(f)
 
-            self._algorithm.fit_iteration(train_dataloader=train_data)
+                self._algorithm.fit_iteration(train_dataloader=train_data)
+                del train_data
 
     def preprocess(self):
         self._algorithm.preprocess(self.train_loader, 'train')
