@@ -192,7 +192,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     torch.save(processed_data, f)
 
                 del processed_data
-                return
+
         end_instance = time.time()
         print(end_instance - start_instance)
 
