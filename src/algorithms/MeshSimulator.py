@@ -180,21 +180,18 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for i, trajectory in enumerate(data_loader):
             trajectories.append(trajectory)
             # TODO: Preprocess only necessary trajectories and change to 100
-            if (i + 1) % 5 == 0 and i != 0:
-                print((int((i + 1) / 5)))
+            if (i + 1) % 10 == 0 and i != 0:
                 with ProcessPoolExecutor() as executor:
-                    processed_data = [executor.map(functools.partial(self.build_trajectory, is_training=is_training), t)
-                                      for t in trajectories]
+                    processed_data = list(executor.map(functools.partial(self.build_trajectory, is_training=is_training), trajectories))
 
                 trajectories = list()
 
-                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 5))), 'wb') as f:
+                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 10))), 'wb') as f:
                     torch.save(processed_data, f)
 
                 del processed_data
 
     def build_trajectory(self, trajectory, is_training):
-        print('process')
         self._network.reset_remote_graph()
         graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
         return list(zip(graphs, trajectory))
