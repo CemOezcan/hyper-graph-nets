@@ -1,6 +1,7 @@
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import lru_cache
 import json
+import multiprocessing
 import os
 import pickle
 import random
@@ -88,11 +89,20 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def preprocess(self, train_dataloader: DataLoader):
         print('Start preprocessing graphs...')
         data = []
-        with ProcessPoolExecutor() as executor:
-            result = list(executor.map(
-                self.fetch_data, train_dataloader))
-            for r in result:
-                data.append(r)
+        for r in range(0, self._trajectories, 50):
+            train = []
+            for i in range(50):
+                train.append(next(train_dataloader))
+            with multiprocessing.Pool() as pool:
+                for i, result in enumerate(pool.imap(
+                        self.fetch_data, train)):
+                    data.append(result)
+                    print(i)
+                    if (i+1) % 50 == 0 and i != 0:
+                        print(i)
+                        with open(os.path.join(IN_DIR, 'split' + '_{}.pth'.format(int((i + 1) / 50))), 'wb') as f:
+                            torch.save(data, f)
+                        data = []
         print('Preprocessing done.')
         return data
 

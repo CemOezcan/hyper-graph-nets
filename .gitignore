@@ -9,3 +9,4 @@ meta.json
 *.pyc
 /wandb
 *.csv
+*.pth
