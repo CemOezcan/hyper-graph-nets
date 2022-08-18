@@ -52,7 +52,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:
-            self._batch_size = 3 # task_information.get('task').get('batch_size')
+            self._batch_size = 7 # task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
