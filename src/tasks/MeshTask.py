@@ -1,12 +1,15 @@
+import json
 import math
 import os
 import pickle
+import re
+from os.path import exists
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import plotly.graph_objects as go
 import torch
-from src.data.data_loader import OUT_DIR, get_data
+from src.data.data_loader import OUT_DIR, get_data, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
@@ -28,6 +31,7 @@ class MeshTask(AbstractTask):
         self._config = config
         self._raw_data = get_data(config=config)
         self._rollouts = config.get('task').get('rollouts')
+        self._epochs = config.get('task').get('epochs')
         self.train_loader = get_data(config=config)
 
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
@@ -39,16 +43,33 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
-        assert isinstance(
-            self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
-        self._algorithm.fit_iteration(train_dataloader=self.train_loader)
+        assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
+        for e in range(self._epochs):
+            train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
+
+            for train_file in train_files:
+                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
+                    train_data = torch.load(f)
+
+                self._algorithm.fit_iteration(train_dataloader=train_data)
+                del train_data
+
+    def preprocess(self):
+        self._algorithm.preprocess(self.train_loader, 'train')
+        self._algorithm.preprocess(self._valid_loader, 'valid')
+        # TODO: fix test
+        # self._algorithm.preprocess(self._test_loader, 'test')
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
-        self._algorithm.one_step_evaluator(self._valid_loader, self._rollouts)
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(r'valid_[0-9]+\.pth', file)]
+        with open(os.path.join(IN_DIR, valid_files[0]), 'rb') as f:
+            valid_data = torch.load(f)
+            self._algorithm.one_step_evaluator(valid_data, self._rollouts)
+
         self._algorithm.evaluator(self._test_loader, self._rollouts)
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         self._algorithm.n_step_evaluator(self._test_loader)

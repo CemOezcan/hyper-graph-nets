@@ -1,3 +1,4 @@
+import functools
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import lru_cache
 import json
@@ -38,6 +39,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._big_batch_size = config.get('task').get('batch_size')
 
         self._batch_size = 1
+        self._num_batches = 0
         self._network = None
         self._optimizer = None
         self._scheduler = None
@@ -107,12 +109,18 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return data
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
-        data = self.preprocess(train_dataloader)
-        for i, batches in enumerate(data):
-            print(f'Batch: {i}')
+        self._network.train()
+        for trajectory in train_dataloader:
+            random.shuffle(trajectory)
+            batches = self.get_batched(trajectory, self._batch_size)
             start_trajectory = time.time()
-            for graph, data_frame in batches:
+
+            for i, (graph, data_frame) in enumerate(batches):
+                self._num_batches += 1
+                if i % 100 == 0:
+                    print('Batch: {}'.format(self._num_batches))
                 start_instance = time.time()
+
                 loss = self._network.training_step(graph, data_frame)
                 loss.backward()
 
@@ -120,12 +128,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 self._optimizer.zero_grad()
 
                 end_instance = time.time()
-                wandb.log(
-                    {'loss': loss, 'training time per instance': end_instance - start_instance})
+                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+
             end_trajectory = time.time()
-            wandb.log(
-                {'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
-        self.save()
+            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            self.save()
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
@@ -198,20 +205,52 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         batches = self.get_batched(shuffled_graphs, self._batch_size)
         return batches
 
+    def preprocess(self, data_loader, split):
+        is_training = split == 'train'
+        trajectories = list()
+
+        start_instance = time.time()
+        for i, trajectory in enumerate(data_loader):
+            trajectories.append(trajectory)
+            # TODO: Preprocess only necessary trajectories and change to 100
+            if (i + 1) % 11 == 0 and i != 0:
+                processed_data = [self.build_trajectory(traj, is_training) for traj in trajectories]
+
+                del trajectories
+                trajectories = list()
+
+                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 11))), 'wb') as f:
+                    torch.save(processed_data, f)
+
+                del processed_data
+
+        end_instance = time.time()
+        print(end_instance - start_instance)
+
+    @staticmethod
+    def traj_to_device(trajectory, device):
+
+        for instance in trajectory:
+            for key, value in instance.items():
+                instance[key] = value.to(device)
+
+        return trajectory
+
+    def build_trajectory(self, trajectory, is_training):
+        self._network.reset_remote_graph()
+        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
+        return list(zip(graphs, trajectory))
+
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances):
         trajectory_loss = list()
         for i, trajectory in enumerate(ds_loader):
             instance_loss = list()
-            self._network.reset_remote_graph()
-
             if i >= instances:
                 break
 
-            for data_frame in trajectory:
-                graph = self._network.build_graph(data_frame, False)
-                loss, pos_error = self._network.validation_step(
-                    graph, data_frame)
+            for graph, data_frame in trajectory:
+                loss, pos_error = self._network.validation_step(graph, data_frame)
                 instance_loss.append([loss, pos_error])
 
             trajectory_loss.append(instance_loss)
@@ -233,6 +272,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         num_steps = 100
 
         for i, trajectory in enumerate(ds_loader):
+            if i >= rollouts:
+                break
             self._network.reset_remote_graph()
             prediction_trajectory, mse_loss = self._network.rollout(
                 trajectory, num_steps=num_steps)
@@ -246,6 +287,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             mse.item() for mse in mse_stds]}
         data_frame = pd.DataFrame.from_dict(rollout_losses)
 
+        # TODO: How are rollouts saved?
         data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
         self.save_rollouts(trajectories)
 
