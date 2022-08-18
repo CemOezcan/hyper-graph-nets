@@ -28,8 +28,8 @@ params:
     dataset: flag_minimal
     rollout_split: valid
     batch_size: 1 # TODO: Batch size != 1 raises an error
-    epochs: 1
-    trajectories: 1
+    epochs: 100
+    trajectories: 11
     rollouts: 1
     mode: all
     prefetch_factor: 2
@@ -48,8 +48,8 @@ params:
     stochastic_message_passing_used: False
     rmp:
       ricci: True
-      clustering: none
-      connector: none
+      clustering: hdbscan
+      connector: hierarchical
 
 ---
 name: optuna_exp
