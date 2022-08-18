@@ -176,22 +176,24 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def preprocess(self, data_loader, split):
         is_training = split == 'train'
-        m = torch.multiprocessing.Manager()
-        trajectories = m.Queue()
+        trajectories = list()
+
+        start_instance = time.time()
         for i, trajectory in enumerate(data_loader):
-            trajectories.put(trajectory)
+            trajectories.append(trajectory)
             # TODO: Preprocess only necessary trajectories and change to 100
-            if (i + 1) % 10 == 0 and i != 0:
-                with torch.multiprocessing.Pool() as executor:
-                    processed_data = list(executor.map(functools.partial(self.build_trajectory, is_training=is_training), (trajectories, )))
+            if (i + 1) % 5 == 0 and i != 0:
+                processed_data = [self.build_trajectory(traj, is_training) for traj in trajectories]
 
                 del trajectories
-                trajectories = m.Queue()
+                trajectories = list()
 
-                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 10))), 'wb') as f:
+                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 5))), 'wb') as f:
                     torch.save(processed_data, f)
 
                 del processed_data
+        end_instance = time.time()
+        print(end_instance - start_instance)
 
     @staticmethod
     def traj_to_device(trajectory, device):
@@ -202,9 +204,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return trajectory
 
-    def build_trajectory(self, queue, is_training):
-        #self.traj_to_device(trajectory, device)
-        trajectory = queue.get()
+    def build_trajectory(self, trajectory, is_training):
         self._network.reset_remote_graph()
         graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
         return list(zip(graphs, trajectory))
