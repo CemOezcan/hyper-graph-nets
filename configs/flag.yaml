@@ -48,8 +48,8 @@ params:
     stochastic_message_passing_used: False
     rmp:
       ricci: True
-      clustering: none
-      connector: none
+      clustering: hdbscan
+      connector: hierarchical
 
 ---
 name: optuna_exp

@@ -132,14 +132,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     edge_dict[e.name]['features'].append(e.features)
 
                     senders = torch.tensor(
-                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
+                        [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
                          for x in e.senders.tolist()]
                     )
                     edge_dict[e.name]['snd'].append(senders)
 
                     receivers = torch.tensor(
-                        [x + i * num_nodes if x < hyper_node_offset else x + num_nodes + i * num_hyper_nodes
-                         for x in e.senders.tolist()]
+                        [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
+                         for x in e.receivers.tolist()]
                     )
                     edge_dict[e.name]['rcv'].append(receivers)
 
@@ -232,6 +232,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         num_steps = 100
 
         for i, trajectory in enumerate(ds_loader):
+            if i >= rollouts:
+                break
             self._network.reset_remote_graph()
             prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=num_steps)
             trajectories.append(prediction_trajectory)
@@ -243,6 +245,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         rollout_losses = {'mse_loss': [mse.item() for mse in mse_means], 'mse_std': [mse.item() for mse in mse_stds]}
         data_frame = pd.DataFrame.from_dict(rollout_losses)
 
+        # TODO: How are rollouts saved?
         data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
         self.save_rollouts(trajectories)
 
