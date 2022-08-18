@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    args = [False, True, True]
+    args = [True, True, True]
     set_start_method('spawn')
     try:
         args[0] = sys.argv[1] == 'True'
