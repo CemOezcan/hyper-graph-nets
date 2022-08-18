@@ -13,6 +13,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import wandb
+from torch.utils.data.dataset import IterableDataset
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
@@ -32,6 +33,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._dataset_name = config.get('task').get('dataset')
 
         self._batch_size = 1
+        self._num_batches = 0
         self._network = None
         self._optimizer = None
         self._scheduler = None
@@ -47,7 +49,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:
-            self._batch_size = 57 # task_information.get('task').get('batch_size')
+            self._batch_size = 7 # task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
@@ -77,40 +79,31 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        i = 0
-        queue = Queue()
-        self.fetch_data(train_dataloader, queue)
-        while i < self._trajectories:
-            i += 1
-            print('Batch: {}'.format(i))
-            thread_1 = thread.Thread(target=self.fetch_data, args=(train_dataloader, queue))
-            if i < self._trajectories:
-                thread_1.start()
-            try:
-                batches = queue.get()
-                start_trajectory = time.time()
-                for graph, data_frame in batches:
-                    start_instance = time.time()
-                    loss = self._network.training_step(graph, data_frame)
-                    loss.backward()
+        for trajectory in train_dataloader:
+            random.shuffle(trajectory)
+            batches = self.get_batched(trajectory, self._batch_size)
+            start_trajectory = time.time()
 
-                    self._optimizer.step()
-                    self._optimizer.zero_grad()
+            for i, (graph, data_frame) in enumerate(batches):
+                self._num_batches += 1
+                print('Batch: {}'.format(self._num_batches))
+                start_instance = time.time()
 
-                    end_instance = time.time()
-                    wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
-                    # self._run.watch(self._network)
+                loss = self._network.training_step(graph, data_frame)
+                loss.backward()
 
-                end_trajectory = time.time()
-                wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
-            except Empty:
-                break
-            finally:
-                self.save()
-                if thread_1.is_alive():
-                    thread_1.join()
+                self._optimizer.step()
+                self._optimizer.zero_grad()
+
+                end_instance = time.time()
+                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+
+            end_trajectory = time.time()
+            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            self.save()
 
     def get_batched(self, data, batch_size):
+        # TODO: Compatibility with instance-wise clustering
         batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
@@ -177,6 +170,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             queue.put(batches)
         except StopIteration:
             return
+
+    def preprocess(self, train_loader):
+        processed_data = list()
+
+        for i, trajectory in enumerate(train_loader):
+            self._network.reset_remote_graph()
+            graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
+            processed_data.append(list(zip(graphs, trajectory)))
+
+            # TODO: change to 100 for cluster and parallelize (fetch 100 trajs, parallelize into processed_data, save and continue)
+            # TODO: Preprocess only necessary trajectories
+            if (i + 1) % 100 == 0 and i != 0:
+                with open(os.path.join(IN_DIR, 'train_{}.pth'.format(int((i + 1) / 100))), 'wb') as f:
+                    torch.save(processed_data, f)
+
+                processed_data = list()
 
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances):

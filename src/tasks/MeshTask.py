@@ -1,12 +1,15 @@
+import json
 import math
 import os
 import pickle
+import re
+from os.path import exists
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import plotly.graph_objects as go
 import torch
-from src.data.data_loader import OUT_DIR, get_data
+from src.data.data_loader import OUT_DIR, get_data, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
@@ -39,9 +42,15 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
-        assert isinstance(
-            self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
-        self._algorithm.fit_iteration(train_dataloader=self.train_loader)
+        assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
+        self._algorithm.preprocess(self.train_loader)
+        train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
+
+        for train_file in train_files:
+            with open(os.path.join(IN_DIR, train_file), 'rb') as f:
+                train_data = torch.load(f)
+
+            self._algorithm.fit_iteration(train_dataloader=train_data)
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
