@@ -1,16 +1,11 @@
 import functools
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from functools import lru_cache
-import json
 import multiprocessing
 import os
 import pickle
 import random
 import time
-from queue import Queue, Empty
 
 import numpy as np
-import threading as thread
 
 import pandas as pd
 import torch
@@ -18,12 +13,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 import wandb
 
-from src.data.data_loader import OUT_DIR, IN_DIR, get_data
+from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
-from src.data.graphloader import GraphDataLoader
 from src.model.flag import FlagModel
-from src.util import NodeType, device, detach, EdgeSet, MultiGraph
+from src.util import detach, EdgeSet, MultiGraph
 from torch.utils.data import DataLoader
 from util.Types import ConfigDict, ScalarDict, Union
 
@@ -92,21 +86,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def preprocess(self, train_dataloader: DataLoader, split):
         # TODO: Does not yet work for the validation dataset
         print('Start preprocessing graphs...')
+        preload = 50
         is_training = split == 'train'
         data = []
-        for r in range(0, self._trajectories, 50):
+        for r in range(0, self._trajectories, preload):
             train = []
-            for i in range(50):
+            for i in range(preload):
                 # TODO: This may rais a StopIteration Exception
                 train.append(next(train_dataloader))
             with multiprocessing.Pool() as pool:
                 for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
                     data.append(result)
                     print(i)
-                    if (i+1) % 50 == 0 and i != 0:
+                    if (i+1) % preload == 0 and i != 0:
                         print(i)
-                        # TODO: Saving files does not work (files ar probably overwritten)
-                        with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 50))), 'wb') as f:
+                        # TODO: last data storage might not be saved
+                        with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth', 'wb')) as f:
                             torch.save(data, f)
                         data = []
         print('Preprocessing done.')
@@ -121,7 +116,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for i, (graph, data_frame) in enumerate(batches):
                 self._num_batches += 1
                 if i % 100 == 0:
-                    print('Batch: {}'.format(self._num_batches))
+                    print(f'Batch: {self._num_batches}')
                 start_instance = time.time()
 
                 loss = self._network.training_step(graph, data_frame)
