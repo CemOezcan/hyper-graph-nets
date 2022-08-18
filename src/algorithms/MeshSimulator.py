@@ -178,7 +178,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         is_training = split == 'train'
         trajectories = list()
         for i, trajectory in enumerate(data_loader):
-            trajectories.append(trajectory)
+            trajectories.append(self.traj_to_device(trajectory, 'cpu'))
             # TODO: Preprocess only necessary trajectories and change to 100
             if (i + 1) % 10 == 0 and i != 0:
                 with ProcessPoolExecutor() as executor:
@@ -191,7 +191,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
                 del processed_data
 
+    @staticmethod
+    def traj_to_device(trajectory, device):
+        for instance in trajectory:
+            for key, value in instance.items():
+                instance[key] = value.to(device)
+
+        return trajectory
+
     def build_trajectory(self, trajectory, is_training):
+        self.traj_to_device(trajectory, device)
         self._network.reset_remote_graph()
         graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
         return list(zip(graphs, trajectory))
