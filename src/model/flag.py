@@ -34,7 +34,7 @@ class FlagModel(nn.Module):
         self._hierarchical = params.get('rmp').get('connector') == 'hierarchical' and self._rmp
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
         self._attention = params.get('attention') == 'True'
-        self._ricci = params.get('rmp').get('ricci') == 'True'
+        self._ricci = params.get('rmp').get('ricci')
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
 
