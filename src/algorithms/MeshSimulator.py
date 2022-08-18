@@ -58,7 +58,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:
             # task_information.get('task').get('batch_size')
-            self._batch_size = 32
+            # TODO: Set batch size to a divisor of 399
+            self._batch_size = 19
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
                 self._network.parameters(), lr=self._learning_rate)
@@ -88,25 +89,27 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
-    def preprocess(self, train_dataloader: DataLoader):
+    def preprocess(self, train_dataloader: DataLoader, split):
+        # TODO: Does not yet work for the validation dataset
         print('Start preprocessing graphs...')
+        is_training = split == 'train'
         data = []
         for r in range(0, self._trajectories, 50):
             train = []
             for i in range(50):
+                # TODO: This may rais a StopIteration Exception
                 train.append(next(train_dataloader))
             with multiprocessing.Pool() as pool:
-                for i, result in enumerate(pool.imap(
-                        self.fetch_data, train)):
+                for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
                     data.append(result)
                     print(i)
                     if (i+1) % 50 == 0 and i != 0:
                         print(i)
-                        with open(os.path.join(IN_DIR, 'split' + '_{}.pth'.format(int((i + 1) / 50))), 'wb') as f:
+                        # TODO: Saving files does not work (files ar probably overwritten)
+                        with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 50))), 'wb') as f:
                             torch.save(data, f)
                         data = []
         print('Preprocessing done.')
-        return data
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
@@ -196,36 +199,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return batched_data
 
-    def fetch_data(self, trajectory):
+    def fetch_data(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(
-            data_frame, True) for data_frame in trajectory]
-        shuffled_graphs = list(zip(graphs, trajectory))
-        random.shuffle(shuffled_graphs)
-        batches = self.get_batched(shuffled_graphs, self._batch_size)
-        return batches
-
-    def preprocess(self, data_loader, split):
-        is_training = split == 'train'
-        trajectories = list()
-
-        start_instance = time.time()
-        for i, trajectory in enumerate(data_loader):
-            trajectories.append(trajectory)
-            # TODO: Preprocess only necessary trajectories and change to 100
-            if (i + 1) % 11 == 0 and i != 0:
-                processed_data = [self.build_trajectory(traj, is_training) for traj in trajectories]
-
-                del trajectories
-                trajectories = list()
-
-                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 11))), 'wb') as f:
-                    torch.save(processed_data, f)
-
-                del processed_data
-
-        end_instance = time.time()
-        print(end_instance - start_instance)
+        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
+        return list(zip(graphs, trajectory))
 
     @staticmethod
     def traj_to_device(trajectory, device):
@@ -235,11 +212,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 instance[key] = value.to(device)
 
         return trajectory
-
-    def build_trajectory(self, trajectory, is_training):
-        self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
-        return list(zip(graphs, trajectory))
 
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances):

@@ -93,7 +93,7 @@ if __name__ == '__main__':
     try:
         args[0] = sys.argv[1] == 'True'
         args[1] = sys.argv[2] == 'True'
-        args[1] = sys.argv[2] == 'True'
+        args[2] = sys.argv[3] == 'True'
     except IndexError:
         pass
     main(*args)
