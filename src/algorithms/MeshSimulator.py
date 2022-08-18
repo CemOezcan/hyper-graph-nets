@@ -1,3 +1,4 @@
+import functools
 import json
 import os
 import pickle
@@ -172,28 +173,32 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         except StopIteration:
             return
 
-    def preprocess(self, train_loader):
+    def preprocess(self, data_loader, split):
+        is_training = split == 'train'
         trajectories = list()
-        for i, trajectory in enumerate(train_loader):
+        for i, trajectory in enumerate(data_loader):
             trajectories.append(trajectory)
             # TODO: Preprocess only necessary trajectories and change to 100
             if (i + 1) % 10 == 0 and i != 0:
                 with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-                    processed_data = [pool.map_async(self.build_trajectory, (t,)) for t in trajectories]
+                    processed_data = [
+                        pool.map_async(functools.partial(self.build_trajectory, is_training=is_training), (t,))
+                        for t in trajectories
+                    ]
                     pool.close()
                     pool.join()
 
                 trajectories = list()
                 processed_data = [x.get()[0] for x in processed_data]
 
-                with open(os.path.join(IN_DIR, 'train_{}.pth'.format(int((i + 1) / 10))), 'wb') as f:
+                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 10))), 'wb') as f:
                     torch.save(processed_data, f)
 
                 del processed_data
 
-    def build_trajectory(self, trajectory):
+    def build_trajectory(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
+        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
         return list(zip(graphs, trajectory))
 
     @torch.no_grad()
@@ -201,13 +206,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         trajectory_loss = list()
         for i, trajectory in enumerate(ds_loader):
             instance_loss = list()
-            self._network.reset_remote_graph()
-
             if i >= instances:
                 break
 
-            for data_frame in trajectory:
-                graph = self._network.build_graph(data_frame, False)
+            for graph, data_frame in trajectory:
                 loss, pos_error = self._network.validation_step(graph, data_frame)
                 instance_loss.append([loss, pos_error])
 
