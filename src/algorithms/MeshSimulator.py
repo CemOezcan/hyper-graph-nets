@@ -182,13 +182,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for i, trajectory in enumerate(data_loader):
             trajectories.append(trajectory)
             # TODO: Preprocess only necessary trajectories and change to 100
-            if (i + 1) % 20 == 0 and i != 0:
+            if (i + 1) % 11 == 0 and i != 0:
                 processed_data = [self.build_trajectory(traj, is_training) for traj in trajectories]
 
                 del trajectories
                 trajectories = list()
 
-                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 20))), 'wb') as f:
+                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 11))), 'wb') as f:
                     torch.save(processed_data, f)
 
                 del processed_data

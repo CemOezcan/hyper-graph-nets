@@ -29,7 +29,7 @@ params:
     rollout_split: valid
     batch_size: 1 # TODO: Batch size != 1 raises an error
     epochs: 1
-    trajectories: 10
+    trajectories: 11
     rollouts: 1
     mode: all
     prefetch_factor: 2
