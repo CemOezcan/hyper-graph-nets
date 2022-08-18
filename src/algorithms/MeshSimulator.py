@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import wandb
 from torch.utils.data.dataset import IterableDataset
+import multiprocessing as mp
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
@@ -172,20 +173,28 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             return
 
     def preprocess(self, train_loader):
-        processed_data = list()
-
+        trajectories = list()
         for i, trajectory in enumerate(train_loader):
-            self._network.reset_remote_graph()
-            graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
-            processed_data.append(list(zip(graphs, trajectory)))
+            trajectories.append(trajectory)
+            # TODO: Preprocess only necessary trajectories and change to 100
+            if (i + 1) % 10 == 0 and i != 0:
+                with mp.Pool(processes=mp.cpu_count() - 1) as pool:
+                    processed_data = [pool.map_async(self.build_trajectory, (t,)) for t in trajectories]
+                    pool.close()
+                    pool.join()
 
-            # TODO: change to 100 for cluster and parallelize (fetch 100 trajs, parallelize into processed_data, save and continue)
-            # TODO: Preprocess only necessary trajectories
-            if (i + 1) % 100 == 0 and i != 0:
-                with open(os.path.join(IN_DIR, 'train_{}.pth'.format(int((i + 1) / 100))), 'wb') as f:
+                trajectories = list()
+                processed_data = [x.get()[0] for x in processed_data]
+
+                with open(os.path.join(IN_DIR, 'train_{}.pth'.format(int((i + 1) / 10))), 'wb') as f:
                     torch.save(processed_data, f)
 
-                processed_data = list()
+                del processed_data
+
+    def build_trajectory(self, trajectory):
+        self._network.reset_remote_graph()
+        graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
+        return list(zip(graphs, trajectory))
 
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances):
