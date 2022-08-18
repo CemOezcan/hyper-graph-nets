@@ -110,7 +110,8 @@ class FlagModel(nn.Module):
             graph = self._ricci_flow.run(graph, inputs, self._mesh_edge_normalizer, is_training)
         if self._rmp:
             graph = self._remote_graph.create_graph(graph, is_training)
-        return graph
+
+        return MultiGraph(node_features=graph.node_features, edge_sets=graph.edge_sets)
 
     def forward(self, graph):
         return self.learned_model(graph)
