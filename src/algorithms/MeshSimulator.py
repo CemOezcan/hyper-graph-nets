@@ -53,7 +53,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if not self._initialized:
             # task_information.get('task').get('batch_size')
             # TODO: Set batch size to a divisor of 399
-            self._batch_size = 1
+            self._batch_size = 7
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
                 self._network.parameters(), lr=self._learning_rate)
@@ -114,6 +114,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             start_trajectory = time.time()
 
             for i, (graph, data_frame) in enumerate(batches):
+                # TODO: Console outputs are inconsistent
                 self._num_batches += 1
                 if i % 100 == 0:
                     print(f'Batch: {self._num_batches}')
@@ -196,11 +197,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fetch_data(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(
-            data_frame, is_training) for data_frame in trajectory]
-        shuffled_graphs = list(zip(graphs, trajectory))
-        random.shuffle(shuffled_graphs)
-        batches = self.get_batched(shuffled_graphs, self._batch_size)
+        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
+        data = list(zip(graphs, trajectory))
+        batches = self.get_batched(data, 1)
         return batches
 
     @staticmethod
