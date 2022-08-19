@@ -44,12 +44,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._scheduler_learning_rate = self._network_config.get(
             "scheduler_learning_rate")
 
+    def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         wandb.init(project='rmp')
+        wandb.define_metric('epoch')
+        wandb.define_metric('validation_loss', step_metric='epoch')
+        wandb.define_metric('position_loss', step_metric='epoch')
         wandb.config = {'learning_rate': self._learning_rate,
                         'epochs': self._trajectories}
         random.seed(0)  # TODO set globally
-
-    def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         if not self._initialized:
             # task_information.get('task').get('batch_size')
             # TODO: Set batch size to a divisor of 399
@@ -92,7 +94,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for r in range(0, self._trajectories, preload):
             train = []
             for i in range(preload):
-                # TODO: This may raise a StopIteration Exception
+                # TODO: This raises a StopIteration Exception
                 train.append(next(train_dataloader))
             with multiprocessing.Pool() as pool:
                 for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
@@ -206,7 +208,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return batches
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances):
+    def one_step_evaluator(self, ds_loader, instances, epoch):
         trajectory_loss = list()
         for i, trajectory in enumerate(ds_loader):
             instance_loss = list()
@@ -222,12 +224,17 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
+
         data_frame = pd.DataFrame.from_dict(
             {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
              'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
              }
         )
 
+        validation_loss, position_loss = zip(*mean)
+        wandb.log({'validation_loss': wandb.Histogram(list(validation_loss)),
+                   'position_loss': wandb.Histogram(list(position_loss)),
+                   'epoch': epoch})
         data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
 
     def evaluator(self, ds_loader, rollouts):

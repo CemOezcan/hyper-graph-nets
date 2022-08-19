@@ -44,8 +44,10 @@ class MeshTask(AbstractTask):
 
     def run_iteration(self):
         assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
+        train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(r'valid_[0-9]+\.pth', file)]
+
         for e in range(self._epochs):
-            train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
 
             for train_file in train_files:
                 with open(os.path.join(IN_DIR, train_file), 'rb') as f:
@@ -53,6 +55,13 @@ class MeshTask(AbstractTask):
 
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
+
+            for valid_file in valid_files:
+                with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
+                    valid_data = torch.load(f)
+
+                self._algorithm.one_step_evaluator(valid_data, self._rollouts, e + 1)
+                del valid_data
 
     def preprocess(self):
         self._algorithm.preprocess(self.train_loader, 'train')
@@ -65,11 +74,6 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
-        valid_files = [file for file in os.listdir(IN_DIR) if re.match(r'valid_[0-9]+\.pth', file)]
-        with open(os.path.join(IN_DIR, valid_files[0]), 'rb') as f:
-            valid_data = torch.load(f)
-            self._algorithm.one_step_evaluator(valid_data, self._rollouts)
-
         self._algorithm.evaluator(self._test_loader, self._rollouts)
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         self._algorithm.n_step_evaluator(self._test_loader)
