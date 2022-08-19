@@ -53,7 +53,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if not self._initialized:
             # task_information.get('task').get('batch_size')
             # TODO: Set batch size to a divisor of 399
-            self._batch_size = 19
+            self._batch_size = 1
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
                 self._network.parameters(), lr=self._learning_rate)
@@ -86,7 +86,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def preprocess(self, train_dataloader: DataLoader, split):
         # TODO: Does not yet work for the validation dataset
         print('Start preprocessing graphs...')
-        preload = 50
+        preload = 5
         is_training = split == 'train'
         data = []
         for r in range(0, self._trajectories, preload):
@@ -101,7 +101,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     if (i+1) % preload == 0 and i != 0:
                         print(i)
                         # TODO: last data storage might not be saved
-                        with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth', 'wb')) as f:
+                        with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
                             torch.save(data, f)
                         data = []
         print('Preprocessing done.')
@@ -196,8 +196,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fetch_data(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
-        return list(zip(graphs, trajectory))
+        graphs = [self._network.build_graph(
+            data_frame, is_training) for data_frame in trajectory]
+        shuffled_graphs = list(zip(graphs, trajectory))
+        random.shuffle(shuffled_graphs)
+        batches = self.get_batched(shuffled_graphs, self._batch_size)
+        return batches
 
     @staticmethod
     def traj_to_device(trajectory, device):
