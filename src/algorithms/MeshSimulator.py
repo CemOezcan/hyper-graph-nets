@@ -88,26 +88,27 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
-    def preprocess(self, train_dataloader: DataLoader, split):
-        # TODO: Does not yet work for the validation dataset
-        print('Start preprocessing graphs...')
-        preload = 5
+    def preprocess(self, train_dataloader: DataLoader, split, preload):
+        assert 1000 % preload == 0, 'Prefetch factor must be divisible by 1000.'
         is_training = split == 'train'
+        print('Start preprocessing graphs...')
+
         data = []
         for r in range(0, self._trajectories, preload):
-            train = []
-            for i in range(preload):
-                # TODO: This raises a StopIteration Exception
-                train.append(next(train_dataloader))
-            with multiprocessing.Pool() as pool:
-                for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
-                    data.append(result)
-                    if (i+1) % preload == 0 and i != 0:
-                        print(r)
-                        # TODO: last data storage might not be saved
-                        with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
-                            torch.save(data, f)
-                        data = []
+            try:
+                train = [next(train_dataloader) for _ in range(preload)]
+                with multiprocessing.Pool() as pool:
+                    for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
+                        data.append(result)
+                        if (i+1) % preload == 0 and i != 0:
+                            print(r)
+                            # TODO: last data storage might not be saved
+                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
+                                torch.save(data, f)
+                            data = []
+            except StopIteration:
+                break
+
         print('Preprocessing done.')
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
@@ -136,7 +137,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory -
-                      start_trajectory}, commit=False)
+                                                       start_trajectory}, commit=False)
             self.save()
 
     def get_batched(self, data, batch_size):
