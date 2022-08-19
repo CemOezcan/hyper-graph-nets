@@ -59,8 +59,9 @@ class MeshTask(AbstractTask):
             self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
 
     def preprocess(self):
-        self._algorithm.preprocess(self.train_loader, 'train')
-        self._algorithm.preprocess(self._valid_loader, 'valid')
+        # TODO: parameterize prefetch factor
+        self._algorithm.preprocess(self.train_loader, 'train', 5)
+        self._algorithm.preprocess(self._valid_loader, 'valid', 5)
         # TODO: fix test
         # self._algorithm.preprocess(self._test_loader, 'test')
 
