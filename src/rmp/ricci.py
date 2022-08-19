@@ -56,7 +56,7 @@ class Ricci(AbstractGraphProcessor):
             torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
         self.g.edge_sets.append(EdgeSet(name='ricci', features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(
             added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
-        wandb.log({'Ricci Added Edges': len(added_edges['senders'])})
+        #wandb.log({'Ricci Added Edges': len(added_edges['senders'])})
         return self.g
 
     @staticmethod
