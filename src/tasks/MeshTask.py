@@ -56,16 +56,12 @@ class MeshTask(AbstractTask):
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
 
-            for valid_file in valid_files:
-                with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
-                    valid_data = torch.load(f)
-
-                self._algorithm.one_step_evaluator(valid_data, self._rollouts, e + 1)
-                del valid_data
+            self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
 
     def preprocess(self):
-        self._algorithm.preprocess(self.train_loader, 'train')
-        self._algorithm.preprocess(self._valid_loader, 'valid')
+        # TODO: parameterize prefetch factor
+        self._algorithm.preprocess(self.train_loader, 'train', 5)
+        self._algorithm.preprocess(self._valid_loader, 'valid', 5)
         # TODO: fix test
         # self._algorithm.preprocess(self._test_loader, 'test')
 
