@@ -1,28 +1,24 @@
 import functools
-import json
+import multiprocessing
 import os
 import pickle
 import random
 import time
-from concurrent.futures import ProcessPoolExecutor
-from queue import Queue, Empty
 
 import numpy as np
-import threading as thread
 
 import pandas as pd
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import wandb
-from torch.utils.data.dataset import IterableDataset
-import multiprocessing as mp
+from matplotlib import pyplot as plt
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
-from src.util import NodeType, device, detach, EdgeSet, MultiGraph
+from src.util import detach, EdgeSet, MultiGraph
 from torch.utils.data import DataLoader
 from util.Types import ConfigDict, ScalarDict, Union
 
@@ -34,6 +30,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._dataset_dir = IN_DIR
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
+        self._prefetch_factor = config.get('task').get('prefetch_factor')
+        self._big_batch_size = config.get('task').get('batch_size')
 
         self._batch_size = 1
         self._num_batches = 0
@@ -44,18 +42,28 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self.loss_function = F.mse_loss
         self._learning_rate = self._network_config.get("learning_rate")
-        self._scheduler_learning_rate = self._network_config.get("scheduler_learning_rate")
-
-        wandb.init(project='rmp')
-        wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
-        random.seed(0)  # TODO set globally
+        self._scheduler_learning_rate = self._network_config.get(
+            "scheduler_learning_rate")
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
+        wandb.init(project='rmp')
+        wandb.define_metric('epoch')
+        wandb.define_metric('val')
+        wandb.define_metric('validation_loss', step_metric='epoch')
+        wandb.define_metric('position_loss', step_metric='epoch')
+        wandb.define_metric('validation_instances', step_metric='val')
+        wandb.config = {'learning_rate': self._learning_rate,
+                        'epochs': self._trajectories}
+        random.seed(0)  # TODO set globally
         if not self._initialized:
-            self._batch_size = 7 # task_information.get('task').get('batch_size')
+            # task_information.get('task').get('batch_size')
+            # TODO: Set batch size to a divisor of 399
+            self._batch_size = 7
             self._network = FlagModel(self._network_config)
-            self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
-            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
+            self._optimizer = optim.Adam(
+                self._network.parameters(), lr=self._learning_rate)
+            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
             self._initialized = True
 
     def set_network(self, network):
@@ -80,6 +88,29 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
+    def preprocess(self, train_dataloader: DataLoader, split, preload):
+        assert 1000 % preload == 0, 'Prefetch factor must be divisible by 1000.'
+        is_training = split == 'train'
+        print('Start preprocessing graphs...')
+
+        data = []
+        for r in range(0, self._trajectories, preload):
+            try:
+                train = [next(train_dataloader) for _ in range(preload)]
+                with multiprocessing.Pool() as pool:
+                    for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
+                        data.append(result)
+                        if (i+1) % preload == 0 and i != 0:
+                            print(r)
+                            # TODO: last data storage might not be saved
+                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
+                                torch.save(data, f)
+                            data = []
+            except StopIteration:
+                break
+
+        print('Preprocessing done.')
+
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
         for trajectory in train_dataloader:
@@ -88,9 +119,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             start_trajectory = time.time()
 
             for i, (graph, data_frame) in enumerate(batches):
+                # TODO: Console outputs are inconsistent
                 self._num_batches += 1
                 if i % 100 == 0:
-                    print('Batch: {}'.format(self._num_batches))
+                    print(f'Batch: {self._num_batches}')
                 start_instance = time.time()
 
                 loss = self._network.training_step(graph, data_frame)
@@ -100,27 +132,32 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 self._optimizer.zero_grad()
 
                 end_instance = time.time()
-                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+                wandb.log(
+                    {'loss': loss, 'training time per instance': end_instance - start_instance})
 
             end_trajectory = time.time()
-            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            wandb.log({'training time per trajectory': end_trajectory -
+                                                       start_trajectory}, commit=False)
             self.save()
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
-        batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
+        batches = [data[i: i + batch_size]
+                   for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
 
         num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
-        num_nodes, num_hyper_nodes = num_nodes if len(num_nodes) > 1 else (num_nodes[0], 0)
+        num_nodes, num_hyper_nodes = num_nodes if len(
+            num_nodes) > 1 else (num_nodes[0], 0)
         hyper_node_offset = batch_size * num_nodes
 
         edge_names = [e.name for e in graph.edge_sets]
 
         batched_data = list()
         for batch in batches:
-            edge_dict = {name: {'snd': list(), 'rcv': list(), 'features': list()} for name in edge_names}
+            edge_dict = {name: {'snd': list(), 'rcv': list(), 'features': list()}
+                         for name in edge_names}
             trajectory_dict = {key: list() for key in trajectory_attributes}
 
             node_features = list()
@@ -145,14 +182,17 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     )
                     edge_dict[e.name]['rcv'].append(receivers)
 
-            new_traj = {key: torch.cat(value, dim=0) for key, value in trajectory_dict.items()}
+            new_traj = {key: torch.cat(value, dim=0)
+                        for key, value in trajectory_dict.items()}
 
-            all_nodes = list(map(lambda x: torch.cat(x, dim=0), zip(*node_features)))
+            all_nodes = list(
+                map(lambda x: torch.cat(x, dim=0), zip(*node_features)))
             new_graph = MultiGraph(
                 node_features=all_nodes,
                 edge_sets=[
                     EdgeSet(name=n,
-                            features=torch.cat(edge_dict[n]['features'], dim=0),
+                            features=torch.cat(
+                                edge_dict[n]['features'], dim=0),
                             senders=torch.cat(edge_dict[n]['snd'], dim=0),
                             receivers=torch.cat(edge_dict[n]['rcv'], dim=0))
                     for n in edge_dict.keys()
@@ -163,76 +203,55 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return batched_data
 
-    def fetch_data(self, loader, queue):
-        try:
-            trajectory = next(loader)
-            self._network.reset_remote_graph()
-            graphs = [self._network.build_graph(data_frame, True) for data_frame in trajectory]
-            shuffled_graphs = list(zip(graphs, trajectory))
-            random.shuffle(shuffled_graphs)
-            batches = self.get_batched(shuffled_graphs, self._batch_size)
-            queue.put(batches)
-        except StopIteration:
-            return
-
-    def preprocess(self, data_loader, split):
-        is_training = split == 'train'
-        trajectories = list()
-
-        start_instance = time.time()
-        for i, trajectory in enumerate(data_loader):
-            trajectories.append(trajectory)
-            # TODO: Preprocess only necessary trajectories and change to 100
-            if (i + 1) % 11 == 0 and i != 0:
-                processed_data = [self.build_trajectory(traj, is_training) for traj in trajectories]
-
-                del trajectories
-                trajectories = list()
-
-                with open(os.path.join(IN_DIR, split + '_{}.pth'.format(int((i + 1) / 11))), 'wb') as f:
-                    torch.save(processed_data, f)
-
-                del processed_data
-
-        end_instance = time.time()
-        print(end_instance - start_instance)
-
-    @staticmethod
-    def traj_to_device(trajectory, device):
-
-        for instance in trajectory:
-            for key, value in instance.items():
-                instance[key] = value.to(device)
-
-        return trajectory
-
-    def build_trajectory(self, trajectory, is_training):
+    def fetch_data(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
-        return list(zip(graphs, trajectory))
+        graphs = [self._network.build_graph(
+            data_frame, is_training) for data_frame in trajectory]
+        data = list(zip(graphs, trajectory))
+        batches = self.get_batched(data, 1)
+        return batches
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances):
+    def one_step_evaluator(self, ds_loader, instances, epoch):
         trajectory_loss = list()
-        for i, trajectory in enumerate(ds_loader):
-            instance_loss = list()
-            if i >= instances:
-                break
+        for valid_file in ds_loader:
+            with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
+                valid_data = torch.load(f)
 
-            for graph, data_frame in trajectory:
-                loss, pos_error = self._network.validation_step(graph, data_frame)
-                instance_loss.append([loss, pos_error])
+            for i, trajectory in enumerate(valid_data):
+                instance_loss = list()
+                if i >= instances:
+                    break
 
-            trajectory_loss.append(instance_loss)
+                for graph, data_frame in trajectory:
+                    loss, pos_error = self._network.validation_step(
+                        graph, data_frame)
+                    instance_loss.append([loss, pos_error])
+
+                trajectory_loss.append(instance_loss)
+
+            del valid_data
 
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
+
         data_frame = pd.DataFrame.from_dict(
             {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
              'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
              }
         )
 
+        val_loss, pos_loss = zip(*mean)
+        for i, x in enumerate(val_loss):
+            wandb.log({'validation_instances': x, 'val': epoch * i})
+
+        wandb.log({
+            'validation_loss': wandb.Histogram(
+                [x for x in val_loss if np.quantile(val_loss, 0.95) > x > np.quantile(val_loss, 0.01)], num_bins=256),
+            'position_loss': wandb.Histogram(
+                [x for x in pos_loss if np.quantile(pos_loss, 0.95) > x > np.quantile(pos_loss, 0.01)], num_bins=256),
+            'epoch': epoch}
+        )
         data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
 
     def evaluator(self, ds_loader, rollouts):
@@ -245,14 +264,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             if i >= rollouts:
                 break
             self._network.reset_remote_graph()
-            prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=num_steps)
+            prediction_trajectory, mse_loss = self._network.rollout(
+                trajectory, num_steps=num_steps)
             trajectories.append(prediction_trajectory)
             mse_losses.append(mse_loss.cpu())
 
         mse_means = torch.mean(torch.stack(mse_losses), dim=0)
         mse_stds = torch.std(torch.stack(mse_losses), dim=0)
 
-        rollout_losses = {'mse_loss': [mse.item() for mse in mse_means], 'mse_std': [mse.item() for mse in mse_stds]}
+        rollout_losses = {'mse_loss': [mse.item() for mse in mse_means], 'mse_std': [
+            mse.item() for mse in mse_stds]}
         data_frame = pd.DataFrame.from_dict(rollout_losses)
 
         # TODO: How are rollouts saved?
@@ -278,7 +299,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             std = torch.std(torch.stack(n_step_losses)).item()
             losses.append((means, std))
 
-        n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
+        n_step_stats = {'n_step': n_step_list,
+                        'mean': losses[0], 'std': losses[1]}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(os.path.join(OUT_DIR, 'n_step_losses.csv'))
 
@@ -291,18 +313,25 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             pickle.dump(self, file)
 
     def save_rollouts(self, rollouts):
-        rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
+        rollouts = [{key: value.to('cpu')
+                     for key, value in x.items()} for x in rollouts]
         with open(os.path.join(OUT_DIR, 'rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
 
     @staticmethod
     def save_losses(run, mse_losses, l1_losses):
-        run.summary['mean_1_step_mse_loss'] = torch.mean(torch.stack(mse_losses)).item()
-        run.summary['mean_1_step_l1_loss'] = torch.mean(torch.stack(l1_losses)).item()
-        run.summary['max_1_step_mse_loss'] = torch.max(torch.stack(mse_losses)).item()
-        run.summary['max_1_step_l1_loss'] = torch.max(torch.stack(l1_losses)).item()
-        run.summary['min_1_step_mse_loss'] = torch.min(torch.stack(mse_losses)).item()
-        run.summary['min_1_step_l1_loss'] = torch.min(torch.stack(l1_losses)).item()
+        run.summary['mean_1_step_mse_loss'] = torch.mean(
+            torch.stack(mse_losses)).item()
+        run.summary['mean_1_step_l1_loss'] = torch.mean(
+            torch.stack(l1_losses)).item()
+        run.summary['max_1_step_mse_loss'] = torch.max(
+            torch.stack(mse_losses)).item()
+        run.summary['max_1_step_l1_loss'] = torch.max(
+            torch.stack(l1_losses)).item()
+        run.summary['min_1_step_mse_loss'] = torch.min(
+            torch.stack(mse_losses)).item()
+        run.summary['min_1_step_l1_loss'] = torch.min(
+            torch.stack(l1_losses)).item()
         run.summary.update()
 
     @staticmethod
