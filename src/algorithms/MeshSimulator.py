@@ -97,17 +97,18 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for r in range(0, self._trajectories, preload):
             try:
                 train = [next(train_dataloader) for _ in range(preload)]
-                with multiprocessing.Pool() as pool:
-                    for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
-                        data.append(result)
-                        if (i+1) % preload == 0 and i != 0:
-                            print(r)
-                            # TODO: last data storage might not be saved
-                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
-                                torch.save(data, f)
-                            data = []
             except StopIteration:
                 break
+            with multiprocessing.Pool() as pool:
+                for i, result in enumerate(
+                        pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
+                    data.append(result)
+                    if (i + 1) % preload == 0 and i != 0:
+                        print(r)
+                        # TODO: last data storage might not be saved
+                        with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
+                            torch.save(data, f)
+                        data = []
 
         print('Preprocessing done.')
 
