@@ -232,8 +232,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         )
 
         validation_loss, position_loss = zip(*mean)
-        wandb.log({'validation_loss': wandb.Histogram(list(validation_loss)),
-                   'position_loss': wandb.Histogram(list(position_loss)),
+        wandb.log({'validation_loss': wandb.Histogram(list(validation_loss), num_bins=256),
+                   'position_loss': wandb.Histogram(list(position_loss), num_bins=256),
                    'epoch': epoch})
         data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
 
