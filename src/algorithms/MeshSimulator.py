@@ -92,14 +92,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for r in range(0, self._trajectories, preload):
             train = []
             for i in range(preload):
-                # TODO: This may rais a StopIteration Exception
+                # TODO: This may raise a StopIteration Exception
                 train.append(next(train_dataloader))
             with multiprocessing.Pool() as pool:
                 for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
                     data.append(result)
-                    print(i)
                     if (i+1) % preload == 0 and i != 0:
-                        print(i)
+                        print(r)
                         # TODO: last data storage might not be saved
                         with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
                             torch.save(data, f)
@@ -127,15 +126,18 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 self._optimizer.zero_grad()
 
                 end_instance = time.time()
-                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+                wandb.log(
+                    {'loss': loss, 'training time per instance': end_instance - start_instance})
 
             end_trajectory = time.time()
-            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            wandb.log({'training time per trajectory': end_trajectory -
+                      start_trajectory}, commit=False)
             self.save()
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
-        batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
+        batches = [data[i: i + batch_size]
+                   for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
 
@@ -197,19 +199,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fetch_data(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(data_frame, is_training) for data_frame in trajectory]
+        graphs = [self._network.build_graph(
+            data_frame, is_training) for data_frame in trajectory]
         data = list(zip(graphs, trajectory))
         batches = self.get_batched(data, 1)
         return batches
-
-    @staticmethod
-    def traj_to_device(trajectory, device):
-
-        for instance in trajectory:
-            for key, value in instance.items():
-                instance[key] = value.to(device)
-
-        return trajectory
 
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances):
@@ -220,7 +214,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 break
 
             for graph, data_frame in trajectory:
-                loss, pos_error = self._network.validation_step(graph, data_frame)
+                loss, pos_error = self._network.validation_step(
+                    graph, data_frame)
                 instance_loss.append([loss, pos_error])
 
             trajectory_loss.append(instance_loss)
