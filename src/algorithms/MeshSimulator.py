@@ -51,9 +51,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('val')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
-        wandb.define_metric('validation_instances', step_metric='val')
-        wandb.config = {'learning_rate': self._learning_rate,
-                        'epochs': self._trajectories}
+        wandb.define_metric('validation_mean', step_metric='epoch')
+        wandb.define_metric('position_mean', step_metric='epoch')
+        wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
         random.seed(0)  # TODO set globally
         if not self._initialized:
             # task_information.get('task').get('batch_size')
@@ -242,14 +242,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         )
 
         val_loss, pos_loss = zip(*mean)
-        for i, x in enumerate(val_loss):
-            wandb.log({'validation_instances': x, 'val': epoch * i})
 
         wandb.log({
             'validation_loss': wandb.Histogram(
                 [x for x in val_loss if np.quantile(val_loss, 0.95) > x > np.quantile(val_loss, 0.01)], num_bins=256),
             'position_loss': wandb.Histogram(
                 [x for x in pos_loss if np.quantile(pos_loss, 0.95) > x > np.quantile(pos_loss, 0.01)], num_bins=256),
+            'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss),
             'epoch': epoch}
         )
         data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
