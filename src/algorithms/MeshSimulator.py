@@ -31,7 +31,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
-        self._big_batch_size = config.get('task').get('batch_size')
+        self._wandb_mode = config.get('logging').get('wandb_mode')
 
         self._batch_size = 1
         self._num_batches = 0
@@ -46,7 +46,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             "scheduler_learning_rate")
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
-        wandb.init(project='rmp', config=task_information)
+        self._wandb_run = wandb.init(project='rmp', config=task_information,
+                                     mode=self._wandb_mode)
         wandb.define_metric('epoch')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')

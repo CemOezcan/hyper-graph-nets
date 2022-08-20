@@ -48,6 +48,8 @@ params:
       ricci: False
       clustering: none
       connector: none
+  logging:
+    wandb_mode: disabled
 
 ---
 name: optuna_exp
