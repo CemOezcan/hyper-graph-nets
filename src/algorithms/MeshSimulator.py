@@ -55,9 +55,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
         random.seed(0)  # TODO set globally
         if not self._initialized:
-            # task_information.get('task').get('batch_size')
             # TODO: Set batch size to a divisor of 399
-            self._batch_size = 7
+            self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
                 self._network.parameters(), lr=self._learning_rate)
@@ -87,22 +86,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
-    def preprocess(self, train_dataloader: DataLoader, split, preload):
-        assert 1000 % preload == 0, 'Prefetch factor must be divisible by 1000.'
+    def preprocess(self, train_dataloader: DataLoader, split):
+        assert 1000 % self._prefetch_factor == 0, 'Prefetch factor must be divisible by 1000.'
         is_training = split == 'train'
         print('Start preprocessing graphs...')
 
         data = []
-        for r in range(0, self._trajectories, preload):
+        for r in range(0, self._trajectories, self._prefetch_factor):
             try:
-                train = [next(train_dataloader) for _ in range(preload)]
+                train = [next(train_dataloader) for _ in range(self._prefetch_factor)]
                 with multiprocessing.Pool() as pool:
                     for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
                         data.append(result)
-                        if (i+1) % preload == 0 and i != 0:
+                        if (i+1) % self._prefetch_factor == 0 and i != 0:
                             print(r)
                             # TODO: last data storage might not be saved
-                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
+                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / self._prefetch_factor)}.pth'), 'wb') as f:
                                 torch.save(data, f)
                             data = []
             except StopIteration:
