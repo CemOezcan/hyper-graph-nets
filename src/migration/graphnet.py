@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from torch import nn
 
 from src import util
-from src.migration.attention import AttentionModel
 from src.util import device, MultiGraph
 
 
