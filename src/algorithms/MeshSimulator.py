@@ -48,7 +48,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         wandb.init(project='rmp')
         wandb.define_metric('epoch')
-        wandb.define_metric('val')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
         wandb.define_metric('validation_mean', step_metric='epoch')
