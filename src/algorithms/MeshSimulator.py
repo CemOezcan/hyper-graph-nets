@@ -218,6 +218,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 valid_data = torch.load(f)
 
             for i, trajectory in enumerate(valid_data):
+                random.shuffle(trajectory)
                 instance_loss = list()
                 if i >= instances:
                     break
