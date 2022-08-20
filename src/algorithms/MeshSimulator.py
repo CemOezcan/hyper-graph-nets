@@ -110,7 +110,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                             torch.save(data, f)
                         del data
                         data = []
-                        torch.cuda.empty_cache()
             end_preprocessing_batch = time.time()
             wandb.log(
                 {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch, 'preprocess completed percentage': int((r / self._trajectories) * 100)})
@@ -146,7 +145,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory -
                        start_trajectory}, commit=False)
-            self.save()
+        self.save()
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
