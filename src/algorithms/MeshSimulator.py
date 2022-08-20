@@ -52,7 +52,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('position_loss', step_metric='epoch')
         wandb.define_metric('validation_mean', step_metric='epoch')
         wandb.define_metric('position_mean', step_metric='epoch')
-        wandb.config = {'learning_rate': self._learning_rate, 'epochs': self._trajectories}
+        wandb.config = {'learning_rate': self._learning_rate,
+                        'epochs': self._trajectories}
         random.seed(0)  # TODO set globally
         if not self._initialized:
             # TODO: Set batch size to a divisor of 399
@@ -144,7 +145,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory -
-                                                       start_trajectory}, commit=False)
+                       start_trajectory}, commit=False)
             self.save()
 
     def get_batched(self, data, batch_size):
