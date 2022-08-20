@@ -87,7 +87,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return detach(evaluations)
 
     def preprocess(self, train_dataloader: DataLoader, split):
-        assert self._trajectories % self._prefetch_factor == 0, f'{self._trajectories} must be divisible by prefetch factor.'
+        assert self._trajectories % self._prefetch_factor == 0, f'{self._trajectories} must be divisible by prefetch factor {self._prefetch_factor}.'
         is_training = split == 'train'
         print(f'Start preprocessing {split} graphs...')
         data = []
@@ -150,7 +150,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
-        assert 399 % batch_size == 0, f'Graph amount must be divisible by batch size.'
+        graph_amt = len(data)
+        assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
         batches = [data[i: i + batch_size]
                    for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
