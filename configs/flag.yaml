@@ -27,7 +27,7 @@ params:
   task:
     dataset: flag_minimal
     rollout_split: valid
-    batch_size: 19 # TODO: Batch size != 1 raises an error
+    batch_size: 19
     epochs: 1
     trajectories: 50
     rollouts: 1
