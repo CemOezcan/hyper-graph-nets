@@ -19,11 +19,10 @@ CONFIG_NAME = 'flag'
 
 def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):
     dataset_name = get_from_nested_dict(config, list_of_keys=["task", "dataset"], raise_error=True)
-    batch_size = config.get('task').get('batch_size')
     if dataset_name == 'flag_minimal' or dataset_name == 'flag_simple':
         dataset = FlagDatasetIterative(path=IN_DIR, split=split, add_targets=add_targets,
-                                       split_and_preprocess=split_and_preprocess, batch_size=batch_size, config=config, in_dir=IN_DIR)
+                                       split_and_preprocess=split_and_preprocess, config=config, in_dir=IN_DIR)
         ################################################################################## TODO
-        return GraphDataLoader(dataset, batch_size=batch_size, prefetch_factor=config.get('task').get('prefetch_factor'), shuffle=False, num_workers=12)
+        return GraphDataLoader(dataset, shuffle=False)
     else:
         raise NotImplementedError("Implement your data loading here!")

@@ -46,19 +46,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             "scheduler_learning_rate")
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
-        wandb.init(project='rmp')
+        wandb.init(project='rmp', config=task_information)
         wandb.define_metric('epoch')
-        wandb.define_metric('val')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
-        wandb.define_metric('validation_instances', step_metric='val')
-        wandb.config = {'learning_rate': self._learning_rate,
-                        'epochs': self._trajectories}
+        wandb.define_metric('validation_mean', step_metric='epoch')
+        wandb.define_metric('position_mean', step_metric='epoch')
         random.seed(0)  # TODO set globally
         if not self._initialized:
-            # task_information.get('task').get('batch_size')
             # TODO: Set batch size to a divisor of 399
-            self._batch_size = 7
+            self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
                 self._network.parameters(), lr=self._learning_rate)
@@ -91,25 +88,34 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def preprocess(self, train_dataloader: DataLoader, split, preload):
         assert 1000 % preload == 0, 'Prefetch factor must be divisible by 1000.'
         is_training = split == 'train'
-        print('Start preprocessing graphs...')
-
+        print(f'Start preprocessing {split} graphs...')
         data = []
+        start_preprocessing = time.time()
         for r in range(0, self._trajectories, preload):
+            start_preprocessing_batch = time.time()
             try:
                 train = [next(train_dataloader) for _ in range(preload)]
-                with multiprocessing.Pool() as pool:
-                    for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
-                        data.append(result)
-                        if (i+1) % preload == 0 and i != 0:
-                            print(r)
-                            # TODO: last data storage might not be saved
-                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
-                                torch.save(data, f)
-                            data = []
             except StopIteration:
                 break
-
-        print('Preprocessing done.')
+            with multiprocessing.Pool() as pool:
+                for i, result in enumerate(
+                        pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
+                    data.append(result)
+                    if (i + 1) % preload == 0 and i != 0:
+                        print(r)
+                        # TODO: last data storage might not be saved
+                        with open(os.path.join(IN_DIR, split + '_ricci' + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
+                            torch.save(data, f)
+                        del data
+                        data = []
+                        torch.cuda.empty_cache()
+            end_preprocessing_batch = time.time()
+            wandb.log(
+                {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch, 'preprocess completed percentage': int((r / self._trajectories) * 100)})
+        end_preprocessing = time.time()
+        wandb.log(
+            {'preprocess time per batch': end_preprocessing - start_preprocessing})
+        print(f'Preprocessing {split} graphs done.')
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
@@ -137,7 +143,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory -
-                                                       start_trajectory}, commit=False)
+                       start_trajectory}, commit=False)
             self.save()
 
     def get_batched(self, data, batch_size):
@@ -219,6 +225,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 valid_data = torch.load(f)
 
             for i, trajectory in enumerate(valid_data):
+                random.shuffle(trajectory)
                 instance_loss = list()
                 if i >= instances:
                     break
@@ -242,14 +249,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         )
 
         val_loss, pos_loss = zip(*mean)
-        for i, x in enumerate(val_loss):
-            wandb.log({'validation_instances': x, 'val': epoch * i})
 
         wandb.log({
             'validation_loss': wandb.Histogram(
                 [x for x in val_loss if np.quantile(val_loss, 0.95) > x > np.quantile(val_loss, 0.01)], num_bins=256),
             'position_loss': wandb.Histogram(
                 [x for x in pos_loss if np.quantile(pos_loss, 0.95) > x > np.quantile(pos_loss, 0.01)], num_bins=256),
+            'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss),
             'epoch': epoch}
         )
         data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
