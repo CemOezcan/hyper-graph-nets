@@ -150,7 +150,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
-        assert batch_size % 399 == 0, f'Graph amount must be divisible by batch size.'
+        assert 399 % batch_size == 0, f'Graph amount must be divisible by batch size.'
         batches = [data[i: i + batch_size]
                    for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
