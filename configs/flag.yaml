@@ -25,14 +25,14 @@ optuna:
 
 params:
   task:
-    dataset: flag_minimal
+    dataset: flag_simple
     rollout_split: valid
-    batch_size: 19
+    batch_size: 1
     epochs: 1
-    trajectories: 50
+    trajectories: 1000
     rollouts: 1
     mode: all
-    prefetch_factor: 2
+    prefetch_factor: 20
   model:
     field: world_pos
     history: True
@@ -45,11 +45,11 @@ params:
     message_passing_steps: 5
     load: None
     rmp:
-      ricci: False
+      ricci: True
       clustering: none
       connector: none
   logging:
-    wandb_mode: disabled
+    wandb_mode: run
 
 ---
 name: optuna_exp
