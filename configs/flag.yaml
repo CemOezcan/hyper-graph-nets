@@ -43,9 +43,7 @@ params:
     learning_rate: 5.0e-5
     scheduler_learning_rate:  1.0e-4
     message_passing_steps: 5
-    attention: False
     load: None
-    stochastic_message_passing_used: False
     rmp:
       ricci: False
       clustering: none
