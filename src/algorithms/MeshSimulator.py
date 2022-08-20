@@ -46,7 +46,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             "scheduler_learning_rate")
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
-        wandb.init(project='rmp')
+        wandb.init(project='rmp', config=task_information)
         wandb.define_metric('epoch')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
@@ -86,28 +86,37 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
-    def preprocess(self, train_dataloader: DataLoader, split):
-        assert 1000 % self._prefetch_factor == 0, 'Prefetch factor must be divisible by 1000.'
+    def preprocess(self, train_dataloader: DataLoader, split, preload):
+        assert 1000 % preload == 0, 'Prefetch factor must be divisible by 1000.'
         is_training = split == 'train'
-        print('Start preprocessing graphs...')
-
+        print(f'Start preprocessing {split} graphs...')
         data = []
-        for r in range(0, self._trajectories, self._prefetch_factor):
+        start_preprocessing = time.time()
+        for r in range(0, self._trajectories, preload):
+            start_preprocessing_batch = time.time()
             try:
-                train = [next(train_dataloader) for _ in range(self._prefetch_factor)]
-                with multiprocessing.Pool() as pool:
-                    for i, result in enumerate(pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
-                        data.append(result)
-                        if (i+1) % self._prefetch_factor == 0 and i != 0:
-                            print(r)
-                            # TODO: last data storage might not be saved
-                            with open(os.path.join(IN_DIR, split + f'_{int((r + 1) / self._prefetch_factor)}.pth'), 'wb') as f:
-                                torch.save(data, f)
-                            data = []
+                train = [next(train_dataloader) for _ in range(preload)]
             except StopIteration:
                 break
-
-        print('Preprocessing done.')
+            with multiprocessing.Pool() as pool:
+                for i, result in enumerate(
+                        pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
+                    data.append(result)
+                    if (i + 1) % preload == 0 and i != 0:
+                        print(r)
+                        # TODO: last data storage might not be saved
+                        with open(os.path.join(IN_DIR, split + '_ricci' + f'_{int((r + 1) / preload)}.pth'), 'wb') as f:
+                            torch.save(data, f)
+                        del data
+                        data = []
+                        torch.cuda.empty_cache()
+            end_preprocessing_batch = time.time()
+            wandb.log(
+                {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch, 'preprocess completed percentage': int((r / self._trajectories) * 100)})
+        end_preprocessing = time.time()
+        wandb.log(
+            {'preprocess time per batch': end_preprocessing - start_preprocessing})
+        print(f'Preprocessing {split} graphs done.')
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()

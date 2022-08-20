@@ -1,9 +1,10 @@
 import copy
-import multiprocessing
 import os
 import pickle
 import sys
 from multiprocessing import set_start_method
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # from cw2 import cluster_work, cw_error, experiment
 # from cw2.cw_data import cw_logging
