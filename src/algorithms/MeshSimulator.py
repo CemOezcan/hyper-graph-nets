@@ -64,7 +64,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             self._optimizer = optim.Adam(
                 self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                self._optimizer, self._scheduler_learning_rate, last_epoch=-1)
+                self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
     def set_network(self, network):
@@ -148,7 +148,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory -
                        start_trajectory}, commit=False)
-        self.save()
 
     def get_batched(self, data, batch_size):
         # TODO: Compatibility with instance-wise clustering
@@ -335,8 +334,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def network(self):
         return self._network
 
-    def save(self):
-        with open(os.path.join(OUT_DIR, 'model.pkl'), 'wb') as file:
+    def save(self, epoch):
+        with open(os.path.join(OUT_DIR, f'model_{epoch}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
     def save_rollouts(self, rollouts):

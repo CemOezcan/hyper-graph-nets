@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 
 def main(preprocess: bool, train: bool, compute_rollout: bool):
     params = read_yaml(CONFIG_NAME)['params']
-    print(f'Device used for this run:{device}')
+    print(f'Device used for this run: {device}')
     random_seed = params.get('random_seed')
     random.seed(random_seed)
     np.random.seed(seed=random_seed)

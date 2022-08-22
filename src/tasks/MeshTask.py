@@ -58,6 +58,7 @@ class MeshTask(AbstractTask):
             self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
             if e >= self.config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
+            self._algorithm.save(e)
 
     @lru_cache(maxsize=1000)
     def load_data(self, train_file):
