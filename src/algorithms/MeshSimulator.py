@@ -58,7 +58,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('position_loss', step_metric='epoch')
         wandb.define_metric('validation_mean', step_metric='epoch')
         wandb.define_metric('position_mean', step_metric='epoch')
-        random.seed(0)  # TODO set globally
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)

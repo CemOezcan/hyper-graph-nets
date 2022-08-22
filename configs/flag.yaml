@@ -55,6 +55,7 @@ params:
       tau: 20
   logging:
     wandb_mode: run
+  random_seed: 0
 
 ---
 name: optuna_exp
