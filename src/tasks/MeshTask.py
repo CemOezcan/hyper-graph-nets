@@ -54,6 +54,7 @@ class MeshTask(AbstractTask):
             for train_file in train_files:
                 train_data = self.load_data(train_file)
                 self._algorithm.fit_iteration(train_dataloader=train_data)
+                del train_data
 
             self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
             if e >= self.config.get('model').get('scheduler_epoch'):
