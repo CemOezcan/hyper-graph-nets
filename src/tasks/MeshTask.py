@@ -35,7 +35,8 @@ class MeshTask(AbstractTask):
         self._epochs = config.get('task').get('epochs')
         self.train_loader = get_data(config=config)
 
-        self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
+        self._test_loader = get_data(
+            config=config, split='test', split_and_preprocess=False)
         self._valid_loader = get_data(config=config, split='valid')
 
         self.mask = None
@@ -44,7 +45,8 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
 
     def run_iteration(self):
-        assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
+        assert isinstance(
+            self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
         train_files = [file for file in os.listdir(
             IN_DIR) if re.match(r'train_ricci_[0-9]+\.pth', file)]
         valid_files = [file for file in os.listdir(
@@ -52,20 +54,16 @@ class MeshTask(AbstractTask):
 
         for e in range(self._epochs):
             for train_file in train_files:
-                train_data = self.load_data(train_file)
+                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
+                    train_data = torch.load(f)
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
 
-            self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
+            self._algorithm.one_step_evaluator(
+                valid_files, self._rollouts, e + 1)
             if e >= self.config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
             self._algorithm.save(e)
-
-    @lru_cache(maxsize=1000)
-    def load_data(self, train_file):
-        with open(os.path.join(IN_DIR, train_file), 'rb') as f:
-            train_data = torch.load(f)
-        return train_data
 
     def preprocess(self):
         # TODO: parameterize prefetch factor
@@ -80,7 +78,8 @@ class MeshTask(AbstractTask):
         # TODO: Use n_step_eval
         # TODO: Bottleneck !!!
         self._algorithm.evaluator(self._test_loader, self._rollouts)
-        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+        self._test_loader = get_data(
+            config=self._config, split='test', split_and_preprocess=False)
         self._algorithm.n_step_evaluator(self._test_loader)
 
     def plot(self) -> go.Figure:
