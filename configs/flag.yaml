@@ -51,8 +51,8 @@ params:
     ricci:
       enabled: True
       frequency: 1
-      loops:10
-      tau:20
+      loops: 10
+      tau: 20
   logging:
     wandb_mode: run
 
