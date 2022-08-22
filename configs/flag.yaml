@@ -42,8 +42,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 5
-    load: None
+    message_passing_steps: 7
     rmp:
       frequency: 1
       clustering: none
