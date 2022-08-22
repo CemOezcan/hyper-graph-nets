@@ -21,6 +21,7 @@ class HierarchicalConnector(AbstractConnector):
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
+        # TODO: Compute initial features properly
         device_0 = 'cpu'
         target_feature = graph.target_feature.to(device_0)
         node_feature = graph.node_features.to(device_0)
