@@ -1,4 +1,5 @@
 import functools
+import math
 import multiprocessing
 import os
 import pickle
@@ -26,24 +27,28 @@ from util.Types import ConfigDict, ScalarDict, Union
 class MeshSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
-        self._network_config = config.get("model")
+        self._network_config = config.get('model')
         self._dataset_dir = IN_DIR
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
         self._wandb_mode = config.get('logging').get('wandb_mode')
+        self._ricci_frequency = self._network_config.get(
+            'ricci').get('frequency')
+        self._rmp_frequency = self._network_config.get(
+            'rmp').get('frequency')
 
         self._batch_size = 1
         self._num_batches = 0
         self._network = None
         self._optimizer = None
         self._scheduler = None
+        self._wandb_run = None
         self._initialized = False
 
         self.loss_function = F.mse_loss
-        self._learning_rate = self._network_config.get("learning_rate")
-        self._scheduler_learning_rate = self._network_config.get(
-            "scheduler_learning_rate")
+        self._learning_rate = self._network_config.get('learning_rate')
+        self._gamma = self._network_config.get('gamma')
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         self._wandb_run = wandb.init(project='rmp', config=task_information,
@@ -55,7 +60,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('position_mean', step_metric='epoch')
         random.seed(0)  # TODO set globally
         if not self._initialized:
-            # TODO: Set batch size to a divisor of 399
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
@@ -214,8 +218,23 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fetch_data(self, trajectory, is_training):
         self._network.reset_remote_graph()
-        graphs = [self._network.build_graph(
-            data_frame, is_training) for data_frame in trajectory]
+        graphs = []
+        graph_amt = len(trajectory)
+        ricci_edge_set = None
+        for i, data_frame in enumerate(trajectory):
+            graph = self._network.build_graph(
+                data_frame, is_training)
+            if i % math.ceil(graph_amt / self._ricci_frequency) == 0:
+                graph = self._network.ricci(graph, data_frame, is_training)
+                ricci_edge_set = self._network.get_ricci_edges(graph)
+            elif ricci_edge_set:
+                    [graph.edge_sets.append(e) for e in ricci_edge_set]
+            if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
+                graph = self._network.rmp(graph, is_training)
+                rmp_edge_set = self._network.get_rmp_edges(graph)
+            elif rmp_edge_set:
+                    [graph.edge_sets.append(e) for e in rmp_edge_set]
+            graphs.append(graph)
         data = list(zip(graphs, trajectory))
         batches = self.get_batched(data, 1)
         return batches
@@ -348,3 +367,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for k, v in data_frame.items():
             data_frame[k] = torch.squeeze(v, 0)
         return data_frame
+
+    def lr_scheduler_step(self):
+        self._scheduler.step()

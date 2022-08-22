@@ -4,7 +4,7 @@ import pickle
 import sys
 from multiprocessing import set_start_method
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore")
 
 # from cw2 import cluster_work, cw_error, experiment
 # from cw2.cw_data import cw_logging
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
     cw.run()"""
-    args = [True, True, True]
+    args = [False, True, True]
     set_start_method('spawn')
     try:
         args[0] = sys.argv[1] == 'True'

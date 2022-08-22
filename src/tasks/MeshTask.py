@@ -1,3 +1,4 @@
+from functools import lru_cache
 import json
 import math
 import os
@@ -44,19 +45,25 @@ class MeshTask(AbstractTask):
 
     def run_iteration(self):
         assert isinstance(self._algorithm, MeshSimulator), "Need a classifier to train on a classification task"
-        train_files = [file for file in os.listdir(IN_DIR) if re.match(r'train_[0-9]+\.pth', file)]
-        valid_files = [file for file in os.listdir(IN_DIR) if re.match(r'valid_[0-9]+\.pth', file)]
+        train_files = [file for file in os.listdir(
+            IN_DIR) if re.match(r'train_ricci_[0-9]+\.pth', file)]
+        valid_files = [file for file in os.listdir(
+            IN_DIR) if re.match(r'valid_ricci_[0-9]+\.pth', file)]
 
         for e in range(self._epochs):
-
             for train_file in train_files:
-                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
-                    train_data = torch.load(f)
-
+                train_data = self.load_data(train_file)
                 self._algorithm.fit_iteration(train_dataloader=train_data)
-                del train_data
 
             self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
+            if e >= self.config.get('model').get('scheduler_epoch'):
+                self._algorithm.lr_scheduler_step()
+
+    @lru_cache(maxsize=1000)
+    def load_data(self, train_file):
+        with open(os.path.join(IN_DIR, train_file), 'rb') as f:
+            train_data = torch.load(f)
+        return train_data
 
     def preprocess(self):
         # TODO: parameterize prefetch factor
