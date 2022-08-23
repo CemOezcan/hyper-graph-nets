@@ -98,22 +98,7 @@ class HierarchicalConnector(AbstractConnector):
 
         # TODO: try connecting close hyper nodes only (instead of fully connecting)
         # Inter cluster communication
-        _, points = torch.split(clustering_features[1], 3, dim=1)
-        tri = ss.Delaunay(points)
-        simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices])
-        a = util.triangles_to_edges(simplices)
-        senders, receivers, edge_features = self._get_subgraph(model_type, clustering_features, a['senders'], a['receivers'])
-
-        hyper_nodes = hyper_nodes
-        reverse_selected_nodes = torch.flip(hyper_nodes, [-1])
-        edges = torch.cat((torch.combinations(hyper_nodes, with_replacement=True),
-                           torch.combinations(reverse_selected_nodes, with_replacement=True)), dim=0)
-        edges = torch.combinations(hyper_nodes, with_replacement=True)
-        senders, receivers = torch.unbind(edges, dim=-1)
-        mask = torch.not_equal(senders, receivers)
-        edges = edges[mask]
-        senders, receivers = torch.unbind(edges, dim=-1)
-        senders, receivers, edge_features = self._get_subgraph(model_type, clustering_features, senders, receivers)
+        senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
 
         world_edges = EdgeSet(
             name='inter_cluster',
@@ -129,3 +114,17 @@ class HierarchicalConnector(AbstractConnector):
 
         return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
 
+    def _delaunay(self, clustering_features, num_nodes, model_type):
+        _, points = torch.split(clustering_features[1], 3, dim=1)
+        tri = ss.Delaunay(points)
+        simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices])
+        a = util.triangles_to_edges(simplices)
+        return self._get_subgraph(model_type, clustering_features, a['senders'], a['receivers'])
+
+    def _fully_connected(self, clustering_features, hyper_nodes, model_type):
+        edges = torch.combinations(hyper_nodes, with_replacement=True)
+        senders, receivers = torch.unbind(edges, dim=-1)
+        mask = torch.not_equal(senders, receivers)
+        edges = edges[mask]
+        senders, receivers = torch.unbind(edges, dim=-1)
+        return self._get_subgraph(model_type, clustering_features, senders, receivers)
