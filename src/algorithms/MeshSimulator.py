@@ -95,7 +95,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         print(f'Start preprocessing {split} graphs...')
         data = []
         start_preprocessing = time.time()
-        for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress:'):
+        for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress'):
             start_preprocessing_batch = time.time()
             try:
                 train = [next(train_dataloader)
