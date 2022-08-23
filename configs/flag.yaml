@@ -27,8 +27,8 @@ params:
   task:
     dataset: flag_simple
     rollout_split: valid
-    batch_size: 1
-    epochs: 1
+    batch_size: 21
+    epochs: 15
     trajectories: 1000
     rollouts: 1
     mode: all
@@ -38,18 +38,23 @@ params:
     history: True
     size: 3
     noise: 0.003
-    gamma: 0.1
+    gamma: 0.9
+    scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    scheduler_learning_rate:  1.0e-4
-    message_passing_steps: 5
-    load: None
+    message_passing_steps: 7
     rmp:
-      ricci: True
+      frequency: 1
       clustering: none
       connector: none
+    ricci:
+      enabled: True
+      frequency: 1
+      loops: 10
+      tau: 20
   logging:
     wandb_mode: run
+  random_seed: 0
 
 ---
 name: optuna_exp
