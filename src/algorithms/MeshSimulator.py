@@ -122,6 +122,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
+        random.shuffle(train_dataloader)
         for trajectory in tqdm(train_dataloader, desc='Trajectories in train file', leave=False):
             random.shuffle(trajectory)
             batches = self.get_batched(trajectory, self._batch_size)
