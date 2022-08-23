@@ -122,11 +122,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        for trajectory in tqdm(train_dataloader, desc='Trajectories in Trainfile:', leave=False):
+        for trajectory in tqdm(train_dataloader, desc='Trajectories in train file', leave=False):
             random.shuffle(trajectory)
             batches = self.get_batched(trajectory, self._batch_size)
             start_trajectory = time.time()
-            for i, (graph, data_frame) in enumerate(batches):
+            for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
                 start_instance = time.time()
 
                 loss = self._network.training_step(graph, data_frame)
