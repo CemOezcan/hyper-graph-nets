@@ -23,7 +23,6 @@ class HierarchicalConnector(AbstractConnector):
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
-        # TODO: Compute initial features properly
         device_0 = 'cpu'
         clustering_features = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to(device_0)
         node_feature = graph.node_features.to(device_0)
@@ -96,7 +95,6 @@ class HierarchicalConnector(AbstractConnector):
 
         hyper_edges.append(world_edges_to_mesh)
 
-        # TODO: try connecting close hyper nodes only (instead of fully connecting)
         # Inter cluster communication
         senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
 
@@ -115,16 +113,16 @@ class HierarchicalConnector(AbstractConnector):
         return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
 
     def _delaunay(self, clustering_features, num_nodes, model_type):
-        _, points = torch.split(clustering_features[1], 3, dim=1)
+        _, points = torch.split(clustering_features[1], 3, dim=1).to('cpu')
         tri = ss.Delaunay(points)
-        simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices])
+        simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices]).to('cpu')
         a = util.triangles_to_edges(simplices)
         return self._get_subgraph(model_type, clustering_features, a['senders'], a['receivers'])
 
     def _fully_connected(self, clustering_features, hyper_nodes, model_type):
-        edges = torch.combinations(hyper_nodes, with_replacement=True)
+        edges = torch.combinations(hyper_nodes, with_replacement=True).to('cpu')
         senders, receivers = torch.unbind(edges, dim=-1)
-        mask = torch.not_equal(senders, receivers)
+        mask = torch.not_equal(senders, receivers).to('cpu')
         edges = edges[mask]
         senders, receivers = torch.unbind(edges, dim=-1)
         return self._get_subgraph(model_type, clustering_features, senders, receivers)
