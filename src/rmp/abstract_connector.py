@@ -71,8 +71,9 @@ class AbstractConnector(ABC):
         if model_type == 'flag' or model_type == 'deform_model':
             relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
                                        torch.index_select(input=target_feature, dim=0, index=receivers))
+            world, mesh = torch.split(relative_target_feature, 3, dim=1)
             edge_features = torch.cat(
-                (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
+                (world, torch.norm(world, dim=-1, keepdim=True), mesh, torch.norm(mesh, dim=-1, keepdim=True)), dim=-1)
         else:
             raise Exception("Model type is not specified in RippleNodeConnector.")
 

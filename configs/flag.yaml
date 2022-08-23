@@ -25,14 +25,14 @@ optuna:
 
 params:
   task:
-    dataset: flag_simple
+    dataset: flag_minimal
     rollout_split: valid
     batch_size: 1
     epochs: 1
     trajectories: 1000
     rollouts: 1
     mode: all
-    prefetch_factor: 20
+    prefetch_factor: 1
   model:
     field: world_pos
     history: True
