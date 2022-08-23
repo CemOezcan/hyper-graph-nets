@@ -122,6 +122,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
+        random.shuffle(train_dataloader)
         for trajectory in tqdm(train_dataloader, desc='Trajectories in train file', leave=False):
             random.shuffle(trajectory)
             batches = self.get_batched(trajectory, self._batch_size)
@@ -212,15 +213,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.reset_remote_graph()
         graphs = []
         graph_amt = len(trajectory)
-        ricci_edge_set = None
         for i, data_frame in enumerate(trajectory):
             graph = self._network.build_graph(
                 data_frame, is_training)
             if i % math.ceil(graph_amt / self._ricci_frequency) == 0:
-                graph = self._network.ricci(graph, data_frame, is_training)
-                ricci_edge_set = self._network.get_ricci_edges(graph)
-            elif ricci_edge_set:
-                    [graph.edge_sets.append(e) for e in ricci_edge_set]
+                self._network.reset_ricci_graph()
+            graph = self._network.ricci(graph, data_frame, is_training)
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
                 self._network.reset_remote_graph()
             graph = self._network.rmp(graph, is_training)
