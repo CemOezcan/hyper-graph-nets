@@ -1,20 +1,18 @@
-from functools import lru_cache
-import json
 import math
 import os
 import pickle
 import re
-from os.path import exists
 
-import matplotlib.pyplot as plt
 import matplotlib.animation as ani
+import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import torch
-from src.data.data_loader import OUT_DIR, get_data, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
+from src.data.data_loader import IN_DIR, OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
+from tqdm import tqdm, trange
 from util.Types import ConfigDict, ScalarDict
 
 
@@ -52,8 +50,8 @@ class MeshTask(AbstractTask):
         valid_files = [file for file in os.listdir(
             IN_DIR) if re.match(r'valid_ricci_[0-9]+\.pth', file)]
 
-        for e in range(self._epochs):
-            for train_file in train_files:
+        for e in trange(self._epochs, desc='Epochs:'):
+            for train_file in tqdm(train_files, desc='Train files:', leave=False):
                 with open(os.path.join(IN_DIR, train_file), 'rb') as f:
                     train_data = torch.load(f)
                 self._algorithm.fit_iteration(train_dataloader=train_data)

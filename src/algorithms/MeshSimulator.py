@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import wandb
 from matplotlib import pyplot as plt
+from tqdm import tqdm, trange
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
@@ -39,7 +40,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             'rmp').get('frequency')
 
         self._batch_size = 1
-        self._num_batches = 0
         self._network = None
         self._optimizer = None
         self._scheduler = None
@@ -95,7 +95,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         print(f'Start preprocessing {split} graphs...')
         data = []
         start_preprocessing = time.time()
-        for r in range(0, self._trajectories, self._prefetch_factor):
+        for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress:'):
             start_preprocessing_batch = time.time()
             try:
                 train = [next(train_dataloader)
@@ -107,7 +107,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                         pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
                     data.append(result)
                     if (i + 1) % self._prefetch_factor == 0 and i != 0:
-                        print(r)
                         # TODO: last data storage might not be saved
                         with open(os.path.join(IN_DIR, split + '_ricci' + f'_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
                             torch.save(data, f)
@@ -123,16 +122,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
-        for trajectory in train_dataloader:
+        for trajectory in tqdm(train_dataloader, desc='Trajectories in Trainfile:', leave=False):
             random.shuffle(trajectory)
             batches = self.get_batched(trajectory, self._batch_size)
             start_trajectory = time.time()
-
             for i, (graph, data_frame) in enumerate(batches):
-                # TODO: Console outputs are inconsistent
-                self._num_batches += 1
-                if i % 100 == 0:
-                    print(f'Batch: {self._num_batches}')
                 start_instance = time.time()
 
                 loss = self._network.training_step(graph, data_frame)
