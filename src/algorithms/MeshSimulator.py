@@ -145,18 +145,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                        start_trajectory}, commit=False)
 
     def get_batched(self, data, batch_size):
-        # TODO: Compatibility with instance-wise clustering
         graph_amt = len(data)
         assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
         batches = [data[i: i + batch_size]
                    for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
-
-        num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
-        num_nodes, num_hyper_nodes = num_nodes if len(
-            num_nodes) > 1 else (num_nodes[0], 0)
-        hyper_node_offset = batch_size * num_nodes
 
         edge_names = [e.name for e in graph.edge_sets]
 
@@ -168,8 +162,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             node_features = list()
             for i, (graph, traj) in enumerate(batch):
-                node_features.append(graph.node_features)
+                # This fixes instance wise clustering
+                num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
+                num_nodes, num_hyper_nodes = num_nodes if len(num_nodes) > 1 else (num_nodes[0], 0)
+                hyper_node_offset = batch_size * num_nodes
 
+                node_features.append(graph.node_features)
                 for key, value in traj.items():
                     trajectory_dict[key].append(value)
 
