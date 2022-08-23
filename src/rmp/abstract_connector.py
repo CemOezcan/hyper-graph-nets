@@ -59,6 +59,7 @@ class AbstractConnector(ABC):
     @staticmethod
     def _get_subgraph(model_type: str, target_feature: List[Tensor], senders_list: Tensor, receivers_list: Tensor) \
             -> Tuple[Tensor, Tensor, Tensor]:
+        # TODO: generalize for mesh and world features
         target_feature = torch.cat(
             tuple(map(lambda x: x.clone().detach(), target_feature)), dim=0)
         senders = torch.cat(
@@ -70,8 +71,9 @@ class AbstractConnector(ABC):
         if model_type == 'flag' or model_type == 'deform_model':
             relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
                                        torch.index_select(input=target_feature, dim=0, index=receivers))
+            world, mesh = torch.split(relative_target_feature, 3, dim=1)
             edge_features = torch.cat(
-                (relative_target_feature, torch.norm(relative_target_feature, dim=-1, keepdim=True)), dim=-1)
+                (world, torch.norm(world, dim=-1, keepdim=True), mesh, torch.norm(mesh, dim=-1, keepdim=True)), dim=-1)
         else:
             raise Exception("Model type is not specified in RippleNodeConnector.")
 
