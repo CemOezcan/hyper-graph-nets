@@ -113,7 +113,7 @@ class HierarchicalConnector(AbstractConnector):
         return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
 
     def _delaunay(self, clustering_features, num_nodes, model_type):
-        _, points = torch.split(clustering_features[1], 3, dim=1).to('cpu')
+        _, points = torch.split(clustering_features[1], 3, dim=1)
         tri = ss.Delaunay(points)
         simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices]).to('cpu')
         a = util.triangles_to_edges(simplices)
