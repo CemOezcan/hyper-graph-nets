@@ -24,7 +24,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
         # TODO: Add velocity as fourth dimension, but only for later instances in a trajectory
         # TODO: Experimental parameter: Many clusters vs few clusters (min_pts=None vs. min_pts=10)
-        min_cluster_size = 15
+        min_cluster_size = 10
         min_samples = 5
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
         clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size, min_samples=min_samples).fit(X.to('cpu'))
@@ -34,7 +34,10 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         clusters = [list(map(lambda x: x[1], filter(lambda x: x[0] == label, enum))) for label in set(labels)]
         # TODO: Special case for clusters[0] (noise)
 
-        indices = [torch.tensor(cluster) for cluster in clusters[1:]]
+        #indices = [torch.tensor(index) for cluster in clusters[1:]]
+        indices = self.exemplars(X, clustering.exemplars_)
+        indices = [torch.tensor(index) for index in indices]
+
         # TODO: Implement exemplars if necessary
 
         return indices

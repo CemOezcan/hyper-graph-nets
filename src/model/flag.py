@@ -109,7 +109,7 @@ class FlagModel(nn.Module):
                                   edge_sets=[mesh_edges], target_feature=world_pos, mesh_features=mesh_pos,
                                   model_type=self._model_type, node_dynamic=node_dynamic)
 
-        return MultiGraph(node_features=graph.node_features, edge_sets=graph.edge_sets)
+        return graph
 
     def forward(self, graph):
         return self.learned_model(graph)

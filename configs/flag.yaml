@@ -44,9 +44,9 @@ params:
     learning_rate: 5.0e-5
     message_passing_steps: 7
     rmp:
-      frequency: 1
-      clustering: none
-      connector: none
+      frequency: 399
+      clustering: hdbscan
+      connector: hierarchical
     ricci:
       enabled: True
       frequency: 1
