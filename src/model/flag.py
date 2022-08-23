@@ -280,9 +280,3 @@ class FlagModel(nn.Module):
     @staticmethod
     def get_ricci_edges(graph):
         return [e for e in graph.edge_sets if e.name == 'ricci']
-
-    @staticmethod
-    def get_rmp_edges(graph):
-        edge_types = ['intra_cluster_to_mesh',
-                      'intra_cluster_to_cluster', 'inter_cluster']
-        return [e for e in graph.edge_sets if e.name in edge_types]

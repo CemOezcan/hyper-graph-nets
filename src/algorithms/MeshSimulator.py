@@ -222,10 +222,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             elif ricci_edge_set:
                     [graph.edge_sets.append(e) for e in ricci_edge_set]
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
-                graph = self._network.rmp(graph, is_training)
-                rmp_edge_set = self._network.get_rmp_edges(graph)
-            elif rmp_edge_set:
-                    [graph.edge_sets.append(e) for e in rmp_edge_set]
+                self._network.reset_remote_graph()
+            graph = self._network.rmp(graph, is_training)
             graphs.append(graph)
         data = list(zip(graphs, trajectory))
         batches = self.get_batched(data, 1)
