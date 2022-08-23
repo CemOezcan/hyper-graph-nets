@@ -23,16 +23,11 @@ class FlagModel(nn.Module):
         self.loss_fn = torch.nn.MSELoss()
 
         self._output_normalizer = Normalizer(size=3, name='output_normalizer')
-        self._node_normalizer = Normalizer(
-            size=3 + NodeType.SIZE, name='node_normalizer')
-        self._node_dynamic_normalizer = Normalizer(
-            size=1, name='node_dynamic_normalizer')
-        self._mesh_edge_normalizer = Normalizer(
-            size=7, name='mesh_edge_normalizer')
-        self._intra_edge_normalizer = Normalizer(
-            size=4, name='intra_edge_normalizer')
-        self._inter_edge_normalizer = Normalizer(
-            size=4, name='intra_edge_normalizer')
+        self._node_normalizer = Normalizer(size=5, name='node_normalizer')
+        self._node_dynamic_normalizer = Normalizer(size=1, name='node_dynamic_normalizer')
+        self._mesh_edge_normalizer = Normalizer(size=7, name='mesh_edge_normalizer')
+        self._intra_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
+        self._inter_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
 
         self._model_type = 'flag'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get(
@@ -70,8 +65,9 @@ class FlagModel(nn.Module):
         prev_world_pos = inputs['prev|world_pos']
         node_type = inputs['node_type']
         velocity = world_pos - prev_world_pos
-        one_hot_node_type = F.one_hot(
-            node_type[:, 0].to(torch.int64), NodeType.SIZE)
+
+        node_types = list(map(lambda x: 0 if x == 0 else 1, node_type[:, 0]))
+        one_hot_node_type = F.one_hot(torch.tensor(node_types))
 
         node_features = torch.cat((velocity, one_hot_node_type), dim=-1)
 
@@ -110,11 +106,10 @@ class FlagModel(nn.Module):
             max_node_dynamic - min_node_dynamic)
 
         graph = MultiGraphWithPos(node_features=[self._node_normalizer(node_features, is_training)],
-                                  edge_sets=[
-                                      mesh_edges], target_feature=world_pos,
+                                  edge_sets=[mesh_edges], target_feature=world_pos, mesh_features=mesh_pos,
                                   model_type=self._model_type, node_dynamic=node_dynamic)
 
-        return MultiGraph(node_features=graph.node_features, edge_sets=graph.edge_sets)
+        return graph
 
     def forward(self, graph):
         return self.learned_model(graph)
