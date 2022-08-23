@@ -59,6 +59,7 @@ class AbstractConnector(ABC):
     @staticmethod
     def _get_subgraph(model_type: str, target_feature: List[Tensor], senders_list: Tensor, receivers_list: Tensor) \
             -> Tuple[Tensor, Tensor, Tensor]:
+        # TODO: generalize for mesh and world features
         target_feature = torch.cat(
             tuple(map(lambda x: x.clone().detach(), target_feature)), dim=0)
         senders = torch.cat(

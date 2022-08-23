@@ -21,7 +21,9 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
         # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
         # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
-        X = graph.target_feature
+        # TODO: Add velocity as fourth dimension, but only for later instances in a trajectory
+        # TODO: Experimental parameter: Many clusters vs few clusters (min_pts=None vs. min_pts=10)
+        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
         clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1).fit(X.to('cpu'))
         labels = clustering.labels_ + 1
 
@@ -30,5 +32,6 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         # TODO: Special case for clusters[0] (noise)
 
         indices = [torch.tensor(cluster) for cluster in clusters[1:]]
+        # TODO: Implement exemplars if necessary
 
         return indices

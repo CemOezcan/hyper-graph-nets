@@ -46,10 +46,10 @@ params:
     load: None
     rmp:
       ricci: True
-      clustering: none
-      connector: none
+      clustering: hdbscan
+      connector: hierarchical
   logging:
-    wandb_mode: run
+    wandb_mode: offline
 
 ---
 name: optuna_exp
