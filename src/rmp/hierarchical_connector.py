@@ -1,9 +1,11 @@
 from typing import List, Tuple
 
 import numpy as np
+import scipy.spatial as ss
 import torch
 from torch import Tensor
 
+from src import util
 from src.migration.normalizer import Normalizer
 from src.rmp.abstract_connector import AbstractConnector
 from src.util import MultiGraphWithPos, EdgeSet, device, MultiGraph
@@ -96,6 +98,12 @@ class HierarchicalConnector(AbstractConnector):
 
         # TODO: try connecting close hyper nodes only (instead of fully connecting)
         # Inter cluster communication
+        _, points = torch.split(clustering_features[1], 3, dim=1)
+        tri = ss.Delaunay(points)
+        simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices])
+        a = util.triangles_to_edges(simplices)
+        senders, receivers, edge_features = self._get_subgraph(model_type, clustering_features, a['senders'], a['receivers'])
+
         hyper_nodes = hyper_nodes
         reverse_selected_nodes = torch.flip(hyper_nodes, [-1])
         edges = torch.cat((torch.combinations(hyper_nodes, with_replacement=True),
