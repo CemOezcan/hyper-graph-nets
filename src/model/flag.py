@@ -66,9 +66,8 @@ class FlagModel(nn.Module):
         node_type = inputs['node_type']
         velocity = world_pos - prev_world_pos
 
-        node_types = list(map(lambda x: 0 if x == 0 else 1, node_type[:, 0]))
-        one_hot_node_type = F.one_hot(torch.tensor(node_types, device=device))
-
+        node_types = torch.flatten(torch.ne(node_type[:, 0], 0)).long()
+        one_hot_node_type = F.one_hot(node_types)
         node_features = torch.cat((velocity, one_hot_node_type), dim=-1)
 
         cells = inputs['cells']
