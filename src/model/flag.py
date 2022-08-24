@@ -283,4 +283,5 @@ class FlagModel(nn.Module):
 
     def connect_rmp_cluster(self, graph, clusters, is_training):
         if self._rmp:
-            self._remote_graph.connect_cluster(graph, clusters, is_training)
+            return self._remote_graph.connect_cluster(graph, clusters, is_training)
+        return graph
