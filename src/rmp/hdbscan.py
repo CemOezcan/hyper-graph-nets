@@ -32,20 +32,15 @@ class HDBSCAN(AbstractClusteringAlgorithm):
 
         enum = list(zip(labels, range(len(X))))
         clusters = [list(map(lambda x: x[1], filter(lambda x: x[0] == label, enum))) for label in set(labels)]
+        indices = [torch.tensor(cluster) for cluster in clusters[1:]]
         # TODO: Special case for clusters[0] (noise)
-
-        #indices = [torch.tensor(index) for cluster in clusters[1:]]
-        indices = self.exemplars(X, clustering.exemplars_)
-        indices = [torch.tensor(index) for index in indices]
-
-        # TODO: Implement exemplars if necessary
 
         return indices
 
     def exemplars(self, X, exemplars):
-        new_ind = list()
+        indices = list()
         for i in range(len(exemplars)):
-            new_ind.append(list())
+            indices.append(list())
             for ex in exemplars[i]:
                 mask = torch.eq(X, torch.tensor(ex).repeat(X.shape[0], 1))
                 for m in range(len(mask)):
@@ -53,8 +48,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
                     for bool in mask[m]:
                         value = value and bool
                     if value:
-                        new_ind[i].append(m)
-        return new_ind
+                        indices[i].append(m)
+        return [torch.tensor(x) for x in indices]
 
     def highest_dynamics(self, graph, clusters, min_cluster_size):
         dyn = [abs(x) for x in graph.node_dynamic.tolist()]
