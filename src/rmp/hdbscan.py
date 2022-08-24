@@ -47,7 +47,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         for i in range(len(exemplars)):
             new_ind.append(list())
             for ex in exemplars[i]:
-                mask = torch.eq(X, torch.tensor(ex).repeat(X.shape[0], 1))
+                mask = torch.eq(X, torch.tensor(
+                    ex, device=device).repeat(X.shape[0], 1))
                 for m in range(len(mask)):
                     value = True
                     for bool in mask[m]:
