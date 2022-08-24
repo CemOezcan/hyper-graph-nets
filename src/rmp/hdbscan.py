@@ -4,6 +4,7 @@ import hdbscan
 import numpy as np
 import torch
 from torch import Tensor
+from numba import jit
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device
@@ -27,7 +28,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         min_cluster_size = 10
         min_samples = 5
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size, min_samples=min_samples).fit(X.to('cpu'))
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size,
+                                     min_samples=min_samples, prediction_data=True).fit(X.to('cpu'))
         labels = clustering.labels_ + 1
 
         enum = list(zip(labels, range(len(X))))
@@ -35,6 +37,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         #indices = [torch.tensor(cluster) for cluster in clusters[1:]]
         # TODO: Special case for clusters[0] (noise)
         indices = self.exemplars(X, clustering.exemplars_)
+        spotter = self.spotter(clustering, 0.5, 0.01)
 
         return indices
 
@@ -52,6 +55,18 @@ class HDBSCAN(AbstractClusteringAlgorithm):
                     if value:
                         indices[i].append(m)
         return [torch.tensor(x) for x in indices]
+
+    def spotter(self, clustering, threshold, difference):
+        soft_clusters = hdbscan.all_points_membership_vectors(clustering)
+        diffs = np.array([self.top_two_probs_diff(x) for x in soft_clusters])
+        return np.where((diffs < difference) & (
+            np.sum(soft_clusters, axis=1) > threshold))[0]
+
+    @staticmethod
+    def top_two_probs_diff(probs):
+        sorted_probs = np.sort(probs)
+        return sorted_probs[-1] - sorted_probs[-2]
+
 
     def highest_dynamics(self, graph, clusters, min_cluster_size):
         dyn = [abs(x) for x in graph.node_dynamic.tolist()]

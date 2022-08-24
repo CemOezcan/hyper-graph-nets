@@ -27,12 +27,12 @@ params:
   task:
     dataset: flag_simple
     rollout_split: valid
-    batch_size: 21
+    batch_size: 1
     epochs: 15
     trajectories: 1000
     rollouts: 1
     mode: all
-    prefetch_factor: 20
+    prefetch_factor: 2
   model:
     field: world_pos
     history: True
@@ -44,16 +44,22 @@ params:
     learning_rate: 5.0e-5
     message_passing_steps: 7
     rmp:
-      frequency: 399
+      frequency: 1
       clustering: hdbscan
       connector: hierarchical
+      spotter:
+        enabled: True
+        threshold: 0.5
+        difference: 0.001
+      exemplars:
+        enabled: True
     ricci:
       enabled: True
       frequency: 1
-      loops: 10
+      loops: 1
       tau: 20
   logging:
-    wandb_mode: run
+    wandb_mode: offline
   random_seed: 0
 
 ---
