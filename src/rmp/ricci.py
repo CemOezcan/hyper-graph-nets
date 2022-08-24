@@ -22,23 +22,16 @@ class Ricci(AbstractGraphProcessor):
     def __init__(self):
         super().__init__()
         self.g = None
-        self.compute = True
 
     def _initialize(self):
         pass
 
     def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool):
-        if self.compute:
-            new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
-                graph), loops=10, remove_edges=False, removal_bound=0.5, tau=1, is_undirected=True)
-            new_graph = self.transform_pyg_to_multigraph(
-                added_edges, inputs, mesh_edge_normalizer, is_training)
-            self.compute = False
-            return new_graph
-        return graph
-
-    def reset_ricci_graph(self):
-        self.compute = True
+        new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
+            graph), loops=10, remove_edges=False, removal_bound=0.5, tau=1, is_undirected=True)
+        new_graph = self.transform_pyg_to_multigraph(
+            added_edges, inputs, mesh_edge_normalizer, is_training)
+        return new_graph
 
     def transform_multigraph_to_pyg(self, graph: MultiGraphWithPos) -> Data:
         self.g = graph

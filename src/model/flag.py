@@ -266,12 +266,21 @@ class FlagModel(nn.Module):
                 graph, inputs, self._mesh_edge_normalizer, is_training)
         return graph
 
-    def reset_ricci_graph(self):
-        if self._ricci:
-            self._ricci_flow.reset_ricci_graph()
+    @staticmethod
+    def get_ricci_edges(graph):
+        return [e for e in graph.edge_sets if e.name == 'ricci']
 
     def rmp(self, graph, is_training):
         # TODO: Normalize hyper nodes
         if self._rmp:
             return self._remote_graph.create_graph(graph, is_training)
         return graph
+
+    def get_rmp_clusters(self, graph):
+        if self._rmp:
+            return self._remote_graph.get_clusters(graph)
+        return None
+
+    def connect_rmp_cluster(self, graph, clusters, is_training):
+        if self._rmp:
+            self._remote_graph.connect_cluster(graph, clusters, is_training)
