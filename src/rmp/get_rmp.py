@@ -26,7 +26,7 @@ def get_rmp(config: ConfigDict) -> RemoteMessagePassing:
 
 def get_clustering_algorithm(name: str) -> AbstractClusteringAlgorithm:
     if name == "hdbscan":
-        return HDBSCAN()
+        return HDBSCAN(0.9)
     elif name == "random":
         return RandomClustering()
     elif name == "none":
