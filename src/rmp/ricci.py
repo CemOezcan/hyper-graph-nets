@@ -19,16 +19,18 @@ from torch_geometric.utils import (
 
 
 class Ricci(AbstractGraphProcessor):
-    def __init__(self):
+    def __init__(self, params):
         super().__init__()
         self.g = None
+        self._loops = params.get('ricci').get('loops')
+        self._tau = params.get('ricci').get('tau')
 
     def _initialize(self):
         pass
 
     def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool):
         new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
-            graph), loops=10, remove_edges=False, removal_bound=0.5, tau=1, is_undirected=True)
+            graph), loops=self._tau, remove_edges=False, tau=self._tau, is_undirected=True)
         new_graph = self.transform_pyg_to_multigraph(
             added_edges, inputs, mesh_edge_normalizer, is_training)
         return new_graph

@@ -18,15 +18,15 @@ def get_rmp(config: ConfigDict) -> RemoteMessagePassing:
     clustering_name = get_from_nested_dict(config, list_of_keys=["rmp", "clustering"], raise_error=True).lower()
     connector_name = get_from_nested_dict(config, list_of_keys=["rmp", "connector"], raise_error=True).lower()
 
-    clustering = get_clustering_algorithm(clustering_name)
+    clustering = get_clustering_algorithm(clustering_name, config)
     connector = get_connector(connector_name)
 
     return RemoteMessagePassing(clustering, connector)
 
 
-def get_clustering_algorithm(name: str) -> AbstractClusteringAlgorithm:
+def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     if name == "hdbscan":
-        return HDBSCAN(0.9)
+        return HDBSCAN(config.get('rmp').get('spotter').get('threshold'))
     elif name == "random":
         return RandomClustering()
     elif name == "none":

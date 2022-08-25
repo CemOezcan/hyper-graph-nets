@@ -42,7 +42,7 @@ class FlagModel(nn.Module):
 
         self._edge_sets = ['mesh_edges']
         if self._ricci:
-            self._ricci_flow = Ricci()
+            self._ricci_flow = Ricci(params)
             self._edge_sets.append('ricci')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
