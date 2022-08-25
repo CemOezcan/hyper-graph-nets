@@ -4,8 +4,6 @@ import hdbscan
 import numpy as np
 import torch
 from torch import Tensor
-from numba import jit
-from profilehooks import profile
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device

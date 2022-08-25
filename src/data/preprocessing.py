@@ -20,6 +20,7 @@ class Preprocessing():
     def __init__(self, config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True, in_dir=None):
         self._split_and_preprocess_b = split_and_preprocess
         self._add_targets_b = add_targets
+        self._add_noise_b = split == 'train'
         self._network_config = config.get("model")
         self._dataset_dir = in_dir
 
@@ -82,9 +83,9 @@ class Preprocessing():
                 trajectory_step = {}
                 for key, value in trajectory.items():
                     trajectory_step[key] = value[i]
-                noisy_trajectory_step = Preprocessing._add_noise(
-                    trajectory_step, noise_field, noise_scale, noise_gamma)
-                trajectory_steps.append(noisy_trajectory_step)
+                if self._add_noise_b:
+                    trajectory_step = Preprocessing._add_noise(trajectory_step, noise_field, noise_scale, noise_gamma)
+                trajectory_steps.append(trajectory_step)
             return trajectory_steps
 
         return element_operation
