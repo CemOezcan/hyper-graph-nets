@@ -98,8 +98,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress'):
             start_preprocessing_batch = time.time()
             try:
-                train = [next(train_dataloader)
-                         for _ in range(self._prefetch_factor)]
+                train = [next(train_dataloader) for _ in range(self._prefetch_factor)]
             except StopIteration:
                 break
             with multiprocessing.Pool() as pool:
@@ -226,6 +225,15 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
             graphs.append(graph)
+
+        if is_training:
+            targets = [self._network.get_target_unnormalized(x) for x in trajectory]
+            keys = [key for key in trajectory[0].keys() if key != 'node_type']
+
+            for i in range(len(trajectory)):
+                trajectory[i]['target'] = targets[i]
+                for key in keys:
+                    trajectory[i].pop(key, None)
 
         data = list(zip(graphs, trajectory))
         batches = self.get_batched(data, 1)

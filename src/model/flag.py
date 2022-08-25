@@ -115,7 +115,8 @@ class FlagModel(nn.Module):
 
     def training_step(self, graph, data_frame):
         network_output = self(graph)
-        target_normalized = self.get_target(data_frame)
+        target = data_frame['target']
+        target_normalized = self._output_normalizer(target, True)
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor(
@@ -164,6 +165,16 @@ class FlagModel(nn.Module):
         target_acceleration = target_position - 2 * cur_position + prev_position
 
         return self._output_normalizer(target_acceleration, is_training).to(device)
+
+    def get_target_unnormalized(self, data_frame):
+        cur_position = data_frame['world_pos']
+        prev_position = data_frame['prev|world_pos']
+        target_position = data_frame['target|world_pos']
+
+        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
+        target_acceleration = target_position - 2 * cur_position + prev_position
+
+        return target_acceleration
 
     @torch.no_grad()
     def rollout(self, trajectory, num_steps):
