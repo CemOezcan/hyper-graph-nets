@@ -5,17 +5,21 @@ import numpy as np
 import torch
 from torch import Tensor
 from numba import jit
+from profilehooks import profile
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device
 from sklearn.cluster import KMeans
 
+
 class HDBSCAN(AbstractClusteringAlgorithm):
     """
     Hierarchical Density Based Clustering for Applications with Noise.
     """
-    def __init__(self):
+
+    def __init__(self, threshold):
         super().__init__()
+        self._threshold = threshold
 
     def _initialize(self):
         pass
@@ -33,11 +37,12 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         labels = clustering.labels_ + 1
 
         enum = list(zip(labels, range(len(X))))
-        clusters = [list(map(lambda x: x[1], filter(lambda x: x[0] == label, enum))) for label in set(labels)]
+        clusters = [list(map(lambda x: x[1], filter(
+            lambda x: x[0] == label, enum))) for label in set(labels)]
         #indices = [torch.tensor(cluster) for cluster in clusters[1:]]
         # TODO: Special case for clusters[0] (noise)
         indices = self.exemplars(X, clustering.exemplars_)
-        spotter = self.spotter(clustering, 0.5, 0.01)
+        spotter = self.spotter(clustering, self._threshold)
 
         return indices
 
@@ -56,17 +61,20 @@ class HDBSCAN(AbstractClusteringAlgorithm):
                         indices[i].append(m)
         return [torch.tensor(x) for x in indices]
 
-    def spotter(self, clustering, threshold, difference):
+    def spotter(self, clustering, threshold):
         soft_clusters = hdbscan.all_points_membership_vectors(clustering)
-        diffs = np.array([self.top_two_probs_diff(x) for x in soft_clusters])
-        return np.where((diffs < difference) & (
-            np.sum(soft_clusters, axis=1) > threshold))[0]
+        spotter_candidates = [
+            self.top_two_probs_diff(x) for x in soft_clusters]
+        prob_diff = np.array([x[0] for x in spotter_candidates])
+        prob_sum = np.sum(np.sort(soft_clusters, )[:, -2:], axis=1)
+        metric = 1 - prob_diff[:] / prob_sum[:]
+        spotter = np.where(metric > threshold)[0]
+        return [[x, spotter_candidates[x][1:]] for x in spotter]
 
     @staticmethod
     def top_two_probs_diff(probs):
-        sorted_probs = np.sort(probs)
-        return sorted_probs[-1] - sorted_probs[-2]
-
+        cluster = np.argsort(probs)
+        return [probs[cluster[-1]] - probs[cluster[-2]], cluster[-1], cluster[-2]]
 
     def highest_dynamics(self, graph, clusters, min_cluster_size):
         dyn = [abs(x) for x in graph.node_dynamic.tolist()]

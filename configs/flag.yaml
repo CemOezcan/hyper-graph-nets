@@ -49,12 +49,11 @@ params:
       connector: hierarchical
       spotter:
         enabled: True
-        threshold: 0.5
-        difference: 0.001
+        threshold: 0.9
       exemplars:
         enabled: True
     ricci:
-      enabled: True
+      enabled: False
       frequency: 1
       loops: 1
       tau: 20
