@@ -25,11 +25,11 @@ optuna:
 
 params:
   task:
-    dataset: flag_simple
+    dataset: flag_minimal
     rollout_split: valid
     batch_size: 1
     epochs: 15
-    trajectories: 1000
+    trajectories: 2
     rollouts: 1
     mode: all
     prefetch_factor: 2
@@ -42,7 +42,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 7
+    message_passing_steps: 1
     rmp:
       frequency: 1
       clustering: hdbscan
