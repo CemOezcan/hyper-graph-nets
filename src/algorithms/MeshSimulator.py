@@ -30,9 +30,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         super().__init__(config=config)
         self._network_config = config.get('model')
         self._dataset_dir = IN_DIR
+        self._validation = config.get('task').get(
+            'validation').get('trajectories')
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
+        assert self._validation <= self._trajectories/self._prefetch_factor
         self._wandb_mode = config.get('logging').get('wandb_mode')
         self._ricci_frequency = self._network_config.get(
             'ricci').get('frequency')
@@ -107,7 +110,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     data.append(result)
                     if (i + 1) % self._prefetch_factor == 0 and i != 0:
                         # TODO: last data storage might not be saved
-                        with open(os.path.join(IN_DIR, split + '_ricci' + f'_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
+                        with open(os.path.join(IN_DIR, split + '_riccihdbscan' + f'_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
                             torch.save(data, f)
                         del data
                         data = []
@@ -245,7 +248,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for valid_file in ds_loader:
             with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
                 valid_data = torch.load(f)
-
+            random.shuffle(valid_data)
+            valid_data = [valid_data[:self._validation]]
             for i, trajectory in enumerate(valid_data):
                 random.shuffle(trajectory)
                 instance_loss = list()

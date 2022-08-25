@@ -1,6 +1,7 @@
 import math
 import os
 import pickle
+import random
 import re
 
 import matplotlib.animation as ani
@@ -46,9 +47,13 @@ class MeshTask(AbstractTask):
         assert isinstance(
             self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
         train_files = [file for file in os.listdir(
-            IN_DIR) if re.match(r'train_ricci_[0-9]+\.pth', file)]
+            IN_DIR) if re.match(r'train_riccihdbscan_[0-9]+\.pth', file)]
         valid_files = [file for file in os.listdir(
-            IN_DIR) if re.match(r'valid_ricci_[0-9]+\.pth', file)]
+            IN_DIR) if re.match(r'valid_riccihdbscan_[0-9]+\.pth', file)]
+        validation_amt = self._config.get('task').get('validation').get('files')
+        assert validation_amt <= len(valid_files)
+        random.shuffle(valid_files)
+        valid_files = valid_files[:validation_amt]
 
         for e in trange(self._epochs, desc='Epochs'):
             for train_file in tqdm(train_files, desc='Train files', leave=False):

@@ -32,7 +32,10 @@ params:
     trajectories: 1000
     rollouts: 1
     mode: all
-    prefetch_factor: 2
+    prefetch_factor: 10
+    validation:
+      files: 10
+      trajectories: 1
   model:
     field: world_pos
     history: True
@@ -58,7 +61,7 @@ params:
       loops: 100
       tau: 100
   logging:
-    wandb_mode: offline
+    wandb_mode: run
   random_seed: 0
 
 ---
