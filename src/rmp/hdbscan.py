@@ -33,7 +33,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size,
                                      min_samples=min_samples, prediction_data=True).fit(X.to('cpu'))
         # TODO: Special case for clusters[0] (noise)
-        exemplars = self.exemplars(X, clustering.exemplars_)
+        exemplars = self.exemplars(clustering)
         spotter = self.spotter(clustering, self._threshold)
 
         indices = [torch.tensor(list(set(e + s)))
@@ -41,20 +41,24 @@ class HDBSCAN(AbstractClusteringAlgorithm):
 
         return indices
 
-    def exemplars(self, X, exemplars):
-        indices = list()
-        for i in range(len(exemplars)):
-            indices.append(list())
-            for ex in exemplars[i]:
-                mask = torch.eq(X, torch.tensor(
-                    ex, device=device).repeat(X.shape[0], 1))
-                for m in range(len(mask)):
-                    value = True
-                    for bool in mask[m]:
-                        value = value and bool
-                    if value:
-                        indices[i].append(m)
-        return indices
+    def exemplars(self, clustering):
+        selected_clusters = clustering.condensed_tree_._select_clusters()
+        raw_condensed_tree = clustering.condensed_tree_._raw_tree
+
+        exemplars = []
+        for cluster in selected_clusters:
+
+            cluster_exemplars = np.array([], dtype=np.int64)
+            for leaf in clustering._prediction_data._recurse_leaf_dfs(cluster):
+                leaf_max_lambda = raw_condensed_tree['lambda_val'][
+                    raw_condensed_tree['parent'] == leaf].max()
+                points = raw_condensed_tree['child'][
+                    (raw_condensed_tree['parent'] == leaf) &
+                    (raw_condensed_tree['lambda_val'] == leaf_max_lambda)]
+                cluster_exemplars = np.hstack([cluster_exemplars, points])
+            exemplars.append(list(cluster_exemplars))
+
+        return exemplars
 
     def spotter(self, clustering, threshold):
         soft_clusters = hdbscan.all_points_membership_vectors(clustering)
