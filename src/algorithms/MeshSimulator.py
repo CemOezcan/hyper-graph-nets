@@ -224,7 +224,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
                 rmp_clusters = self._network.get_rmp_clusters(graph)
 
-            graph = graph._replace(node_features=graph.node_features[0])
             graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
             graphs.append(graph)
 
