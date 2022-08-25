@@ -38,7 +38,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         exemplars = self.exemplars(X, clustering.exemplars_)
         spotter = self.spotter(clustering, self._threshold)
 
-        indices = [torch.tensor(e + s) for e, s in zip(exemplars, spotter)]
+        indices = [torch.tensor(list(set(e + s)))
+                   for e, s in zip(exemplars, spotter)]
 
         return indices
 
