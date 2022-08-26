@@ -47,8 +47,9 @@ params:
     learning_rate: 5.0e-5
     message_passing_steps: 7
     rmp:
+      num_clusters: 10
       frequency: 1
-      clustering: hdbscan
+      clustering: gmm
       n_clusters: auto
       connector: hierarchical
       spotter:
@@ -62,7 +63,7 @@ params:
       loops: 100
       tau: 100
   logging:
-    wandb_mode: run
+    wandb_mode: offline
   random_seed: 0
 
 ---
