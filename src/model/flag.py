@@ -10,7 +10,7 @@ from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.migration.normalizer import Normalizer
 from src.migration.meshgraphnet import MeshGraphNet
 from src import util
-from src.rmp.ricci import Ricci
+from src.graph_balancer.ricci import Ricci
 from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
 
 
@@ -36,7 +36,7 @@ class FlagModel(nn.Module):
             'connector') == 'hierarchical' and self._rmp
         self._multi = params.get('rmp').get(
             'connector') == 'multigraph' and self._rmp
-        self._ricci = params.get('ricci').get('enabled')
+        self._ricci = params.get('graph_balancer').get('ricci').get('enabled')
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
 

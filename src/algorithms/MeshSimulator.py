@@ -37,7 +37,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._prefetch_factor = config.get('task').get('prefetch_factor')
         assert self._validation <= self._trajectories/self._prefetch_factor
         self._wandb_mode = config.get('logging').get('wandb_mode')
-        self._ricci_frequency = self._network_config.get(
+        self._ricci_frequency = self._network_config.get('graph_balancer').get(
             'ricci').get('frequency')
         self._rmp_frequency = self._network_config.get(
             'rmp').get('frequency')
