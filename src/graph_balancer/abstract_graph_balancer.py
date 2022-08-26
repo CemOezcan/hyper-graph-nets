@@ -54,6 +54,6 @@ class AbstractGraphBalancer(ABC):
             torch.norm(relative_world_pos, dim=-1, keepdim=True),
             relative_mesh_pos,
             torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
-        graph.edge_sets.append(EdgeSet(name='ricci', features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(
-            added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))  # TODO change from ricci to balance
+        graph.edge_sets.append(EdgeSet(name='balance', features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(
+            added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
         return graph

@@ -3,7 +3,7 @@ from src.graph_balancer.abstract_graph_balancer import AbstractGraphBalancer
 from src.util import MultiGraphWithPos
 
 
-class Ricci(AbstractGraphBalancer):
+class RandomGraphBalancer(AbstractGraphBalancer):
     def __init__(self, params):
         super().__init__()
         self._edge_amount = params.get('graph_processor').get(
