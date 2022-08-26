@@ -1,6 +1,7 @@
 """
 Utility class to select a remote message passing strategy based on a given config file
 """
+from src.rmp.gaussian_mixture import GaussianMixtureClustering
 from src.rmp.hdbscan import HDBSCAN
 from src.rmp.hierarchical_connector import HierarchicalConnector
 from src.rmp.multigraph_connector import MultigraphConnector
@@ -31,7 +32,9 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     elif name == "random":
         return RandomClustering()
     elif name == "spectral":
-        return SpectralClustering()
+        return SpectralClustering(config.get('rmp').get('num_clusters'))
+    elif name == "gmm":
+        return GaussianMixtureClustering(config.get('rmp').get('num_clusters'))
     elif name == "none":
         return None
     else:

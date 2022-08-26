@@ -17,8 +17,9 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     Spectral Clustering
     """
 
-    def __init__(self):
+    def __init__(self, num_clusters):
         super().__init__()
+        self._num_clusters = num_clusters
         self._wandb = wandb.init(reinit=False)
 
     def _initialize(self):
@@ -26,15 +27,10 @@ class SpectralClustering(AbstractClusteringAlgorithm):
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
         X = self._compute_affinity_matrix(graph)
-        n_clusters = 10
-        sc = sklearn.cluster.SpectralClustering(n_clusters=n_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
+        sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
         labels = sc.fit(X).labels_
 
-        indices = [list() for _ in range(n_clusters)]
-        for i in range(len(labels)):
-            indices[labels[i]].append(i)
-
-        return [torch.tensor(x) for x in indices]
+        return self._labels_to_indices(labels)
 
     @staticmethod
     def _compute_affinity_matrix(graph: MultiGraphWithPos):
