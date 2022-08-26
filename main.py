@@ -11,8 +11,7 @@ from multiprocessing import set_start_method
 
 import numpy as np
 import torch
-
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore', category=UserWarning)
 
 
 def main(preprocess: bool, train: bool, compute_rollout: bool):

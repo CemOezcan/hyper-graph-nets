@@ -1,9 +1,14 @@
 from typing import List
 
 import hdbscan
+from hdbscan.flat import (HDBSCAN_flat,
+                          approximate_predict_flat,
+                          membership_vector_flat,
+                          all_points_membership_vectors_flat)
 import numpy as np
 import torch
 from torch import Tensor
+import wandb
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device
@@ -18,6 +23,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def __init__(self, threshold):
         super().__init__()
         self._threshold = threshold
+        self._wandb = wandb.init(reinit=False)
 
     def _initialize(self):
         pass
@@ -28,10 +34,12 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         # TODO: Add velocity as fourth dimension, but only for later instances in a trajectory
         # TODO: Experimental parameter: Many clusters vs few clusters (min_pts=None vs. min_pts=10)
         min_cluster_size = 10
-        min_samples = 5
+        min_samples = 2
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
         clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size,
                                      min_samples=min_samples, prediction_data=True).fit(X.to('cpu'))
+        self._wandb.log({'hdbscan cluster': clustering.labels_.max(
+        ), 'hdbscan noise': len([x for x in clustering.labels_ if x < 0])})
         # TODO: Special case for clusters[0] (noise)
         exemplars = self.exemplars(clustering)
         spotter = self.spotter(clustering, self._threshold)
@@ -47,7 +55,6 @@ class HDBSCAN(AbstractClusteringAlgorithm):
 
         exemplars = []
         for cluster in selected_clusters:
-
             cluster_exemplars = np.array([], dtype=np.int64)
             for leaf in clustering._prediction_data._recurse_leaf_dfs(cluster):
                 leaf_max_lambda = raw_condensed_tree['lambda_val'][
@@ -61,7 +68,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         return exemplars
 
     def spotter(self, clustering, threshold):
-        soft_clusters = hdbscan.all_points_membership_vectors(clustering)
+        soft_clusters = HDBSCAN_flat.all_points_membership_vectors_flat(
+            clustering)
         spotter_candidates = [
             self.top_two_probs_diff(x) for x in soft_clusters]
         prob_diff = np.array([x[0] for x in spotter_candidates])
@@ -76,6 +84,12 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def top_two_probs_diff(probs):
         cluster = np.argsort(probs)
         return [probs[cluster[-1]] - probs[cluster[-2]], cluster[-1]]
+
+    @staticmethod
+    def assign_noise_to_cluster(clustering):
+        soft_clusters = HDBSCAN_flat.all_points_membership_vectors_flat(
+            clustering)
+        return [np.argsort(x)[-1] for x in soft_clusters]
 
     def highest_dynamics(self, graph, clusters, min_cluster_size):
         dyn = [abs(x) for x in graph.node_dynamic.tolist()]
