@@ -5,6 +5,7 @@ from src.rmp.hdbscan import HDBSCAN
 from src.rmp.hierarchical_connector import HierarchicalConnector
 from src.rmp.multigraph_connector import MultigraphConnector
 from src.rmp.random_clustering import RandomClustering
+from src.rmp.spectral_clustering import SpectralClustering
 from util.Types import *
 from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
@@ -29,6 +30,8 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
         return HDBSCAN(config.get('rmp').get('spotter').get('threshold'))
     elif name == "random":
         return RandomClustering()
+    elif name == "spectral":
+        return SpectralClustering()
     elif name == "none":
         return None
     else:
