@@ -340,8 +340,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def network(self):
         return self._network
 
-    def save(self, epoch):
-        with open(os.path.join(OUT_DIR, f'model_{epoch}.pkl'), 'wb') as file:
+    def save(self, name, epoch):
+        with open(os.path.join(OUT_DIR, f'model_{name}_epoch:{epoch}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
     def save_rollouts(self, rollouts):

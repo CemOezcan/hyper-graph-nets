@@ -15,6 +15,7 @@ from src.data.data_loader import IN_DIR, OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
 from tqdm import tqdm, trange
 from util.Types import ConfigDict, ScalarDict
+from util.Functions import get_from_nested_dict
 
 
 class MeshTask(AbstractTask):
@@ -40,6 +41,11 @@ class MeshTask(AbstractTask):
 
         self.mask = None
 
+        cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
+        n_clusters = get_from_nested_dict(config, ['model', 'rmp', 'n_clusters'])
+        ricci = get_from_nested_dict(config, ['model', 'ricci', 'enabled'])
+        mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
+        self._task_name = str(n_clusters) + 'cluster:' + cluster + '_ricci:' + str(ricci) + '_mp:' + str(mp)
         self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
 
@@ -66,7 +72,7 @@ class MeshTask(AbstractTask):
                 valid_files, self._rollouts, e + 1)
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
-            self._algorithm.save(e)
+            self._algorithm.save(self._task_name, e)
 
     def preprocess(self):
         # TODO: parameterize prefetch factor

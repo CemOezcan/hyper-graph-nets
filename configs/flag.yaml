@@ -49,6 +49,7 @@ params:
     rmp:
       frequency: 1
       clustering: hdbscan
+      n_clusters: auto
       connector: hierarchical
       spotter:
         enabled: True
