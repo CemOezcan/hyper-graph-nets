@@ -29,8 +29,8 @@ class Ricci(AbstractGraphBalancer):
         self._wandb.log({'ricci added edges': len(added_edges['senders'])})
         return new_graph
 
-    def transform_multigraph_to_pyg(self, graph: MultiGraphWithPos) -> Data:
-        self.g = graph
+    @staticmethod
+    def transform_multigraph_to_pyg(graph: MultiGraphWithPos) -> Data:
         edge_index = torch.stack(
             (graph.edge_sets[0].senders, graph.edge_sets[0].receivers), dim=0)
         node_features = graph.node_features[0]
