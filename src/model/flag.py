@@ -4,7 +4,7 @@ import src.rmp.get_rmp as rmp
 import torch
 import torch.nn.functional as F
 from src import util
-from src.graph_balancer import get_graph_balancer
+import src.graph_balancer.get_graph_balancer as graph_balancer
 from src.migration.meshgraphnet import MeshGraphNet
 from src.migration.normalizer import Normalizer
 from src.util import EdgeSet, MultiGraphWithPos, NodeType, device
@@ -40,7 +40,7 @@ class FlagModel(nn.Module):
 
         self._edge_sets = ['mesh_edges']
         if self._balancer:
-            self._graph_balancer = get_graph_balancer(params)
+            self._graph_balancer = graph_balancer.get_balancer(params)
             self._edge_sets.append('balance')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)

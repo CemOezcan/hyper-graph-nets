@@ -14,8 +14,8 @@ from torch_geometric.utils import (from_networkx, remove_self_loops,
 class Ricci(AbstractGraphBalancer):
     def __init__(self, params):
         super().__init__()
-        self._loops = params.get('ricci').get('loops')
-        self._tau = params.get('ricci').get('tau')
+        self._loops = params.get('graph_balancer').get('ricci').get('loops')
+        self._tau = params.get('graph_balancer').get('ricci').get('tau')
         self._wandb = wandb.init(reinit=False)
 
     def _initialize(self):

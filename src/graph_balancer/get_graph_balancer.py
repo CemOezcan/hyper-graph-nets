@@ -10,7 +10,6 @@ from util.Types import *
 
 
 def get_balancer(config: ConfigDict) -> GraphBalancer:
-    # TODO: Change config template to fit the following
     balancer_algorithm = get_from_nested_dict(
         config, list_of_keys=["graph_balancer", "algorithm"], raise_error=True).lower()
     balancer = get_balancer_algorithm(balancer_algorithm, config)
