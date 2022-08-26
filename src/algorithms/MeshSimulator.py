@@ -114,12 +114,20 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                             torch.save(data, f)
                         del data
                         data = []
+
             end_preprocessing_batch = time.time()
             wandb.log(
-                {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch, 'preprocess completed percentage': int((r / self._trajectories) * 100)})
+                {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch,
+                 'preprocess completed percentage': int((r / self._trajectories) * 100)
+                 }
+            )
+
         end_preprocessing = time.time()
         wandb.log(
-            {'preprocess time per batch': end_preprocessing - start_preprocessing})
+            {'preprocess time per batch': end_preprocessing - start_preprocessing
+             }
+        )
+
         print(f'Preprocessing {split} graphs done.')
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
@@ -249,7 +257,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
                 valid_data = torch.load(f)
             random.shuffle(valid_data)
-            valid_data = [valid_data[:self._validation]]
+            valid_data = valid_data[:self._validation]
             for i, trajectory in enumerate(valid_data):
                 random.shuffle(trajectory)
                 instance_loss = list()
@@ -290,7 +298,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
-        num_steps = 100
+        num_steps = None
 
         for i, trajectory in enumerate(ds_loader):
             if i >= rollouts:

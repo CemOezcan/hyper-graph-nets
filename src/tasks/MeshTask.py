@@ -8,6 +8,8 @@ import matplotlib.animation as ani
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import torch
+import wandb
+
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
@@ -35,8 +37,7 @@ class MeshTask(AbstractTask):
         self._epochs = config.get('task').get('epochs')
         self.train_loader = get_data(config=config)
 
-        self._test_loader = get_data(
-            config=config, split='test', split_and_preprocess=False)
+        self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
         self._valid_loader = get_data(config=config, split='valid')
 
         self.mask = None
@@ -48,6 +49,7 @@ class MeshTask(AbstractTask):
         self._task_name = str(n_clusters) + 'cluster:' + cluster + '_ricci:' + str(ricci) + '_mp:' + str(mp)
         self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
+        self._wandb = wandb.init(reinit=False)
 
     def run_iteration(self):
         assert isinstance(
@@ -68,18 +70,19 @@ class MeshTask(AbstractTask):
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
 
-            self._algorithm.one_step_evaluator(
-                valid_files, self._rollouts, e + 1)
+            self._algorithm.save(self._task_name, e)
+
+            self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
+            self._algorithm.evaluator(self._test_loader, 1)
+            self.plot()
+            self._wandb.log({"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")})
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
-            self._algorithm.save(self._task_name, e)
 
     def preprocess(self):
         # TODO: parameterize prefetch factor
         self._algorithm.preprocess(self.train_loader, 'train')
         self._algorithm.preprocess(self._valid_loader, 'valid')
-        # TODO: fix test
-        # self._algorithm.preprocess(self._test_loader, 'test')
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
