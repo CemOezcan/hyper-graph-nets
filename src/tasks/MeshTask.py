@@ -71,11 +71,16 @@ class MeshTask(AbstractTask):
                 del train_data
 
             self._algorithm.save(self._task_name, e)
+            # Allways visualize the second trajectory
+            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+            next(self._test_loader)
 
             self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
             self._algorithm.evaluator(self._test_loader, 1)
+
             self.plot()
             self._wandb.log({"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")})
+
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
 
