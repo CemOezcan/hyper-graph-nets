@@ -1,17 +1,14 @@
 """Model for FlagSimple."""
 
-import torch
-import torch_scatter
-import torch.nn.functional as F
-
-from torch import nn
 import src.rmp.get_rmp as rmp
-from src.rmp.remote_message_passing import RemoteMessagePassing
-from src.migration.normalizer import Normalizer
-from src.migration.meshgraphnet import MeshGraphNet
+import torch
+import torch.nn.functional as F
 from src import util
-from src.rmp.ricci import Ricci
-from src.util import NodeType, EdgeSet, MultiGraph, device, MultiGraphWithPos
+from src.graph_balancer import get_graph_balancer
+from src.migration.meshgraphnet import MeshGraphNet
+from src.migration.normalizer import Normalizer
+from src.util import EdgeSet, MultiGraphWithPos, NodeType, device
+from torch import nn
 
 
 class FlagModel(nn.Module):
@@ -36,14 +33,15 @@ class FlagModel(nn.Module):
             'connector') == 'hierarchical' and self._rmp
         self._multi = params.get('rmp').get(
             'connector') == 'multigraph' and self._rmp
-        self._ricci = params.get('ricci').get('enabled')
+        self._balancer = params.get(
+            'graph_balancer').get('algorithm') != 'none'
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
 
         self._edge_sets = ['mesh_edges']
-        if self._ricci:
-            self._ricci_flow = Ricci(params)
-            self._edge_sets.append('ricci')
+        if self._balancer:
+            self._graph_balancer = get_graph_balancer(params)
+            self._edge_sets.append('balance')
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(
@@ -270,15 +268,15 @@ class FlagModel(nn.Module):
         self.eval()
         self.learned_model.eval()
 
-    def ricci(self, graph, inputs, is_training):
-        if self._ricci:
-            return self._ricci_flow.run(
+    def run_balancer(self, graph, inputs, is_training):
+        if self._balancer:
+            return self._graph_balancer.get_balanced_graph(
                 graph, inputs, self._mesh_edge_normalizer, is_training)
         return graph
 
     @staticmethod
-    def get_ricci_edges(graph):
-        return [e for e in graph.edge_sets if e.name == 'ricci']
+    def get_balanced_edges(graph):
+        return [e for e in graph.edge_sets if e.name == 'balance']
 
     def rmp(self, graph, is_training):
         # TODO: Normalize hyper nodes

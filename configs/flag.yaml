@@ -57,11 +57,14 @@ params:
         threshold: 0.9
       exemplars:
         enabled: True
-    ricci:
-      enabled: False
+    graph_balancer:
+      algorithm: ricci
       frequency: 1
-      loops: 100
-      tau: 100
+      ricci:
+        loops: 5
+        tau: 20
+      random:
+        edge_amount: 100
   logging:
     wandb_mode: offline
   random_seed: 0

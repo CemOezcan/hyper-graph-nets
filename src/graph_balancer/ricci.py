@@ -1,27 +1,19 @@
-from typing import Dict
-
-import wandb
-from src.rmp.abstract_graph_processing import AbstractGraphProcessor
-from src.util import EdgeSet, MultiGraphWithPos, device
-from torch_geometric.data import Data
-import torch
 import math
-from numba import cuda
+
 import numpy as np
 import torch
-from torch_geometric.utils import (
-    to_networkx,
-    from_networkx,
-    to_dense_adj,
-    remove_self_loops,
-    to_undirected,
-)
+import wandb
+from numba import cuda
+from src.graph_balancer.abstract_graph_balancer import AbstractGraphBalancer
+from src.util import MultiGraphWithPos
+from torch_geometric.data import Data
+from torch_geometric.utils import (from_networkx, remove_self_loops,
+                                   to_dense_adj, to_networkx, to_undirected)
 
 
-class Ricci(AbstractGraphProcessor):
+class Ricci(AbstractGraphBalancer):
     def __init__(self, params):
         super().__init__()
-        self.g = None
         self._loops = params.get('ricci').get('loops')
         self._tau = params.get('ricci').get('tau')
         self._wandb = wandb.init(reinit=False)
@@ -32,35 +24,19 @@ class Ricci(AbstractGraphProcessor):
     def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool):
         new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
             graph), loops=self._tau, remove_edges=False, tau=self._tau, is_undirected=True)
-        new_graph = self.transform_pyg_to_multigraph(
-            added_edges, inputs, mesh_edge_normalizer, is_training)
+        new_graph = self.add_graph_balance_edges(
+            graph, added_edges, inputs, mesh_edge_normalizer, is_training)
+        self._wandb.log({'ricci added edges': len(added_edges['senders'])})
         return new_graph
 
-    def transform_multigraph_to_pyg(self, graph: MultiGraphWithPos) -> Data:
-        self.g = graph
+    @staticmethod
+    def transform_multigraph_to_pyg(graph: MultiGraphWithPos) -> Data:
         edge_index = torch.stack(
             (graph.edge_sets[0].senders, graph.edge_sets[0].receivers), dim=0)
         node_features = graph.node_features[0]
         pyg = Data(x=node_features, edge_index=edge_index,
                    edge_attr=graph.edge_sets[0].features)
         return pyg
-
-    def transform_pyg_to_multigraph(self, added_edges: Dict, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
-        mesh_pos = inputs['mesh_pos']
-        world_pos = inputs['world_pos']
-        relative_world_pos = (torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
-                              torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
-        relative_mesh_pos = (torch.index_select(mesh_pos, 0, torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
-                             torch.index_select(mesh_pos, 0, torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
-        edge_features = torch.cat((
-            relative_world_pos,
-            torch.norm(relative_world_pos, dim=-1, keepdim=True),
-            relative_mesh_pos,
-            torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
-        self.g.edge_sets.append(EdgeSet(name='ricci', features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(
-            added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
-        self._wandb.log({'ricci added edges': len(added_edges['senders'])})
-        return self.g
 
     @staticmethod
     def sdrf(
