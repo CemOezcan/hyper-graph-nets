@@ -71,7 +71,7 @@ class MeshTask(AbstractTask):
                 del train_data
 
             self._algorithm.save(self._task_name, e)
-            # Allways visualize the second trajectory
+            # TODO: Allways visualize the second trajectory
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
