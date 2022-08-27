@@ -43,10 +43,10 @@ class MeshTask(AbstractTask):
         self.mask = None
 
         cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
-        num_cluster = get_from_nested_dict(config, ['model', 'rmp', 'num_cluster'])
+        num_clusters = get_from_nested_dict(config, ['model', 'rmp', 'num_clusters'])
         balancer = get_from_nested_dict(config, ['model', 'graph_balancer', 'algorithm'])
         self._mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
-        self._task_name =f'{num_cluster}_cluster:{cluster}_balancer:{balancer}'
+        self._task_name =f'{num_clusters}_cluster:{cluster}_balancer:{balancer}'
         self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
