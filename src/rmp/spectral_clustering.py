@@ -3,9 +3,7 @@ from typing import List
 
 import numpy as np
 import sklearn
-import torch
 from torch import Tensor
-import wandb
 from sklearn.preprocessing import MinMaxScaler
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
@@ -17,10 +15,10 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     Spectral Clustering
     """
 
-    def __init__(self, num_clusters):
+    def __init__(self, num_clusters, spotter_threshold):
         super().__init__()
         self._num_clusters = num_clusters
-        self._wandb = wandb.init(reinit=False)
+        self._spotter_threshold = spotter_threshold
 
     def _initialize(self):
         pass
@@ -29,7 +27,7 @@ class SpectralClustering(AbstractClusteringAlgorithm):
         X = self._compute_affinity_matrix(graph)
         sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
         labels = sc.fit(X).labels_
-
+        spotter = self.spotter(graph, labels, self._spotter_threshold)
         return self._labels_to_indices(labels)
 
     @staticmethod

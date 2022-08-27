@@ -47,18 +47,18 @@ params:
     learning_rate: 5.0e-5
     message_passing_steps: 7
     rmp:
-      num_clusters: 10
+      num_clusters: 5
       frequency: 1
-      clustering: hdbscan
+      clustering: gmm
       n_clusters: auto
       connector: hierarchical
       spotter:
         enabled: True
-        threshold: 0.9
+        threshold: 0
       exemplars:
         enabled: True
     graph_balancer:
-      algorithm: ricci
+      algorithm: none
       frequency: 1
       ricci:
         loops: 5

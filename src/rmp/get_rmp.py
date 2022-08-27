@@ -27,14 +27,17 @@ def get_rmp(config: ConfigDict) -> RemoteMessagePassing:
 
 
 def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
+    num_clusters = get_from_nested_dict(config, list_of_keys=["rmp", "num_clusters"], raise_error=True)
+    spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "spotter", "threshold"], raise_error=True)
+
     if name == "hdbscan":
-        return HDBSCAN(config.get('rmp').get('spotter').get('threshold'))
+        return HDBSCAN(spotter_threshold)
     elif name == "random":
         return RandomClustering()
     elif name == "spectral":
-        return SpectralClustering(config.get('rmp').get('num_clusters'))
+        return SpectralClustering(num_clusters, spotter_threshold)
     elif name == "gmm":
-        return GaussianMixtureClustering(config.get('rmp').get('num_clusters'))
+        return GaussianMixtureClustering(num_clusters, spotter_threshold)
     elif name == "none":
         return None
     else:
