@@ -92,7 +92,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
-    def preprocess(self, train_dataloader: DataLoader, split):
+    def preprocess(self, train_dataloader: DataLoader, split: str, task_name: str):
         assert self._trajectories % self._prefetch_factor == 0, f'{self._trajectories} must be divisible by prefetch factor {self._prefetch_factor}.'
         is_training = split == 'train'
         print(f'Start preprocessing {split} graphs...')
@@ -110,8 +110,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                         pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
                     data.append(result)
                     if (i + 1) % self._prefetch_factor == 0 and i != 0:
-                        # TODO: last data storage might not be saved
-                        with open(os.path.join(IN_DIR, split + '_ricci_hdbscan' + f'_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
+                        with open(os.path.join(IN_DIR, f'{split}_{task_name}_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
                             torch.save(data, f)
                         del data
                         data = []
@@ -353,8 +352,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def network(self):
         return self._network
 
-    def save(self, name, epoch):
-        with open(os.path.join(OUT_DIR, f'model_{name}_epoch:{epoch}.pkl'), 'wb') as file:
+    def save(self, name):
+        with open(os.path.join(OUT_DIR, f'model_{name}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
     def save_rollouts(self, rollouts):

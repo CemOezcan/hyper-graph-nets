@@ -43,10 +43,10 @@ class MeshTask(AbstractTask):
         self.mask = None
 
         cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
-        n_clusters = get_from_nested_dict(config, ['model', 'rmp', 'n_clusters'])
-        ricci = get_from_nested_dict(config, ['model', 'ricci', 'enabled'])
-        mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
-        self._task_name = str(n_clusters) + 'cluster:' + cluster + '_ricci:' + str(ricci) + '_mp:' + str(mp)
+        num_cluster = get_from_nested_dict(config, ['model', 'rmp', 'num_cluster'])
+        balancer = get_from_nested_dict(config, ['model', 'graph_balancer', 'algorithm'])
+        self._mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
+        self._task_name =f'{num_cluster}_cluster:{cluster}_balancer:{balancer}'
         self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
@@ -55,9 +55,9 @@ class MeshTask(AbstractTask):
         assert isinstance(
             self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
         train_files = [file for file in os.listdir(
-            IN_DIR) if re.match(r'train_riccihdbscan_[0-9]+\.pth', file)]
+            IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
         valid_files = [file for file in os.listdir(
-            IN_DIR) if re.match(r'valid_riccihdbscan_[0-9]+\.pth', file)]
+            IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
         validation_amt = self._config.get('task').get('validation').get('files')
         assert validation_amt <= len(valid_files)
         random.shuffle(valid_files)
@@ -70,7 +70,7 @@ class MeshTask(AbstractTask):
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
 
-            self._algorithm.save(self._task_name, e)
+            self._algorithm.save(f'{self._task_name}_mp:{self._mp}_epoch:{e}')
             # TODO: Allways visualize the second trajectory
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
@@ -86,9 +86,8 @@ class MeshTask(AbstractTask):
                 self._algorithm.lr_scheduler_step()
 
     def preprocess(self):
-        # TODO: parameterize prefetch factor
-        self._algorithm.preprocess(self.train_loader, 'train')
-        self._algorithm.preprocess(self._valid_loader, 'valid')
+        self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
+        self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:

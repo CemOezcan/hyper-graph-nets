@@ -50,7 +50,6 @@ params:
       num_clusters: 5
       frequency: 1
       clustering: gmm
-      n_clusters: auto
       connector: hierarchical
       spotter:
         enabled: True
@@ -61,7 +60,7 @@ params:
       algorithm: none
       frequency: 1
       ricci:
-        loops: 5
+        loops: 100
         tau: 20
       random:
         edge_amount: 100
