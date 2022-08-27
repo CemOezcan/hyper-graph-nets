@@ -104,7 +104,8 @@ class FlagModel(nn.Module):
 
         graph = MultiGraphWithPos(node_features=[self._node_normalizer(node_features, is_training)],
                                   edge_sets=[mesh_edges], target_feature=world_pos, mesh_features=mesh_pos,
-                                  model_type=self._model_type, node_dynamic=node_dynamic)
+                                  model_type=self._model_type, node_dynamic=node_dynamic,
+                                  unnormalized_edges=EdgeSet(name='mesh_edges', features=edge_features, receivers=receivers, senders=senders))
 
         return graph
 

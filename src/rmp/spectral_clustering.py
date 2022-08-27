@@ -26,7 +26,7 @@ class SpectralClustering(AbstractClusteringAlgorithm):
         pass
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
-        X = self._compute_affinity_matrix(graph).to('cpu')
+        X = self._compute_affinity_matrix(graph)
         sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
         labels = sc.fit(X).labels_
 
@@ -38,14 +38,13 @@ class SpectralClustering(AbstractClusteringAlgorithm):
         num_nodes = graph.node_features[0].shape[0]
         affinity_matrix = np.zeros((num_nodes, num_nodes), float)
 
-        mesh_edges = [e for e in graph.edge_sets if e.name == 'mesh_edges'][0]
-        mesh_edges = mesh_edges._replace(features=MinMaxScaler().fit_transform(mesh_edges.features))
+        mesh_edges = graph.unnormalized_edges
 
         edges = list(
             zip(
                 mesh_edges.senders.numpy(),
                 mesh_edges.receivers.numpy(),
-                [1 / (f[3] + f[6]) for f in mesh_edges.features]
+                [1 / math.sqrt(f[3] ** 2 + f[6] ** 2) for f in mesh_edges.features]
             )
         )
 

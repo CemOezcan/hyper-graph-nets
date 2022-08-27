@@ -10,7 +10,9 @@ import numpy as np
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 EdgeSet = collections.namedtuple('EdgeSet', ['name', 'features', 'senders', 'receivers'])
 MultiGraph = collections.namedtuple('MultiGraph', ['node_features', 'edge_sets'])
-MultiGraphWithPos = collections.namedtuple('MultiGraph', ['node_features', 'edge_sets', 'target_feature', 'mesh_features', 'model_type', 'node_dynamic'])
+MultiGraphWithPos = collections.namedtuple('MultiGraph', ['node_features', 'edge_sets', 'target_feature',
+                                                          'mesh_features', 'model_type', 'node_dynamic',
+                                                          'unnormalized_edges'])
 
 
 def detach(tensor: torch.Tensor) -> np.array:

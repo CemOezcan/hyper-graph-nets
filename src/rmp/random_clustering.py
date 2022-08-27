@@ -1,5 +1,6 @@
 from typing import List
 
+import numpy as np
 import torch
 from torch import Tensor
 
@@ -15,27 +16,17 @@ class RandomClustering(AbstractClusteringAlgorithm):
         super().__init__()
 
     def _initialize(self):
-        self._num_clusters = 5
+        self._num_clusters = 10
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
-        # TODO: return Clusters and Representatives (Core and Border)
+        num_nodes = graph.target_feature.shape[0]
 
-        # Cluster
-        indices = []
+        labels = list(map(int, np.multiply(np.random.rand(num_nodes), self._num_clusters)))
+        indices = self._labels_to_indices(labels)
 
-        target_feature_matrix = graph.target_feature
-        num_nodes = target_feature_matrix.shape[0]
-        cluster_size = num_nodes // self._num_clusters
-        cluster_size_rest = num_nodes % self._num_clusters
+        for i, cluster in enumerate(indices):
+            perm = torch.randperm(cluster.size(0))
+            idx = perm[:len(cluster) // 2]
+            indices[i] = cluster[idx]
 
-        for i in range(self._num_clusters - 1):
-            start_index = i * cluster_size
-            end_index = (i + 1) * cluster_size
-            indices.append(range(start_index, end_index))
-        indices.append(range((self._num_clusters - 1) * cluster_size,
-                             self._num_clusters * cluster_size + cluster_size_rest))
-
-        indices = [torch.tensor(x) for x in indices]
-
-        # TODO: Differentiate between core and border
         return indices

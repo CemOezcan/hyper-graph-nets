@@ -3,6 +3,7 @@ from typing import List
 import hdbscan
 import numpy as np
 import torch
+from sklearn.preprocessing import StandardScaler
 from torch import Tensor
 import wandb
 
@@ -31,9 +32,12 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         # TODO: Experimental parameter: Many clusters vs few clusters (min_pts=None vs. min_pts=10)
         min_cluster_size = 10
         min_samples = 2
-        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
+        # TODO: Normalize
+        sc = StandardScaler()
+        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
+        X = sc.fit_transform(X)
         clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size,
-                                     min_samples=min_samples, prediction_data=True).fit(X.to('cpu'))
+                                     min_samples=min_samples, prediction_data=True).fit(X)
         self._wandb.log({'hdbscan cluster': clustering.labels_.max(
         ), 'hdbscan noise': len([x for x in clustering.labels_ if x < 0])})
         # TODO: Special case for clusters[0] (noise)
