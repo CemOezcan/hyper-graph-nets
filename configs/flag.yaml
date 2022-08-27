@@ -34,8 +34,8 @@ params:
     mode: all
     prefetch_factor: 10
     validation:
-      files: 10
-      trajectories: 1
+      files: 2
+      trajectories: 5
   model:
     field: world_pos
     history: True
@@ -49,7 +49,7 @@ params:
     rmp:
       num_clusters: 10
       frequency: 1
-      clustering: gmm
+      clustering: hdbscan
       n_clusters: auto
       connector: hierarchical
       spotter:
@@ -57,13 +57,16 @@ params:
         threshold: 0.9
       exemplars:
         enabled: True
-    ricci:
-      enabled: False
+    graph_balancer:
+      algorithm: ricci
       frequency: 1
-      loops: 100
-      tau: 100
+      ricci:
+        loops: 5
+        tau: 20
+      random:
+        edge_amount: 100
   logging:
-    wandb_mode: offline
+    wandb_mode: run
   random_seed: 0
 
 ---

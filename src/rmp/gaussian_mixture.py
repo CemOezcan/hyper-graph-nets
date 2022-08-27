@@ -24,7 +24,8 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
-        clustering = GaussianMixture(n_components=self._num_clusters, random_state=0, init_params='k-means++').fit(X)
+        clustering = GaussianMixture(
+            n_components=self._num_clusters, random_state=0, init_params='k-means').fit(X.to('cpu'))
         labels = clustering.predict(X)
 
         return self._labels_to_indices(labels)

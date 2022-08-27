@@ -37,10 +37,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._prefetch_factor = config.get('task').get('prefetch_factor')
         assert self._validation <= self._trajectories/self._prefetch_factor
         self._wandb_mode = config.get('logging').get('wandb_mode')
-        self._ricci_frequency = self._network_config.get(
-            'ricci').get('frequency')
-        self._rmp_frequency = self._network_config.get(
-            'rmp').get('frequency')
+        self._balance_frequency = self._network_config.get(
+            'graph_balancer').get('frequency')
+        self._rmp_frequency = self._network_config.get('rmp').get('frequency')
 
         self._batch_size = 1
         self._network = None
@@ -101,7 +100,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress'):
             start_preprocessing_batch = time.time()
             try:
-                train = [next(train_dataloader) for _ in range(self._prefetch_factor)]
+                train = [next(train_dataloader)
+                         for _ in range(self._prefetch_factor)]
             except StopIteration:
                 break
             with multiprocessing.Pool() as pool:
@@ -110,7 +110,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     data.append(result)
                     if (i + 1) % self._prefetch_factor == 0 and i != 0:
                         # TODO: last data storage might not be saved
-                        with open(os.path.join(IN_DIR, split + '_riccihdbscan' + f'_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
+                        with open(os.path.join(IN_DIR, split + '_ricci_hdbscan' + f'_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
                             torch.save(data, f)
                         del data
                         data = []
@@ -173,8 +173,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             node_features = list()
             for i, (graph, traj) in enumerate(batch):
                 # This fixes instance wise clustering
-                num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
-                num_nodes, num_hyper_nodes = num_nodes if len(num_nodes) > 1 else (num_nodes[0], 0)
+                num_nodes = tuple(
+                    map(lambda x: x.shape[0], graph.node_features))
+                num_nodes, num_hyper_nodes = num_nodes if len(
+                    num_nodes) > 1 else (num_nodes[0], 0)
                 hyper_node_offset = batch_size * num_nodes
 
                 node_features.append(graph.node_features)
@@ -220,25 +222,27 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def fetch_data(self, trajectory, is_training):
         graphs = []
         graph_amt = len(trajectory)
-        ricci_edge_set = None
+        balanced_edge_set = None
         rmp_clusters = None
         for i, data_frame in enumerate(trajectory):
             graph = self._network.build_graph(data_frame, is_training)
 
-            if i % math.ceil(graph_amt / self._ricci_frequency) == 0:
-                graph = self._network.ricci(graph, data_frame, is_training)
-                ricci_edge_set = self._network.get_ricci_edges(graph)
-            elif ricci_edge_set:
-                [graph.edge_sets.append(e) for e in ricci_edge_set]
+            if i % math.ceil(graph_amt / self._balance_frequency) == 0:
+                graph = self._network.run_balancer(
+                    graph, data_frame, is_training)
+                balanced_edge_set = self._network.get_balanced_edges(graph)
+            elif balanced_edge_set:
+                [graph.edge_sets.append(e) for e in balanced_edge_set]
 
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
                 rmp_clusters = self._network.get_rmp_clusters(graph)
-
-            graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
+            graph = self._network.connect_rmp_cluster(
+                graph, rmp_clusters, is_training)
             graphs.append(graph)
 
         if is_training:
-            targets = [self._network.get_target_unnormalized(x) for x in trajectory]
+            targets = [self._network.get_target_unnormalized(
+                x) for x in trajectory]
             keys = [key for key in trajectory[0].keys() if key != 'node_type']
 
             for i in range(len(trajectory)):

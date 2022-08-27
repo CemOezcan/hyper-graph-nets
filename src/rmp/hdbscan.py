@@ -68,8 +68,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         return exemplars
 
     def spotter(self, clustering, threshold):
-        soft_clusters = HDBSCAN_flat.all_points_membership_vectors_flat(
-            clustering)
+        soft_clusters = hdbscan.all_points_membership_vectors(clustering)
         spotter_candidates = [
             self.top_two_probs_diff(x) for x in soft_clusters]
         prob_diff = np.array([x[0] for x in spotter_candidates])
