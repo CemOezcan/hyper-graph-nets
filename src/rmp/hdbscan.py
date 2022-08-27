@@ -1,10 +1,6 @@
 from typing import List
 
 import hdbscan
-from hdbscan.flat import (HDBSCAN_flat,
-                          approximate_predict_flat,
-                          membership_vector_flat,
-                          all_points_membership_vectors_flat)
 import numpy as np
 import torch
 from torch import Tensor
@@ -86,7 +82,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
 
     @staticmethod
     def assign_noise_to_cluster(clustering):
-        soft_clusters = HDBSCAN_flat.all_points_membership_vectors_flat(
+        soft_clusters = hdbscan.all_points_membership_vectors(
             clustering)
         return [np.argsort(x)[-1] for x in soft_clusters]
 
