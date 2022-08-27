@@ -6,7 +6,7 @@ from src.util import MultiGraphWithPos
 class RandomGraphBalancer(AbstractGraphBalancer):
     def __init__(self, params):
         super().__init__()
-        self._edge_amount = params.get('graph_processor').get(
+        self._edge_amount = params.get('graph_balancer').get(
             'random').get('edge_amount')
 
     def _initialize(self):
@@ -14,7 +14,7 @@ class RandomGraphBalancer(AbstractGraphBalancer):
 
     def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
         added_edges = {'senders': [], 'receivers': []}
-        vertices_amt = graph.node_features  # TODO get size
+        vertices_amt = graph.node_features[0].size(dim=0)
         random_edge_pairs = np.random.choice(
             vertices_amt, size=(self._edge_amount, 2), replace=False)
         for e in random_edge_pairs:
