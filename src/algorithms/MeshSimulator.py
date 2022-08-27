@@ -1,6 +1,6 @@
 import functools
 import math
-import multiprocessing
+import torch.multiprocessing as mp
 import os
 import pickle
 import random
@@ -96,7 +96,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         assert self._trajectories % self._prefetch_factor == 0, f'{self._trajectories} must be divisible by prefetch factor {self._prefetch_factor}.'
         is_training = split == 'train'
         print(f'Start preprocessing {split} graphs...')
-        data = []
         start_preprocessing = time.time()
         for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress'):
             start_preprocessing_batch = time.time()
@@ -105,16 +104,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                          for _ in range(self._prefetch_factor)]
             except StopIteration:
                 break
-            with multiprocessing.Pool() as pool:
-                for i, result in enumerate(
-                        pool.imap(functools.partial(self.fetch_data, is_training=is_training), train)):
-                    data.append(result)
-                    if (i + 1) % self._prefetch_factor == 0 and i != 0:
-                        with open(os.path.join(IN_DIR, f'{split}_{task_name}_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
-                            torch.save(data, f)
-                        del data
-                        data = []
-
+            with mp.Pool() as pool:
+                result = pool.map(functools.partial(self.fetch_data, is_training=is_training), train)
+            with open(os.path.join(IN_DIR, f'{split}_{task_name}_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
+                torch.save(result, f)
             end_preprocessing_batch = time.time()
             wandb.log(
                 {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch,
@@ -182,7 +175,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 node_features.append(graph.node_features)
                 for key, value in traj.items():
                     trajectory_dict[key].append(value)
-
                 for e in graph.edge_sets:
                     edge_dict[e.name]['features'].append(e.features)
 
@@ -214,7 +206,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     for n in edge_dict.keys()
                 ]
             )
-
             batched_data.append((new_graph, new_traj))
 
         return batched_data
