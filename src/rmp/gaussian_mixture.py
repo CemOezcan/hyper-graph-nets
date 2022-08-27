@@ -1,6 +1,7 @@
 from typing import List
 
 import torch
+from sklearn.preprocessing import StandardScaler
 from torch import Tensor
 from sklearn.mixture import GaussianMixture
 import wandb
@@ -23,10 +24,12 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
         pass
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
-        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1)
+        sc = StandardScaler()
+        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
+        X = sc.fit_transform(X)
         clustering = GaussianMixture(
-            n_components=self._num_clusters, random_state=0, init_params='kmeans').fit(X.to('cpu'))
-        labels = clustering.predict(X.to('cpu'))
+            n_components=self._num_clusters, random_state=0, init_params='kmeans').fit(X)
+        labels = clustering.predict(X)
 
         return self._labels_to_indices(labels)
 
