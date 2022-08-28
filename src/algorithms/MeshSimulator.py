@@ -30,12 +30,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         super().__init__(config=config)
         self._network_config = config.get('model')
         self._dataset_dir = IN_DIR
-        self._validation = config.get('task').get(
-            'validation').get('trajectories')
         self._trajectories = config.get('task').get('trajectories')
         self._dataset_name = config.get('task').get('dataset')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
-        assert self._validation <= self._trajectories/self._prefetch_factor
         self._wandb_mode = config.get('logging').get('wandb_mode')
         self._balance_frequency = self._network_config.get(
             'graph_balancer').get('frequency')
@@ -245,7 +242,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return batches
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, logging=True):
+    def one_step_evaluator(self, ds_loader, instances, logging=True):
         trajectory_loss = list()
         for valid_file in ds_loader:
             with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
@@ -254,7 +251,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for i, trajectory in enumerate(valid_data):
                 random.shuffle(trajectory)
                 instance_loss = list()
-                if i >= self._validation:
+                if i >= instances:
                     break
 
                 for graph, data_frame in trajectory:

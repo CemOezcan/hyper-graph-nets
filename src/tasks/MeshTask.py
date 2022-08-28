@@ -33,8 +33,17 @@ class MeshTask(AbstractTask):
         super().__init__(algorithm=algorithm, config=config)
         self._config = config
         self._raw_data = get_data(config=config)
-        self._rollouts = config.get('task').get('rollouts')
         self._epochs = config.get('task').get('epochs')
+
+        self._trajectories = config.get('task').get('trajectories')
+        self._validation_files = self._config.get('task').get('validation').get('files')
+        self._validation = config.get('task').get('validation').get('trajectories')
+        self._val_rollouts = self._config.get('task').get('validation').get('rollouts')
+
+        self._val_traj = config.get('task').get('val_traj')
+        self._rollouts = config.get('task').get('rollouts')
+        self._n_step_rollouts = config.get('task').get('n_step_rollouts')
+
         self._n_step_loss = config.get('task').get('n_step_loss')
         self.train_loader = get_data(config=config)
 
@@ -47,7 +56,7 @@ class MeshTask(AbstractTask):
         num_clusters = get_from_nested_dict(config, ['model', 'rmp', 'num_clusters'])
         balancer = get_from_nested_dict(config, ['model', 'graph_balancer', 'algorithm'])
         self._mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
-        self._task_name =f'{num_clusters}_cluster:{cluster}_balancer:{balancer}'
+        self._task_name = f'{num_clusters}_cluster:{cluster}_balancer:{balancer}'
         self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
@@ -59,11 +68,9 @@ class MeshTask(AbstractTask):
             IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
         valid_files = [file for file in os.listdir(
             IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        validation_amt = self._config.get('task').get('validation').get('files')
-        rollouts = self._config.get('task').get('validation').get('rollouts')
-        assert validation_amt <= len(valid_files)
+        assert self._validation_files <= len(valid_files)
         random.shuffle(valid_files)
-        valid_files = valid_files[:validation_amt]
+        valid_files = valid_files[:self._validation_files]
 
         for e in trange(self._epochs, desc='Epochs'):
             for train_file in tqdm(train_files, desc='Train files', leave=False):
@@ -78,8 +85,8 @@ class MeshTask(AbstractTask):
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
-            one_step = self._algorithm.one_step_evaluator(valid_files)
-            rollout = self._algorithm.evaluator(self._test_loader, rollouts)
+            one_step = self._algorithm.one_step_evaluator(valid_files, self._validation)
+            rollout = self._algorithm.evaluator(self._test_loader, self._val_rollouts)
 
             self.plot()
             animation = {"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")}
@@ -97,7 +104,7 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
 
         valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        self._algorithm.one_step_evaluator(valid_files, logging=False)
+        self._algorithm.one_step_evaluator(valid_files, self._val_traj, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
@@ -106,7 +113,7 @@ class MeshTask(AbstractTask):
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         # TODO: Different rollouts value for n_step_loss
-        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[self._n_step_loss], n_traj=self._rollouts)
+        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[self._n_step_loss], n_traj=self._n_step_rollouts)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
