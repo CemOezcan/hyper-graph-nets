@@ -12,7 +12,7 @@ class RandomGraphBalancer(AbstractGraphBalancer):
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
         added_edges = {'senders': [], 'receivers': []}
         vertices_amt = graph.node_features[0].size(dim=0)
         random_edge_pairs = np.random.choice(
@@ -21,6 +21,6 @@ class RandomGraphBalancer(AbstractGraphBalancer):
             added_edges['senders'].append(e[0])
             added_edges['receivers'].append(e[1])
         graph = self.add_graph_balance_edges(
-            graph, added_edges, inputs, mesh_edge_normalizer, is_training)
+            graph, added_edges, mesh_edge_normalizer, is_training)
         self._wandb.log({'random added edges': len(added_edges['senders'])})
         return graph

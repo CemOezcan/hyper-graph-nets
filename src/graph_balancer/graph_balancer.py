@@ -15,5 +15,5 @@ class GraphBalancer:
     def initialize(self):
         pass
 
-    def get_balanced_graph(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
-        return self._balancer.run(graph, inputs, mesh_edge_normalizer, is_training)
+    def get_balanced_graph(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+        return self._balancer.run(graph, mesh_edge_normalizer, is_training)

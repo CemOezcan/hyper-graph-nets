@@ -270,10 +270,10 @@ class FlagModel(nn.Module):
         self.eval()
         self.learned_model.eval()
 
-    def run_balancer(self, graph, inputs, is_training):
+    def run_balancer(self, graph, is_training):
         if self._balancer:
             return self._graph_balancer.get_balanced_graph(
-                graph, inputs, self._mesh_edge_normalizer, is_training)
+                graph, self._mesh_edge_normalizer, is_training)
         return graph
 
     @staticmethod

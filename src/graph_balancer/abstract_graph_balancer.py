@@ -28,7 +28,7 @@ class AbstractGraphBalancer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run(self, graph: MultiGraphWithPos, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
         """
         Run processing algorithm given a multigraph.
 
@@ -42,9 +42,9 @@ class AbstractGraphBalancer(ABC):
         """
         raise NotImplementedError
 
-    def add_graph_balance_edges(self, graph: MultiGraphWithPos, added_edges: Dict, inputs, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
-        mesh_pos = inputs['mesh_pos']
-        world_pos = inputs['world_pos']
+    def add_graph_balance_edges(self, graph: MultiGraphWithPos, added_edges: Dict, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+        mesh_pos = graph.mesh_features
+        world_pos = graph.target_feature
         relative_world_pos = (torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
                               torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
         relative_mesh_pos = (torch.index_select(mesh_pos, 0, torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
