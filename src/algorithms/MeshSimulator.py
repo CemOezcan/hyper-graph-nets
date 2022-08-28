@@ -247,7 +247,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return batches
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances, epoch, logging=True):
+    def one_step_evaluator(self, ds_loader, instances, logging=True):
         trajectory_loss = list()
         for valid_file in ds_loader:
             with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
@@ -275,16 +275,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if logging:
             # TODO: Log csv
             val_loss, pos_loss = zip(*mean)
-            wandb.log({
+            log_dict = {
                 'validation_loss': wandb.Histogram(
                     [x for x in val_loss if np.quantile(val_loss, 0.95) > x > np.quantile(val_loss, 0.01)],
                     num_bins=256),
                 'position_loss': wandb.Histogram(
                     [x for x in pos_loss if np.quantile(pos_loss, 0.95) > x > np.quantile(pos_loss, 0.01)],
                     num_bins=256),
-                'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss),
-                'epoch': epoch}
-            )
+                'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss)
+            }
+            return log_dict
         else:
             path = os.path.join(OUT_DIR, 'one_step.csv')
             data_frame = pd.DataFrame.from_dict(
@@ -295,7 +295,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             data_frame.to_csv(path)
             self.publish_csv(data_frame, 'one_step', path)
 
-    def evaluator(self, ds_loader, rollouts, epoch, logging=True):
+    def evaluator(self, ds_loader, rollouts, logging=True):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
@@ -321,7 +321,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         if logging:
             # TODO: Log csv
-            wandb.log({'rollout_loss': rollout_losses['mse_loss'][-1], 'epoch': epoch})
+            return {'rollout_loss': rollout_losses['mse_loss'][-1]}
         else:
             path = os.path.join(OUT_DIR, 'rollout_losses.csv')
             data_frame = pd.DataFrame.from_dict(rollout_losses)
@@ -358,6 +358,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         artifact.add(table, f"{name}_table")
         artifact.add_file(path)
         wandb.log_artifact(artifact)
+        print(name, 'done')
+
+    def log_epoch(self, list_of_dicts, epoch):
+        data = {k: v for dictionary in list_of_dicts for k, v in dictionary.items()}
+        data['epoch'] = epoch
+        wandb.log(data)
 
     @property
     def network(self):

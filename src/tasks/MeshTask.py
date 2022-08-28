@@ -72,16 +72,17 @@ class MeshTask(AbstractTask):
                 del train_data
 
             self._algorithm.save(f'{self._task_name}_mp:{self._mp}_epoch:{e}')
-            # TODO: Allways visualize the second trajectory
+            # TODO: Always visualize the second trajectory
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
-            self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
-            self._algorithm.evaluator(self._test_loader, 1, e + 1)
+            one_step = self._algorithm.one_step_evaluator(valid_files, self._rollouts)
+            rollout = self._algorithm.evaluator(self._test_loader, 1)
 
             self.plot()
-            self._wandb.log({"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")})
+            animation = {"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")}
+            self._algorithm.log_epoch([one_step, rollout, animation], e + 1)
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
@@ -95,7 +96,7 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
 
         valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        self._algorithm.one_step_evaluator(valid_files, self._rollouts, self._epochs + 1, logging=False)
+        self._algorithm.one_step_evaluator(valid_files, self._rollouts, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
