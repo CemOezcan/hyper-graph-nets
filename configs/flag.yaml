@@ -33,6 +33,7 @@ params:
     rollouts: 1
     mode: all
     prefetch_factor: 10
+    n_step_loss: 367
     validation:
       files: 2
       trajectories: 5
