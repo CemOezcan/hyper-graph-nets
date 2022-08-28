@@ -23,7 +23,7 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
     def _initialize(self):
         pass
 
-    def _cluster(self, graph):
+    def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
         sc = StandardScaler()
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
         X = sc.fit_transform(X)

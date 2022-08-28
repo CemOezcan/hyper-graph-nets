@@ -25,7 +25,7 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     def _initialize(self):
         pass
 
-    def _cluster(self, graph: MultiGraphWithPos) -> List[Tensor]:
+    def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
         X = self._compute_affinity_matrix(graph)
         sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
         return sc.fit(X).labels_
