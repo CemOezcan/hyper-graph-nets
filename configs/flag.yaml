@@ -51,11 +51,9 @@ params:
       frequency: 1
       clustering: gmm
       connector: hierarchical
-      spotter:
-        enabled: True
-        threshold: 0
-      exemplars:
-        enabled: True
+      intra_cluster_sampling:
+        enabled: False
+        spotter_threshold: 0
     graph_balancer:
       algorithm: none
       frequency: 1
