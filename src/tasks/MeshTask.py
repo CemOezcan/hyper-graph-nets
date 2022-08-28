@@ -100,7 +100,7 @@ class MeshTask(AbstractTask):
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.evaluator(self._test_loader, self._rollouts, self._epochs + 1, logging=False)
+        self._algorithm.evaluator(self._test_loader, self._rollouts, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
