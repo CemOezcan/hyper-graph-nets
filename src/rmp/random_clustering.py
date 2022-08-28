@@ -1,32 +1,24 @@
 from typing import List
 
 import numpy as np
-import torch
-from torch import Tensor
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
-from src.util import MultiGraphWithPos, device
+from src.util import MultiGraphWithPos
 
 
 class RandomClustering(AbstractClusteringAlgorithm):
     """
     Naive clustering strategy (Baseline). Pick clusters at random.
     """
-    def __init__(self):
+    def __init__(self, sampling, num_clusters, spotter_threshold, alpha):
         super().__init__()
+        self._sampling = sampling
+        self._num_clusters = num_clusters
+        self._spotter_threshold = spotter_threshold
+        self._alpha = alpha
 
     def _initialize(self):
-        self._num_clusters = 10
+        pass
 
-    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
-        num_nodes = graph.target_feature.shape[0]
-
-        labels = list(map(int, np.multiply(np.random.rand(num_nodes), self._num_clusters)))
-        indices = self._labels_to_indices(labels)
-
-        for i, cluster in enumerate(indices):
-            perm = torch.randperm(cluster.size(0))
-            idx = perm[:len(cluster) // 2]
-            indices[i] = cluster[idx]
-
-        return indices
+    def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
+        return list(map(int, np.multiply(np.random.rand(graph.target_feature.shape[0]), self._num_clusters)))

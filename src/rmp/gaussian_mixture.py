@@ -23,17 +23,13 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
+    def _cluster(self, graph):
         sc = StandardScaler()
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
         X = sc.fit_transform(X)
         clustering = GaussianMixture(n_components=self._num_clusters, random_state=0, init_params='kmeans').fit(X)
-        labels = clustering.predict(X)
+        return clustering.predict(X)
 
-        if not self._sampling:
-            return self._labels_to_indices(labels)
-        else:
-            spotter = self.spotter(graph, labels, self._spotter_threshold)
+    
 
-        return self._labels_to_indices(labels)
 

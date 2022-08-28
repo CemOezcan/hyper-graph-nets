@@ -17,22 +17,20 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     Hierarchical Density Based Clustering for Applications with Noise.
     """
 
-    def __init__(self, sampling, threshold):
+    def __init__(self, sampling, spotter_threshold, alpha):
         super().__init__()
         self._sampling = sampling
-        self._threshold = threshold
-        self._wandb = wandb.init(reinit=False)
+        self._spotter_threshold = spotter_threshold
+        self._alpha = alpha
 
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
+    def _cluster(self, graph: MultiGraphWithPos) -> List[Tensor]:
         # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
         # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
         # TODO: Add velocity as fourth dimension, but only for later instances in a trajectory
         # TODO: Experimental parameter: Many clusters vs few clusters (min_pts=None vs. min_pts=10)
-        min_cluster_size = 10
-        min_samples = 2
         # TODO: Normalize
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
@@ -41,18 +39,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         labels = clustering.labels_
         self._wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
-
-        if not self._sampling:
-            indices = self._labels_to_indices(labels)
-        else:
-        # TODO: Special case for clusters[0] (noise)
-            exemplars = self.exemplars(clustering)
-            spotter = self.spotter(clustering, self._threshold)
-
-            indices = [torch.tensor(list(set(e + s)))
-                       for e, s in zip(exemplars, spotter)]
-
-        return indices
+        return labels
 
     def exemplars(self, clustering):
         selected_clusters = clustering.condensed_tree_._select_clusters()

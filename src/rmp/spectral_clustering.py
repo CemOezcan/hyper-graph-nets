@@ -15,26 +15,20 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     Spectral Clustering
     """
 
-    def __init__(self, num_clusters, sampling, spotter_threshold):
+    def __init__(self, num_clusters, sampling, spotter_threshold, alpha):
         super().__init__()
         self._sampling = sampling
         self._num_clusters = num_clusters
         self._spotter_threshold = spotter_threshold
+        self._alpha = alpha
 
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
+    def _cluster(self, graph: MultiGraphWithPos) -> List[Tensor]:
         X = self._compute_affinity_matrix(graph)
         sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
-        labels = sc.fit(X).labels_
-
-        if not self._sampling:
-            return self._labels_to_indices(labels)
-        else:
-            spotter = self.spotter(graph, labels, self._spotter_threshold)
-
-        return self._labels_to_indices(labels)
+        return sc.fit(X).labels_
 
     @staticmethod
     def _compute_affinity_matrix(graph: MultiGraphWithPos):

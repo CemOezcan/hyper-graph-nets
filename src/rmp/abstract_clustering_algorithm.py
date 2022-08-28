@@ -18,6 +18,7 @@ class AbstractClusteringAlgorithm(ABC):
         """
         self._num_clusters = 10
         self._treshold = 0
+        self._alpha = 0.5
         self._wandb = wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
@@ -34,6 +35,12 @@ class AbstractClusteringAlgorithm(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
+        '''
+        Run clustering algorithm given a multigraph or point cloud.
+        '''
+        raise NotImplementedError
+
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
         """
         Run clustering algorithm given a multigraph or point cloud.
@@ -46,7 +53,15 @@ class AbstractClusteringAlgorithm(ABC):
         -------
 
         """
-        raise NotImplementedError
+        labels = self._cluster(graph)
+
+        if not self._sampling:
+            return self._labels_to_indices(labels)
+        
+        spotter = self.spotter(graph, labels, self._spotter_threshold)
+        exemplars = self.exemplars(labels, spotter, self._alpha)
+        return self._combine_samples(spotter, exemplars)
+
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
         """
@@ -90,5 +105,24 @@ class AbstractClusteringAlgorithm(ABC):
                 if i.count(e) >= threshold:
                     result[k].append(e)
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
-        # return tensor of indices
-        return [torch.tensor(x) for x in result]
+        return result
+
+    def exemplars(self, labels: List[List[int]], spotter: List[List[int]], alpha: float) -> List[List[int]]:
+        # for each list in labels, remove the elements of the list if the elements are also in spotter
+        result = [list() for _ in range(self._num_clusters)]
+        for i in range(self._num_clusters):
+            for e in labels[i]:
+                if e not in spotter[i]:
+                    result[i].append(e)
+        #randomly sample from the remaining elements of each list in result according to the ratio alpha
+        for i in range(self._num_clusters):
+            result[i] = torch.randperm(len(result[i]))[:int(len(result[i]) * alpha)].tolist()
+        self._wandb.log({f'exemplars added': sum([len(x) for x in result])})
+        return result
+
+    def _combine_samples(self, spotter: List[List[int]], exemplars: List[List[int]]) -> List[List[int]]:
+        # combine the lists of spotter and exemplars
+        result = [list() for _ in range(self._num_clusters)]
+        for i in range(self._num_clusters):
+            result[i] = torch.tensor(spotter[i] + exemplars[i])
+        return result

@@ -54,6 +54,7 @@ params:
       intra_cluster_sampling:
         enabled: False
         spotter_threshold: 0
+        alpha: 0.5
     graph_balancer:
       algorithm: none
       frequency: 1

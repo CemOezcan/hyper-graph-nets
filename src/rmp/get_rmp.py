@@ -30,15 +30,16 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     num_clusters = get_from_nested_dict(config, list_of_keys=["rmp", "num_clusters"], raise_error=True)
     sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "enabled"], raise_error=True)
     spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "spotter_threshold"], raise_error=True)
+    alpha = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "alpha"], raise_error=True)
 
     if name == "hdbscan":
-        return HDBSCAN(sampling, spotter_threshold)
+        return HDBSCAN(sampling, spotter_threshold, alpha)
     elif name == "random":
-        return RandomClustering()
+        return RandomClustering(num_clusters, sampling, spotter_threshold, alpha)
     elif name == "spectral":
-        return SpectralClustering(num_clusters, sampling, spotter_threshold)
+        return SpectralClustering(num_clusters, sampling, spotter_threshold, alpha)
     elif name == "gmm":
-        return GaussianMixtureClustering(num_clusters, sampling, spotter_threshold)
+        return GaussianMixtureClustering(num_clusters, sampling, spotter_threshold, alpha)
     elif name == "none":
         return None
     else:
