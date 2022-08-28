@@ -37,7 +37,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, prediction_data=True).fit(X)
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=50, prediction_data=True).fit(X)
         labels = clustering.labels_
         self._wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
