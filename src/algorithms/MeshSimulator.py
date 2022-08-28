@@ -218,12 +218,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         rmp_clusters = None
         for i, data_frame in enumerate(trajectory):
             graph = self._network.build_graph(data_frame, is_training)
-
             if i % math.ceil(graph_amt / self._balance_frequency) == 0:
-                graph = self._network.run_balancer(graph, is_training)
-                balanced_edge_set = self._network.get_balanced_edges(graph)
-            elif balanced_edge_set:
-                [graph.edge_sets.append(e) for e in balanced_edge_set]
+                graph, balanced_edge_set = self._network.run_balancer(graph, is_training)
+            elif balanced_edge_set is not None:
+                graph = self._network.add_balanced_edges(graph, balanced_edge_set, is_training)
 
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
                 rmp_clusters = self._network.get_rmp_clusters(graph)
