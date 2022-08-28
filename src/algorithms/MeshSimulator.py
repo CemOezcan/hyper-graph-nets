@@ -28,17 +28,18 @@ from util.Types import ConfigDict, ScalarDict, Union
 class MeshSimulator(AbstractIterativeAlgorithm):
     def __init__(self, config: ConfigDict) -> None:
         super().__init__(config=config)
-        self._network_config = config.get('model')
         self._dataset_dir = IN_DIR
-        self._trajectories = config.get('task').get('trajectories')
+        self._network_config = config.get('model')
         self._dataset_name = config.get('task').get('dataset')
-        self._prefetch_factor = config.get('task').get('prefetch_factor')
         self._wandb_mode = config.get('logging').get('wandb_mode')
-        self._balance_frequency = self._network_config.get(
-            'graph_balancer').get('frequency')
+
+        self._trajectories = config.get('task').get('trajectories')
+        self._prefetch_factor = config.get('task').get('prefetch_factor')
+
+        self._balance_frequency = self._network_config.get('graph_balancer').get('frequency')
         self._rmp_frequency = self._network_config.get('rmp').get('frequency')
 
-        self._batch_size = 1
+        self._batch_size = self._network_config.get('task').get('batch_size')
         self._network = None
         self._optimizer = None
         self._scheduler = None
