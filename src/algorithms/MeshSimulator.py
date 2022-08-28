@@ -53,17 +53,17 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._gamma = self._network_config.get('gamma')
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
+        self._wandb_mode = task_information.get('logging').get('wandb_mode')
+        self._wandb_run = wandb.init(project='rmp', config=task_information,
+                                     mode=self._wandb_mode)
+        wandb.define_metric('epoch')
+        wandb.define_metric('validation_loss', step_metric='epoch')
+        wandb.define_metric('position_loss', step_metric='epoch')
+        wandb.define_metric('validation_mean', step_metric='epoch')
+        wandb.define_metric('position_mean', step_metric='epoch')
+        wandb.define_metric('rollout_loss', step_metric='epoch')
+        wandb.define_metric('video', step_metric='epoch')
         if not self._initialized:
-            self._wandb_mode = task_information.get('logging').get('wandb_mode')
-            self._wandb_run = wandb.init(project='rmp', config=task_information,
-                                         mode=self._wandb_mode)
-            wandb.define_metric('epoch')
-            wandb.define_metric('validation_loss', step_metric='epoch')
-            wandb.define_metric('position_loss', step_metric='epoch')
-            wandb.define_metric('validation_mean', step_metric='epoch')
-            wandb.define_metric('position_mean', step_metric='epoch')
-            wandb.define_metric('rollout_loss', step_metric='epoch')
-            wandb.define_metric('video', step_metric='epoch')
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(

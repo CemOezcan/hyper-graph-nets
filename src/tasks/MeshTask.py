@@ -93,7 +93,6 @@ class MeshTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
-        self._wandb.log({'task_name': self._task_name})
 
         valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
         self._algorithm.one_step_evaluator(valid_files, self._rollouts, self._epochs + 1, logging=False)
