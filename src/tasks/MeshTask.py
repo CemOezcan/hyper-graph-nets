@@ -35,6 +35,7 @@ class MeshTask(AbstractTask):
         self._raw_data = get_data(config=config)
         self._rollouts = config.get('task').get('rollouts')
         self._epochs = config.get('task').get('epochs')
+        self._n_step_loss = config.get('task').get('n_step_loss')
         self.train_loader = get_data(config=config)
 
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
@@ -71,16 +72,17 @@ class MeshTask(AbstractTask):
                 del train_data
 
             self._algorithm.save(f'{self._task_name}_mp:{self._mp}_epoch:{e}')
-            # TODO: Allways visualize the second trajectory
+            # TODO: Always visualize the second trajectory
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
-            self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
-            self._algorithm.evaluator(self._test_loader, 1)
+            one_step = self._algorithm.one_step_evaluator(valid_files, self._rollouts)
+            rollout = self._algorithm.evaluator(self._test_loader, 1)
 
             self.plot()
-            self._wandb.log({"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")})
+            animation = {"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")}
+            self._algorithm.log_epoch([one_step, rollout, animation], e + 1)
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
@@ -93,13 +95,16 @@ class MeshTask(AbstractTask):
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
 
-        del self._test_loader
-        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.evaluator(self._test_loader, self._rollouts)
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
+        self._algorithm.one_step_evaluator(valid_files, self._rollouts, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[60], n_traj=self._rollouts)
+        self._algorithm.evaluator(self._test_loader, self._rollouts, logging=False)
+
+        del self._test_loader
+        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[self._n_step_loss], n_traj=self._rollouts)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
