@@ -14,6 +14,7 @@ class AbstractGraphBalancer(ABC):
         """
         Initializes the graph processing algorithm
         """
+        self._added_edges = None
         self._initialize()
 
     @abstractmethod
@@ -57,4 +58,15 @@ class AbstractGraphBalancer(ABC):
             torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
         graph.edge_sets.append(EdgeSet(name='balance', features=mesh_edge_normalizer(edge_features, is_training), senders=torch.tensor(
             added_edges['senders'], dtype=torch.long, device=device), receivers=torch.tensor(added_edges['receivers'], dtype=torch.long, device=device)))
+        return graph
+
+    def create_graph(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+        """
+        Create a graph with balance edges.
+        """
+        if self._added_edges is None:
+            graph, added_edges = self.run(graph, mesh_edge_normalizer, is_training)
+            self._added_edges = added_edges
+        else:
+            graph = self.add_graph_balance_edges(graph, self._added_edges, mesh_edge_normalizer, is_training)
         return graph
