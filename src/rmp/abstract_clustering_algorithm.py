@@ -19,6 +19,8 @@ class AbstractClusteringAlgorithm(ABC):
         self._num_clusters = 10
         self._treshold = 0
         self._alpha = 0.5
+        self._sampling = False
+        self._spotter_threshold = 0
         self._wandb = wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
