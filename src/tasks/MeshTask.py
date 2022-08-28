@@ -77,7 +77,7 @@ class MeshTask(AbstractTask):
             next(self._test_loader)
 
             self._algorithm.one_step_evaluator(valid_files, self._rollouts, e + 1)
-            self._algorithm.evaluator(self._test_loader, 1)
+            self._algorithm.evaluator(self._test_loader, 1, e + 1)
 
             self.plot()
             self._wandb.log({"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")})
@@ -93,9 +93,12 @@ class MeshTask(AbstractTask):
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
 
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
+        self._algorithm.one_step_evaluator(valid_files, self._rollouts, self._epochs + 1, logging=False)
+
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.evaluator(self._test_loader, self._rollouts)
+        self._algorithm.evaluator(self._test_loader, self._rollouts, self._epochs + 1, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
