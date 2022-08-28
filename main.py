@@ -33,7 +33,6 @@ def main(preprocess: bool, train: bool, compute_rollout: bool):
         if preprocess:
             task.preprocess()
         task.run_iteration()
-        task.get_scalars()
 
     cluster = get_from_nested_dict(params, ['model', 'rmp', 'clustering'])
     num_clusters = get_from_nested_dict(params, ['model', 'rmp', 'num_clusters'])
