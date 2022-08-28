@@ -29,7 +29,7 @@ class SpectralClustering(AbstractClusteringAlgorithm):
         sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
         labels = sc.fit(X).labels_
 
-        if self._sampling:
+        if not self._sampling:
             return self._labels_to_indices(labels)
         else:
             spotter = self.spotter(graph, labels, self._spotter_threshold)

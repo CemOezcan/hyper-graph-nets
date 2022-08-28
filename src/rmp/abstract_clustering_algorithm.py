@@ -60,10 +60,11 @@ class AbstractClusteringAlgorithm(ABC):
         -------
 
         """
-        indices = [list() for _ in range(self._num_clusters)]
+        indices = [list() for _ in range(max(labels) + 1)]
 
         for i in range(len(labels)):
-            indices[labels[i]].append(i)
+            if labels[i] >= 0:
+                indices[labels[i]].append(i)
 
         return [torch.tensor(x) for x in indices]
 

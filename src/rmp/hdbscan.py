@@ -9,7 +9,7 @@ import wandb
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 
 
 class HDBSCAN(AbstractClusteringAlgorithm):
@@ -35,15 +35,14 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         min_samples = 2
         # TODO: Normalize
         sc = StandardScaler()
-        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
+        X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size,
-                                     min_samples=min_samples, prediction_data=True).fit(X)
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, prediction_data=True).fit(X)
         labels = clustering.labels_
         self._wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
 
-        if self._sampling:
+        if not self._sampling:
             indices = self._labels_to_indices(labels)
         else:
         # TODO: Special case for clusters[0] (noise)

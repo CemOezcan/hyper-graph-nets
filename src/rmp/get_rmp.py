@@ -28,7 +28,7 @@ def get_rmp(config: ConfigDict) -> RemoteMessagePassing:
 
 def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     num_clusters = get_from_nested_dict(config, list_of_keys=["rmp", "num_clusters"], raise_error=True)
-    sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "threshold"], raise_error=True)
+    sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "enabled"], raise_error=True)
     spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "spotter_threshold"], raise_error=True)
 
     if name == "hdbscan":

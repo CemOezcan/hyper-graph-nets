@@ -30,7 +30,7 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
         clustering = GaussianMixture(n_components=self._num_clusters, random_state=0, init_params='kmeans').fit(X)
         labels = clustering.predict(X)
 
-        if self._sampling:
+        if not self._sampling:
             return self._labels_to_indices(labels)
         else:
             spotter = self.spotter(graph, labels, self._spotter_threshold)
