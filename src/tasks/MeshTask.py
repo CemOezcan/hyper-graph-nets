@@ -92,12 +92,14 @@ class MeshTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
-        # TODO: Use n_step_eval
-        # TODO: Bottleneck !!!
+
+        del self._test_loader
+        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         self._algorithm.evaluator(self._test_loader, self._rollouts)
-        self._test_loader = get_data(
-            config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.n_step_evaluator(self._test_loader)
+
+        del self._test_loader
+        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[60], n_traj=self._rollouts)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')

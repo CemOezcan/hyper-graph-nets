@@ -1,3 +1,5 @@
+import re
+
 from src.util import device, read_yaml
 from src.tasks.MeshTask import MeshTask
 from src.data.data_loader import CONFIG_NAME, OUT_DIR
@@ -11,6 +13,9 @@ from multiprocessing import set_start_method
 
 import numpy as np
 import torch
+
+from util.Functions import get_from_nested_dict
+
 warnings.filterwarnings('ignore', category=UserWarning)
 
 
@@ -29,7 +34,14 @@ def main(preprocess: bool, train: bool, compute_rollout: bool):
             task.preprocess()
         task.run_iteration()
 
-    model_path = os.path.join(OUT_DIR, 'model.pkl')
+    cluster = get_from_nested_dict(params, ['model', 'rmp', 'clustering'])
+    num_clusters = get_from_nested_dict(params, ['model', 'rmp', 'num_clusters'])
+    balancer = get_from_nested_dict(params, ['model', 'graph_balancer', 'algorithm'])
+    mp = get_from_nested_dict(params, ['model', 'message_passing_steps'])
+    model_name = f'model_{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{mp}_epoch:'
+
+    epochs = max([file.split('_epoch:')[1][:-4] for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)])
+    model_path = os.path.join(OUT_DIR, f'{model_name}{epochs}.pkl')
     with open(model_path, 'rb') as file:
         algorithm = pickle.load(file)
         task = MeshTask(algorithm, params)
