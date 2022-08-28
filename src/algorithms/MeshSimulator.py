@@ -318,12 +318,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if logging:
             # TODO: Log csv
             wandb.log({'rollout_loss': rollout_losses['mse_loss'][-1], 'epoch': epoch})
-        else:
-            data_frame = pd.DataFrame.from_dict(rollout_losses)
-            data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
-            self.save_rollouts(trajectories)
 
-        return rollout_losses
+        data_frame = pd.DataFrame.from_dict(rollout_losses)
+        data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
+        self.save_rollouts(trajectories)
 
     def n_step_evaluator(self, ds_loader, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
@@ -345,6 +343,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(os.path.join(OUT_DIR, 'n_step_losses.csv'))
+
+    def publish_csv(self, data_frame, name):
+        table = wandb.Table(dataframe=data_frame)
+        artifact = wandb.Artifact(f"{name}_artifact", type="dataset")
+        artifact.add(table, f"{name}_table")
+        artifact.add_file(f"{name}_dataframe.csv")
+        wandb.log_artifact(artifact)
 
     @property
     def network(self):
