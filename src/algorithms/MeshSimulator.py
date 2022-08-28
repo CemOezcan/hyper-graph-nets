@@ -245,17 +245,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return batches
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances, logging=True):
+    def one_step_evaluator(self, ds_loader, logging=True):
         trajectory_loss = list()
         for valid_file in ds_loader:
             with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
                 valid_data = torch.load(f)
             random.shuffle(valid_data)
-            valid_data = valid_data[:self._validation]
             for i, trajectory in enumerate(valid_data):
                 random.shuffle(trajectory)
                 instance_loss = list()
-                if i >= instances:
+                if i >= self._validation:
                     break
 
                 for graph, data_frame in trajectory:
