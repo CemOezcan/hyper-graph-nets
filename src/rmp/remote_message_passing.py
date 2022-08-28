@@ -39,8 +39,8 @@ class RemoteMessagePassing:
         """
         # TODO: Replace lists with tensors
         graph = graph._replace(node_features=graph.node_features[0])
-        clusters = self._clustering_algorithm.run(graph)
-        new_graph = self.connect_cluster(graph, clusters, is_training)
+        self._clusters = self._clustering_algorithm.run(graph) if self._clusters is None else self._clusters
+        new_graph = self.connect_cluster(graph, self._clusters, is_training)
         return new_graph
 
     def get_clusters(self, graph):

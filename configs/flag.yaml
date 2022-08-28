@@ -28,7 +28,7 @@ params:
     dataset: flag_simple
     rollout_split: valid
     batch_size: 21
-    epochs: 20
+    epochs: 15
     trajectories: 1000
     rollouts: 1
     mode: all
@@ -45,17 +45,15 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 7
+    message_passing_steps: 5
     rmp:
-      num_clusters: 5
+      num_clusters: 40
       frequency: 1
-      clustering: gmm
+      clustering: hdbscan
       connector: hierarchical
-      spotter:
-        enabled: True
-        threshold: 0
-      exemplars:
-        enabled: True
+      intra_cluster_sampling:
+        enabled: False
+        spotter_threshold: 0
     graph_balancer:
       algorithm: none
       frequency: 1

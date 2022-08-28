@@ -9,7 +9,7 @@ import wandb
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos, device
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 
 
 class HDBSCAN(AbstractClusteringAlgorithm):
@@ -17,8 +17,9 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     Hierarchical Density Based Clustering for Applications with Noise.
     """
 
-    def __init__(self, threshold):
+    def __init__(self, sampling, threshold):
         super().__init__()
+        self._sampling = sampling
         self._threshold = threshold
         self._wandb = wandb.init(reinit=False)
 
@@ -34,18 +35,22 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         min_samples = 2
         # TODO: Normalize
         sc = StandardScaler()
-        X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
+        X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, min_cluster_size=min_cluster_size,
-                                     min_samples=min_samples, prediction_data=True).fit(X)
-        self._wandb.log({'hdbscan cluster': clustering.labels_.max(
-        ), 'hdbscan noise': len([x for x in clustering.labels_ if x < 0])})
-        # TODO: Special case for clusters[0] (noise)
-        exemplars = self.exemplars(clustering)
-        spotter = self.spotter(clustering, self._threshold)
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=50, prediction_data=True).fit(X)
+        labels = clustering.labels_
+        self._wandb.log({'hdbscan cluster': labels.max(
+        ), 'hdbscan noise': len([x for x in labels if x < 0])})
 
-        indices = [torch.tensor(list(set(e + s)))
-                   for e, s in zip(exemplars, spotter)]
+        if not self._sampling:
+            indices = self._labels_to_indices(labels)
+        else:
+        # TODO: Special case for clusters[0] (noise)
+            exemplars = self.exemplars(clustering)
+            spotter = self.spotter(clustering, self._threshold)
+
+            indices = [torch.tensor(list(set(e + s)))
+                       for e, s in zip(exemplars, spotter)]
 
         return indices
 

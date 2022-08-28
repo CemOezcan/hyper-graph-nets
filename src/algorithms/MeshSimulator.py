@@ -53,15 +53,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._gamma = self._network_config.get('gamma')
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
-        self._wandb_run = wandb.init(project='rmp', config=task_information,
-                                     mode=self._wandb_mode)
-        wandb.define_metric('epoch')
-        wandb.define_metric('validation_loss', step_metric='epoch')
-        wandb.define_metric('position_loss', step_metric='epoch')
-        wandb.define_metric('validation_mean', step_metric='epoch')
-        wandb.define_metric('position_mean', step_metric='epoch')
-        wandb.define_metric('video', step_metric='epoch')
         if not self._initialized:
+            self._wandb_mode = task_information.get('logging').get('wandb_mode')
+            self._wandb_run = wandb.init(project='rmp', config=task_information,
+                                         mode=self._wandb_mode)
+            wandb.define_metric('epoch')
+            wandb.define_metric('validation_loss', step_metric='epoch')
+            wandb.define_metric('position_loss', step_metric='epoch')
+            wandb.define_metric('validation_mean', step_metric='epoch')
+            wandb.define_metric('position_mean', step_metric='epoch')
+            wandb.define_metric('video', step_metric='epoch')
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
             self._optimizer = optim.Adam(
@@ -219,16 +220,15 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             graph = self._network.build_graph(data_frame, is_training)
 
             if i % math.ceil(graph_amt / self._balance_frequency) == 0:
-                graph = self._network.run_balancer(
-                    graph, data_frame, is_training)
+                graph = self._network.run_balancer(graph, is_training)
                 balanced_edge_set = self._network.get_balanced_edges(graph)
             elif balanced_edge_set:
                 [graph.edge_sets.append(e) for e in balanced_edge_set]
 
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
                 rmp_clusters = self._network.get_rmp_clusters(graph)
-            graph = self._network.connect_rmp_cluster(
-                graph, rmp_clusters, is_training)
+            graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
+
             graphs.append(graph)
 
         if is_training:
@@ -317,7 +317,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return rollout_losses
 
-    def n_step_evaluator(self, ds_loader, n_step_list=[397, 396], n_traj=2):
+    def n_step_evaluator(self, ds_loader, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
         # TODO: Decide on how to summarize
         losses = list()
