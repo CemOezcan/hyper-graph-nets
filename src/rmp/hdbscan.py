@@ -26,7 +26,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def _initialize(self):
         pass
 
-    def _cluster(self, graph: MultiGraphWithPos) -> List[Tensor]:
+    def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
         # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
         # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
         # TODO: Add velocity as fourth dimension, but only for later instances in a trajectory
