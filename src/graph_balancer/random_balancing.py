@@ -23,4 +23,4 @@ class RandomGraphBalancer(AbstractGraphBalancer):
         graph = self.add_graph_balance_edges(
             graph, added_edges, mesh_edge_normalizer, is_training)
         self._wandb.log({'random added edges': len(added_edges['senders'])})
-        return graph
+        return graph, added_edges

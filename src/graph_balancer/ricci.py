@@ -27,7 +27,7 @@ class Ricci(AbstractGraphBalancer):
         new_graph = self.add_graph_balance_edges(
             graph, added_edges, mesh_edge_normalizer, is_training)
         self._wandb.log({'ricci added edges': len(added_edges['senders'])})
-        return new_graph
+        return new_graph, added_edges
 
     @staticmethod
     def transform_multigraph_to_pyg(graph: MultiGraphWithPos) -> Data:

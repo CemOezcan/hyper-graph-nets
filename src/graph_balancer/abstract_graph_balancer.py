@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, Tuple
 
 import torch
 from src.util import EdgeSet, MultiGraphWithPos, device
@@ -28,7 +28,7 @@ class AbstractGraphBalancer(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> Tuple[MultiGraphWithPos, Dict]:
         """
         Run processing algorithm given a multigraph.
 
@@ -42,7 +42,8 @@ class AbstractGraphBalancer(ABC):
         """
         raise NotImplementedError
 
-    def add_graph_balance_edges(self, graph: MultiGraphWithPos, added_edges: Dict, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+    @staticmethod
+    def add_graph_balance_edges(graph: MultiGraphWithPos, added_edges: Dict, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
         mesh_pos = graph.mesh_features
         world_pos = graph.target_feature
         relative_world_pos = (torch.index_select(input=world_pos, dim=0, index=torch.tensor(added_edges['senders'], dtype=torch.long, device=device)) -
