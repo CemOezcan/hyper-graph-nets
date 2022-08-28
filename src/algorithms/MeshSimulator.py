@@ -286,12 +286,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 'epoch': epoch}
             )
         else:
+            path = os.path.join(OUT_DIR, 'one_step.csv')
             data_frame = pd.DataFrame.from_dict(
                 {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
                  'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
                  }
             )
-            data_frame.to_csv(os.path.join(OUT_DIR, 'one_step.csv'))
+            data_frame.to_csv(path)
+            self.publish_csv(data_frame, 'one_step', path)
 
     def evaluator(self, ds_loader, rollouts, epoch, logging=True):
         """Run a model rollout trajectory."""
@@ -315,13 +317,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             'mse_std': [mse.item() for mse in mse_stds]
         }
 
+        self.save_rollouts(trajectories)
+
         if logging:
             # TODO: Log csv
             wandb.log({'rollout_loss': rollout_losses['mse_loss'][-1], 'epoch': epoch})
-
-        data_frame = pd.DataFrame.from_dict(rollout_losses)
-        data_frame.to_csv(os.path.join(OUT_DIR, 'rollout_losses.csv'))
-        self.save_rollouts(trajectories)
+        else:
+            path = os.path.join(OUT_DIR, 'rollout_losses.csv')
+            data_frame = pd.DataFrame.from_dict(rollout_losses)
+            data_frame.to_csv(path)
+            self.publish_csv(data_frame, 'rollout_losses', path)
 
     def n_step_evaluator(self, ds_loader, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
@@ -340,15 +345,18 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             std = torch.std(torch.stack(n_step_losses)).item()
             losses.append((means, std))
 
+        path = os.path.join(OUT_DIR, 'n_step_losses.csv')
         n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
-        data_frame.to_csv(os.path.join(OUT_DIR, 'n_step_losses.csv'))
+        data_frame.to_csv(path)
+        self.publish_csv(data_frame, f'n_step_losses', path)
 
-    def publish_csv(self, data_frame, name):
+    def publish_csv(self, data_frame, name, path):
         table = wandb.Table(dataframe=data_frame)
+        wandb.log({name: table})
         artifact = wandb.Artifact(f"{name}_artifact", type="dataset")
         artifact.add(table, f"{name}_table")
-        artifact.add_file(f"{name}_dataframe.csv")
+        artifact.add_file(path)
         wandb.log_artifact(artifact)
 
     @property

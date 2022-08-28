@@ -35,6 +35,7 @@ class MeshTask(AbstractTask):
         self._raw_data = get_data(config=config)
         self._rollouts = config.get('task').get('rollouts')
         self._epochs = config.get('task').get('epochs')
+        self._n_step_loss = config.get('task').get('n_step_loss')
         self.train_loader = get_data(config=config)
 
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
@@ -92,6 +93,7 @@ class MeshTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
+        self._wandb.log({'task_name': self._task_name})
 
         valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
         self._algorithm.one_step_evaluator(valid_files, self._rollouts, self._epochs + 1, logging=False)
@@ -102,7 +104,7 @@ class MeshTask(AbstractTask):
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[60], n_traj=self._rollouts)
+        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[self._n_step_loss], n_traj=self._rollouts)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
