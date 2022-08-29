@@ -19,6 +19,7 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
         self._sampling = sampling
         self._num_clusters = num_clusters
         self._spotter_threshold = spotter_threshold
+        self._alpha = alpha
 
     def _initialize(self):
         pass
