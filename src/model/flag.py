@@ -216,10 +216,10 @@ class FlagModel(nn.Module):
         input = {**initial_state,
                  'prev|world_pos': prev_pos, 'world_pos': cur_pos}
         graph = self.build_graph(input, is_training=False)
-        if self._rmp:
-            graph = self._remote_graph.create_graph(graph, is_training=False)
         if self._balancer:
             graph = self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training=False)
+        if self._rmp:
+            graph = self._remote_graph.create_graph(graph, is_training=False)
         prediction = self.update(input, self(graph))
 
         next_pos = torch.where(mask, torch.squeeze(
