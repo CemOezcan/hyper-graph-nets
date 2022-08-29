@@ -31,9 +31,11 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "enabled"], raise_error=True)
     spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "spotter_threshold"], raise_error=True)
     alpha = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "alpha"], raise_error=True)
+    hdbscan_spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "threshold"], raise_error=True)
+    hdbscan_max_cluster_size = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "max_cluster_size"], raise_error=True)
 
     if name == "hdbscan":
-        return HDBSCAN(sampling, spotter_threshold, alpha)
+        return HDBSCAN(sampling, hdbscan_max_cluster_size, hdbscan_spotter_threshold)
     elif name == "random":
         return RandomClustering(num_clusters, sampling, spotter_threshold, alpha)
     elif name == "spectral":

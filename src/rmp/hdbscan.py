@@ -5,11 +5,9 @@ import numpy as np
 import torch
 from sklearn.preprocessing import StandardScaler
 from torch import Tensor
-import wandb
 
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
-from src.util import MultiGraphWithPos, device
-from sklearn.cluster import KMeans, DBSCAN
+from src.util import MultiGraphWithPos
 
 
 class HDBSCAN(AbstractClusteringAlgorithm):
@@ -17,14 +15,36 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     Hierarchical Density Based Clustering for Applications with Noise.
     """
 
-    def __init__(self, sampling, spotter_threshold, alpha):
+    def __init__(self, sampling, max_cluster_size, spotter_threshold):
         super().__init__()
         self._sampling = sampling
+        self._max_cluster_size = max_cluster_size
         self._spotter_threshold = spotter_threshold
-        self._alpha = alpha
 
     def _initialize(self):
         pass
+    
+    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
+        """
+        Run clustering algorithm given a multigraph or point cloud.
+
+        Parameters
+        ----------
+        graph :  Input data for the algorithm, represented by a multigraph or a point cloud.
+
+        Returns clustering as a list.
+        -------
+
+        """
+        clustering = list(self._cluster(graph))
+        labels = clustering.labels_
+
+        if not self._sampling:
+            return self._labels_to_indices(labels)
+        
+        spotter = self.spotter(clustering, self._spotter_threshold)
+        exemplars = self.exemplars(clustering)
+        return self._combine_samples(spotter, exemplars)
 
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
         # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
@@ -35,11 +55,11 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=50, prediction_data=True).fit(X)
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size, prediction_data=True).fit(X)
         labels = clustering.labels_
         self._wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
-        return labels
+        return clustering
 
     def exemplars(self, clustering):
         selected_clusters = clustering.condensed_tree_._select_clusters()
