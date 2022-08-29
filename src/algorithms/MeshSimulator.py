@@ -39,7 +39,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._balance_frequency = self._network_config.get('graph_balancer').get('frequency')
         self._rmp_frequency = self._network_config.get('rmp').get('frequency')
 
-        self._batch_size = self._network_config.get('task').get('batch_size')
+        self._batch_size = config.get('task').get('batch_size')
         self._network = None
         self._optimizer = None
         self._scheduler = None
