@@ -27,6 +27,7 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to('cpu')
         X = sc.fit_transform(X)
+        # TODO: Change parameter to 'kmeans++'
         clustering = GaussianMixture(n_components=self._num_clusters, random_state=0, init_params='kmeans').fit(X)
         return clustering.predict(X)
 
