@@ -30,13 +30,17 @@ params:
     batch_size: 21
     epochs: 15
     trajectories: 1000
-    rollouts: 1
     mode: all
     prefetch_factor: 10
-    n_step_loss: 367
+    test:
+      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
+      rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
+      n_steps: 60
     validation:
       files: 2
-      trajectories: 5
+      trajectories: 5 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
     field: world_pos
     history: True
