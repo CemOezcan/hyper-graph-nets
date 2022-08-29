@@ -14,7 +14,7 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
     Gaussian Mixture Clustering
     """
 
-    def __init__(self, num_clusters, sampling, spotter_threshold):
+    def __init__(self, num_clusters, sampling, spotter_threshold, alpha):
         super().__init__()
         self._sampling = sampling
         self._num_clusters = num_clusters

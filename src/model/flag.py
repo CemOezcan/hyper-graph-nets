@@ -279,8 +279,8 @@ class FlagModel(nn.Module):
                 graph, self._mesh_edge_normalizer, is_training)
         return graph, None
 
-    def add_balanced_edges(self, added_edges, graph, is_training):
-        return self._graph_balancer.add_balanced_edges(graph, added_edges, self._mesh_edge_normalizer, is_training)
+    def add_balanced_edges(self, graph, added_edges, is_training):
+        return self._graph_balancer.add_graph_balance_edges(graph, added_edges, self._mesh_edge_normalizer, is_training)
 
     def rmp(self, graph, is_training):
         # TODO: Normalize hyper nodes
