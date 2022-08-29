@@ -108,6 +108,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 result = pool.map(functools.partial(self.fetch_data, is_training=is_training), train)
             with open(os.path.join(IN_DIR, f'{split}_{task_name}_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
                 torch.save(result, f)
+                del result
             end_preprocessing_batch = time.time()
             wandb.log(
                 {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch,
