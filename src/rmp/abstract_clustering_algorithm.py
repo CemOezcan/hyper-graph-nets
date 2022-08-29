@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import random
 from typing import List
 
 import torch
@@ -55,7 +56,7 @@ class AbstractClusteringAlgorithm(ABC):
         -------
 
         """
-        labels = self._cluster(graph)
+        labels = list(self._cluster(graph))
 
         if not self._sampling:
             return self._labels_to_indices(labels)
@@ -112,13 +113,13 @@ class AbstractClusteringAlgorithm(ABC):
     def exemplars(self, labels: List[List[int]], spotter: List[List[int]], alpha: float) -> List[List[int]]:
         # for each list in labels, remove the elements of the list if the elements are also in spotter
         result = [list() for _ in range(self._num_clusters)]
-        for i in range(self._num_clusters):
-            for e in labels[i]:
-                if e not in spotter[i]:
-                    result[i].append(e)
+        for i, e in enumerate(labels):
+            if i not in spotter[e]:
+                result[e].append(i)
         #randomly sample from the remaining elements of each list in result according to the ratio alpha
         for i in range(self._num_clusters):
-            result[i] = torch.randperm(len(result[i]))[:int(len(result[i]) * alpha)].tolist()
+            random.shuffle(result[i])
+            result[i] = result[i][:int(len(result[i]) * alpha)]
         self._wandb.log({f'exemplars added': sum([len(x) for x in result])})
         return result
 
