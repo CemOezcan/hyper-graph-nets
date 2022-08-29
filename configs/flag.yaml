@@ -27,11 +27,11 @@ params:
   task:
     dataset: flag_simple
     rollout_split: valid
-    batch_size: 21
+    batch_size: 57
     epochs: 15
     trajectories: 1000
     mode: all
-    prefetch_factor: 10
+    prefetch_factor: 5
     test:
       trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
       rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
@@ -50,22 +50,25 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 5
+    message_passing_steps: 7
     rmp:
-      num_clusters: 40
+      num_clusters: 20
       frequency: 1
-      clustering: hdbscan
+      clustering: gmm
       connector: hierarchical
       intra_cluster_sampling:
-        enabled: False
-        spotter_threshold: 0
-        alpha: 0.5
+        enabled: True
+        spotter_threshold: 3
+        alpha: 0.2
+      hdbscan:
+        max_cluster_size: 50
+        spotter_treshold: 0.9
     graph_balancer:
-      algorithm: none
+      algorithm: ricci
       frequency: 1
       ricci:
-        loops: 100
-        tau: 20
+        loops: 150
+        tau: 150
       random:
         edge_amount: 100
   logging:
