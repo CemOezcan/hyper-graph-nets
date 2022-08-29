@@ -23,7 +23,7 @@ class Ricci(AbstractGraphBalancer):
 
     def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool):
         new_graph, added_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
-            graph), loops=self._tau, remove_edges=False, tau=self._tau, is_undirected=True)
+            graph), loops=self._loops, remove_edges=False, tau=self._tau, is_undirected=True)
         new_graph = self.add_graph_balance_edges(
             graph, added_edges, mesh_edge_normalizer, is_training)
         self._wandb.log({'ricci added edges': len(added_edges['senders'])})
