@@ -10,11 +10,10 @@ class RandomClustering(AbstractClusteringAlgorithm):
     """
     Naive clustering strategy (Baseline). Pick clusters at random.
     """
-    def __init__(self, sampling, num_clusters, spotter_threshold, alpha):
+    def __init__(self, sampling, num_clusters, alpha):
         super().__init__()
         self._sampling = sampling
         self._num_clusters = num_clusters
-        self._spotter_threshold = spotter_threshold
         self._alpha = alpha
 
     def _initialize(self):

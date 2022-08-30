@@ -21,7 +21,6 @@ class AbstractClusteringAlgorithm(ABC):
         self._treshold = 0
         self._alpha = 0.5
         self._sampling = False
-        self._spotter_threshold = 0
         self._wandb = wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
@@ -61,7 +60,7 @@ class AbstractClusteringAlgorithm(ABC):
         if not self._sampling:
             return self._labels_to_indices(labels)
         
-        spotter = self.spotter(graph, labels, self._spotter_threshold)
+        spotter = self.spotter(graph, labels, self._alpha)
         exemplars = self.exemplars(labels, spotter, self._alpha)
         top_k = self.highest_dynamics(graph, labels, self._alpha)
         return self._combine_samples(spotter, exemplars, top_k)
@@ -87,7 +86,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         return [torch.tensor(x) for x in indices]
 
-    def spotter(self, graph: MultiGraphWithPos, labels: List[int], threshold: int) -> List[int]:
+    def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float) -> List[int]:
         '''Given a graph with edges, traverse all edges and find vertices that are connected to each other, but belong to different clusters'''
         edge_set = [x for x in graph.edge_sets if x.name == 'mesh_edges']
         # for the sender and receiver of the edge set, find the corresponding label
@@ -105,9 +104,9 @@ class AbstractClusteringAlgorithm(ABC):
             indices[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
         result = [list() for _ in range(self._num_clusters)]
         for k, i in enumerate(indices):
-            for e in set(i):
-                if i.count(e) >= threshold:
-                    result[k].append(e)
+            for e in list(set(i)):
+                random.shuffle(e)
+                result[k].append(e[:int(len(result[i]) * alpha)])
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 

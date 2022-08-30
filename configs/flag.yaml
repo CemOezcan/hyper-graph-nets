@@ -50,7 +50,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 7
+    message_passing_steps: 5
     rmp:
       num_clusters: 20
       frequency: 1
@@ -58,7 +58,7 @@ params:
       connector: hierarchical
       intra_cluster_sampling:
         enabled: True
-        spotter_threshold: 20
+        spotter_threshold: 5
         alpha: 0.1
       hdbscan:
         max_cluster_size: 50
