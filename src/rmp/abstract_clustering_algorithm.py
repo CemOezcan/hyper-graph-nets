@@ -23,6 +23,7 @@ class AbstractClusteringAlgorithm(ABC):
         self._alpha = 0.5
         self._sampling = False
         self._spotter_threshold = 0
+        self._top_k = 10
         self._wandb = wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
@@ -64,7 +65,8 @@ class AbstractClusteringAlgorithm(ABC):
         
         spotter = self.spotter(graph, labels, self._spotter_threshold)
         exemplars = self.exemplars(labels, spotter, self._alpha)
-        return self._combine_samples(spotter, exemplars)
+        top_k = self.highest_dynamics(graph, labels, self._top_k)
+        return self._combine_samples(spotter, exemplars, top_k)
 
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
@@ -124,11 +126,11 @@ class AbstractClusteringAlgorithm(ABC):
         self._wandb.log({f'exemplars added': sum([len(x) for x in result])})
         return result
 
-    def _combine_samples(self, spotter: List[List[int]], exemplars: List[List[int]]) -> List[List[int]]:
+    def _combine_samples(self, spotter: List[List[int]], exemplars: List[List[int]], top_k: List[List[int]]) -> List[List[int]]:
         # combine the lists of spotter and exemplars
         result = [list() for _ in range(self._num_clusters)]
         for i in range(self._num_clusters):
-            result[i] = torch.tensor(spotter[i] + exemplars[i])
+            result[i] = torch.tensor(list(set(spotter[i] + exemplars[i] + top_k[i])))
         return result
 
     def highest_dynamics(self, graph: MultiGraphWithPos, clusters: List[List[int]], top_k: int) -> List[List[int]]:

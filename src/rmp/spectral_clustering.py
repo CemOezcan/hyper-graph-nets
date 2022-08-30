@@ -15,12 +15,13 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     Spectral Clustering
     """
 
-    def __init__(self, num_clusters, sampling, spotter_threshold, alpha):
+    def __init__(self, num_clusters, sampling, spotter_threshold, alpha, top_k):
         super().__init__()
         self._sampling = sampling
         self._num_clusters = num_clusters
         self._spotter_threshold = spotter_threshold
         self._alpha = alpha
+        self._top_k = top_k
 
     def _initialize(self):
         pass

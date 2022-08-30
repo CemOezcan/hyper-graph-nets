@@ -60,6 +60,7 @@ params:
         enabled: True
         spotter_threshold: 3
         alpha: 0.2
+        top_k: 10
       hdbscan:
         max_cluster_size: 50
         spotter_treshold: 0.9
