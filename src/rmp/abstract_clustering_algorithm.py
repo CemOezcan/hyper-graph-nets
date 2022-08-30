@@ -104,9 +104,9 @@ class AbstractClusteringAlgorithm(ABC):
             indices[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
         result = [list() for _ in range(self._num_clusters)]
         for k, i in enumerate(indices):
-            for e in list(set(i)):
-                random.shuffle(e)
-                result[k].append(e[:int(len(result[i]) * alpha)])
+            l = list(set(i))
+            random.shuffle(l)
+            result[k] = l[:int(len(l) * alpha)]
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 
@@ -140,6 +140,6 @@ class AbstractClusteringAlgorithm(ABC):
             result[i] = sorted(result[i], key=lambda x: graph.node_dynamic[x], reverse=True)
         # for each list in result, take the alpha percentage indices
         for i in range(self._num_clusters):
-            result[i] = result[i][:int(len(result[i]) * self.alpha)]
+            result[i] = result[i][:int(len(result[i]) * alpha)]
         self._wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
         return result

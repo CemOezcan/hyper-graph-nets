@@ -58,7 +58,6 @@ params:
       connector: hierarchical
       intra_cluster_sampling:
         enabled: True
-        spotter_threshold: 5
         alpha: 0.1
       hdbscan:
         max_cluster_size: 50
