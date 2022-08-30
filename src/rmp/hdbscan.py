@@ -15,13 +15,12 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     Hierarchical Density Based Clustering for Applications with Noise.
     """
 
-    def __init__(self, sampling, max_cluster_size, min_cluster_size, spotter_threshold, top_k):
+    def __init__(self, sampling, max_cluster_size, min_cluster_size, spotter_threshold):
         super().__init__()
         self._sampling = sampling
         self._max_cluster_size = max_cluster_size
         self._min_cluster_size = min_cluster_size
         self._spotter_threshold = spotter_threshold
-        self._top_k = top_k
 
     def _initialize(self):
         pass
@@ -99,9 +98,3 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def top_two_probs_diff(probs):
         cluster = np.argsort(probs)
         return [probs[cluster[-1]] - probs[cluster[-2]], cluster[-1]]
-
-    @staticmethod
-    def assign_noise_to_cluster(clustering):
-        soft_clusters = hdbscan.all_points_membership_vectors(
-            clustering)
-        return [np.argsort(x)[-1] for x in soft_clusters]

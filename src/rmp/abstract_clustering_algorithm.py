@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import random
 from typing import List
 
-import numpy as np
 import torch
 import wandb
 from src.util import MultiGraphWithPos
@@ -23,7 +22,6 @@ class AbstractClusteringAlgorithm(ABC):
         self._alpha = 0.5
         self._sampling = False
         self._spotter_threshold = 0
-        self._top_k = 10
         self._wandb = wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
@@ -65,7 +63,7 @@ class AbstractClusteringAlgorithm(ABC):
         
         spotter = self.spotter(graph, labels, self._spotter_threshold)
         exemplars = self.exemplars(labels, spotter, self._alpha)
-        top_k = self.highest_dynamics(graph, labels, self._top_k)
+        top_k = self.highest_dynamics(graph, labels, self._alpha)
         return self._combine_samples(spotter, exemplars, top_k)
 
 
@@ -133,15 +131,16 @@ class AbstractClusteringAlgorithm(ABC):
             result[i] = torch.tensor(list(set(spotter[i] + exemplars[i] + top_k[i])))
         return result
 
-    def highest_dynamics(self, graph: MultiGraphWithPos, clusters: List[List[int]], top_k: int) -> List[List[int]]:
-        dyn = [abs(x) for x in graph.node_dynamic.tolist()]
-        cluster_dyn = [[dyn[index] for index in cluster] for cluster in clusters]
-
-        indices = list()
-        for a in range(len(cluster_dyn)):
-            cluster = cluster_dyn[a]
-            k = min(len(cluster), top_k)
-            idx = np.argsort([-dynamics for dynamics in cluster])[:k]
-            indices.append([clusters[a][i] for i in idx])
-
-        return indices
+    def highest_dynamics(self, graph: MultiGraphWithPos, clusters: List[int], alpha: float) -> List[List[int]]:
+        # for each index in clusters, put the index in the corresponding list in result
+        result = [list() for _ in range(self._num_clusters)]
+        for i in range(len(clusters)):
+            result[clusters[i]].append(i)
+        # for each list in result, sort the indices in descending order according to the graph's dynamics
+        for i in range(self._num_clusters):
+            result[i] = sorted(result[i], key=lambda x: graph.node_dynamic[x], reverse=True)
+        # for each list in result, take the alpha percentage indices
+        for i in range(self._num_clusters):
+            result[i] = result[i][:int(len(result[i]) * self.alpha)]
+        self._wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
+        return result

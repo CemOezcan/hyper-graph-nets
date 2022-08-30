@@ -52,21 +52,20 @@ params:
     learning_rate: 5.0e-5
     message_passing_steps: 7
     rmp:
-      num_clusters: 20
+      num_clusters: 10
       frequency: 1
-      clustering: gmm
+      clustering: spectral
       connector: hierarchical
       intra_cluster_sampling:
         enabled: True
-        spotter_threshold: 3
-        alpha: 0.2
-        top_k: 10
+        spotter_threshold: 5
+        alpha: 0.1
       hdbscan:
         max_cluster_size: 50
         min_cluster_size: 20
         spotter_treshold: 0.9
     graph_balancer:
-      algorithm: ricci
+      algorithm: none
       frequency: 1
       ricci:
         loops: 150
