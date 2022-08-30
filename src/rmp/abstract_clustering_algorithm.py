@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import random
 from typing import List
 
+import numpy as np
 import torch
 import wandb
 from src.util import MultiGraphWithPos
@@ -129,3 +130,16 @@ class AbstractClusteringAlgorithm(ABC):
         for i in range(self._num_clusters):
             result[i] = torch.tensor(spotter[i] + exemplars[i])
         return result
+
+    def highest_dynamics(self, graph: MultiGraphWithPos, clusters: List[List[int]], top_k: int) -> List[List[int]]:
+        dyn = [abs(x) for x in graph.node_dynamic.tolist()]
+        cluster_dyn = [[dyn[index] for index in cluster] for cluster in clusters]
+
+        indices = list()
+        for a in range(len(cluster_dyn)):
+            cluster = cluster_dyn[a]
+            k = min(len(cluster), top_k)
+            idx = np.argsort([-dynamics for dynamics in cluster])[:k]
+            indices.append([clusters[a][i] for i in idx])
+
+        return indices
