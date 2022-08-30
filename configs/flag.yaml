@@ -63,6 +63,7 @@ params:
       hdbscan:
         max_cluster_size: 50
         min_cluster_size: 20
+        min_samples: 20
         spotter_treshold: 0.9
     graph_balancer:
       algorithm: none
