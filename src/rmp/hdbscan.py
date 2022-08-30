@@ -15,10 +15,11 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     Hierarchical Density Based Clustering for Applications with Noise.
     """
 
-    def __init__(self, sampling, max_cluster_size, spotter_threshold, top_k):
+    def __init__(self, sampling, max_cluster_size, min_cluster_size, spotter_threshold, top_k):
         super().__init__()
         self._sampling = sampling
         self._max_cluster_size = max_cluster_size
+        self._min_cluster_size = min_cluster_size
         self._spotter_threshold = spotter_threshold
         self._top_k = top_k
 
@@ -45,7 +46,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         
         spotter = self.spotter(clustering, self._spotter_threshold)
         exemplars = self.exemplars(clustering)
-        top_k = self.highest_dynamics(graph, labels, self._top_k)
+        top_k = self.highest_dynamics(graph, labels[1:], self._top_k)
         return self._combine_samples(spotter, exemplars, top_k)
 
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
@@ -57,7 +58,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size, prediction_data=True).fit(X)
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size,
+                                     min_cluster_size=self._min_cluster_size, prediction_data=True).fit(X)
         labels = clustering.labels_
         self._wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
