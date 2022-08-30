@@ -45,7 +45,8 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         
         spotter = self.spotter(clustering, self._spotter_threshold)
         exemplars = self.exemplars(clustering)
-        return self._combine_samples(spotter, exemplars)
+        top_k = self.highest_dynamics(graph, labels, self._top_k)
+        return self._combine_samples(spotter, exemplars, top_k)
 
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
         # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
@@ -102,20 +103,3 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         soft_clusters = hdbscan.all_points_membership_vectors(
             clustering)
         return [np.argsort(x)[-1] for x in soft_clusters]
-
-    def highest_dynamics(self, graph, clusters, min_cluster_size):
-        dyn = [abs(x) for x in graph.node_dynamic.tolist()]
-        new = list()
-
-        for x in clusters:
-            new.append(list())
-            for i in x:
-                new[-1].append(dyn[i])
-
-        indices = list()
-        for a in range(len(new)):
-            n = new[a]
-            idx = np.argsort([-number for number in n])[:min_cluster_size]
-            indices.append([clusters[a][i] for i in idx])
-
-        return [torch.tensor(x) for x in indices]
