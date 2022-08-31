@@ -180,7 +180,7 @@ class MeshTask(AbstractTask):
             return fig,
 
         animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
-        writergif = animation.PillowWriter(fps=30)
+        writergif = ani.PillowWriter(fps=30)
 
         return animation, writergif
 
