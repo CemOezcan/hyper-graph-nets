@@ -93,8 +93,8 @@ class Ricci(AbstractGraphBalancer):
                     )
                 ]
                 G.add_edge(k, l)
-                added_edges['senders'].append(k)
-                added_edges['receivers'].append(l)
+                added_edges['senders'].extend([k, l])
+                added_edges['receivers'].extend([l, k])
                 if is_undirected:
                     A[k, l] = A[l, k] = 1
                 else:

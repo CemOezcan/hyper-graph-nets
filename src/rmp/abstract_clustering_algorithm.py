@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import random
 from typing import List
 
-import numpy as np
 import torch
 import wandb
 from src.util import MultiGraphWithPos
@@ -22,8 +21,6 @@ class AbstractClusteringAlgorithm(ABC):
         self._treshold = 0
         self._alpha = 0.5
         self._sampling = False
-        self._spotter_threshold = 0
-        self._top_k = 10
         self._wandb = wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
@@ -63,9 +60,9 @@ class AbstractClusteringAlgorithm(ABC):
         if not self._sampling:
             return self._labels_to_indices(labels)
         
-        spotter = self.spotter(graph, labels, self._spotter_threshold)
+        spotter = self.spotter(graph, labels, self._alpha)
         exemplars = self.exemplars(labels, spotter, self._alpha)
-        top_k = self.highest_dynamics(graph, labels, self._top_k)
+        top_k = self.highest_dynamics(graph, labels, self._alpha)
         return self._combine_samples(spotter, exemplars, top_k)
 
 
@@ -89,7 +86,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         return [torch.tensor(x) for x in indices]
 
-    def spotter(self, graph: MultiGraphWithPos, labels: List[int], threshold: int) -> List[int]:
+    def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float) -> List[int]:
         '''Given a graph with edges, traverse all edges and find vertices that are connected to each other, but belong to different clusters'''
         edge_set = [x for x in graph.edge_sets if x.name == 'mesh_edges']
         # for the sender and receiver of the edge set, find the corresponding label
@@ -107,9 +104,9 @@ class AbstractClusteringAlgorithm(ABC):
             indices[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
         result = [list() for _ in range(self._num_clusters)]
         for k, i in enumerate(indices):
-            for e in set(i):
-                if i.count(e) >= threshold:
-                    result[k].append(e)
+            l = list(set(i))
+            random.shuffle(l)
+            result[k] = l[:int(len(l) * alpha)]
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 
@@ -133,15 +130,16 @@ class AbstractClusteringAlgorithm(ABC):
             result[i] = torch.tensor(list(set(spotter[i] + exemplars[i] + top_k[i])))
         return result
 
-    def highest_dynamics(self, graph: MultiGraphWithPos, clusters: List[List[int]], top_k: int) -> List[List[int]]:
-        dyn = [abs(x) for x in graph.node_dynamic.tolist()]
-        cluster_dyn = [[dyn[index] for index in cluster] for cluster in clusters]
-
-        indices = list()
-        for a in range(len(cluster_dyn)):
-            cluster = cluster_dyn[a]
-            k = min(len(cluster), top_k)
-            idx = np.argsort([-dynamics for dynamics in cluster])[:k]
-            indices.append([clusters[a][i] for i in idx])
-
-        return indices
+    def highest_dynamics(self, graph: MultiGraphWithPos, clusters: List[int], alpha: float) -> List[List[int]]:
+        # for each index in clusters, put the index in the corresponding list in result
+        result = [list() for _ in range(self._num_clusters)]
+        for i in range(len(clusters)):
+            result[clusters[i]].append(i)
+        # for each list in result, sort the indices in descending order according to the graph's dynamics
+        for i in range(self._num_clusters):
+            result[i] = sorted(result[i], key=lambda x: graph.node_dynamic[x], reverse=True)
+        # for each list in result, take the alpha percentage indices
+        for i in range(self._num_clusters):
+            result[i] = result[i][:int(len(result[i]) * alpha)]
+        self._wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
+        return result

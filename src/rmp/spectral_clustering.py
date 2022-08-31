@@ -3,9 +3,6 @@ from typing import List
 
 import numpy as np
 import sklearn
-from torch import Tensor
-from sklearn.preprocessing import MinMaxScaler
-
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
 
@@ -15,20 +12,17 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     Spectral Clustering
     """
 
-    def __init__(self, num_clusters, sampling, spotter_threshold, alpha, top_k):
+    def __init__(self, num_clusters, sampling, alpha):
         super().__init__()
         self._sampling = sampling
         self._num_clusters = num_clusters
-        self._spotter_threshold = spotter_threshold
         self._alpha = alpha
-        self._top_k = top_k
 
     def _initialize(self):
         pass
 
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
         X = self._compute_affinity_matrix(graph)
-        # TODO: use cluster_qr
         sc = sklearn.cluster.SpectralClustering(n_clusters=self._num_clusters, random_state=0, affinity='precomputed', assign_labels='cluster_qr')
         return sc.fit(X).labels_
 

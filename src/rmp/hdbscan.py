@@ -1,13 +1,12 @@
 from typing import List
 
-import hdbscan
 import numpy as np
-import torch
 from sklearn.preprocessing import StandardScaler
-from torch import Tensor
-
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
+from torch import Tensor
+
+import hdbscan
 
 
 class HDBSCAN(AbstractClusteringAlgorithm):
@@ -15,13 +14,13 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     Hierarchical Density Based Clustering for Applications with Noise.
     """
 
-    def __init__(self, sampling, max_cluster_size, min_cluster_size, spotter_threshold, top_k):
+    def __init__(self, sampling, max_cluster_size, min_cluster_size, min_samples, spotter_threshold):
         super().__init__()
         self._sampling = sampling
         self._max_cluster_size = max_cluster_size
         self._min_cluster_size = min_cluster_size
         self._spotter_threshold = spotter_threshold
-        self._top_k = top_k
+        self._min_samples = min_samples
 
     def _initialize(self):
         pass
@@ -58,7 +57,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size,
+        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size, min_samples=self._min_samples,
                                      min_cluster_size=self._min_cluster_size, prediction_data=True).fit(X)
         labels = clustering.labels_
         self._wandb.log({'hdbscan cluster': labels.max(
@@ -99,9 +98,3 @@ class HDBSCAN(AbstractClusteringAlgorithm):
     def top_two_probs_diff(probs):
         cluster = np.argsort(probs)
         return [probs[cluster[-1]] - probs[cluster[-2]], cluster[-1]]
-
-    @staticmethod
-    def assign_noise_to_cluster(clustering):
-        soft_clusters = hdbscan.all_points_membership_vectors(
-            clustering)
-        return [np.argsort(x)[-1] for x in soft_clusters]
