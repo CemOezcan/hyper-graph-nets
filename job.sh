@@ -1,4 +1,4 @@
 #!/bin/bash
 
 source ./venv/bin/activate
-srun python main.py
+srun python main.py 'flag2'
