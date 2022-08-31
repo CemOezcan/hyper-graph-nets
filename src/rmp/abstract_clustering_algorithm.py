@@ -86,7 +86,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         return [torch.tensor(x) for x in indices]
 
-    def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float) -> List[int]:
+    def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float) -> List[List[int]]:
         '''Given a graph with edges, traverse all edges and find vertices that are connected to each other, but belong to different clusters'''
         edge_set = [x for x in graph.edge_sets if x.name == 'mesh_edges']
         # for the sender and receiver of the edge set, find the corresponding label
