@@ -20,6 +20,8 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 
 def main(config_name=CONFIG_NAME):
+    print(config_name)
+    exit()
     config_file = read_yaml(config_name)
     preprocess = config_file['compute']['preprocessing']
     retrain = config_file['compute']['retrain']
