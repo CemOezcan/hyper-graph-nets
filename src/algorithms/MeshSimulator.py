@@ -66,7 +66,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             # TODO: Inconsistent with stored model
             api = wandb.Api()
             run = api.run(self._wandb_url)
-            curr_epoch = 1# max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
+            curr_epoch = max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
             b = False
             for x in run.scan_history():
                 if b:
