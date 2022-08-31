@@ -44,7 +44,7 @@ def main(config_name: str):
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
         task.preprocess()
-        exit()
+        epochs = list()
 
     if epochs:
         last_epoch = max(epochs)
