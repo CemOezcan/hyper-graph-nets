@@ -86,7 +86,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         return [torch.tensor(x) for x in indices]
 
-    def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float) -> List[int]:
+    def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float) -> List[List[int]]:
         '''Given a graph with edges, traverse all edges and find vertices that are connected to each other, but belong to different clusters'''
         edge_set = [x for x in graph.edge_sets if x.name == 'mesh_edges']
         # for the sender and receiver of the edge set, find the corresponding label
@@ -98,15 +98,15 @@ class AbstractClusteringAlgorithm(ABC):
         # find all elements of edge_set_tensor that have a different sender_label and receiver_label
         edges_different_clusters = torch.nonzero(torch.abs(edge_set_tensor[:, 2] - edge_set_tensor[:, 3]) > 0).squeeze()
         # for each element in edges_different_clusters, put them in a list of length labels and put the senders and receivers to their corresponding labels
-        indices = [list() for _ in range(self._num_clusters)]
-        for i in edges_different_clusters:
-            indices[edge_set_tensor[i, 2].item()].append(edge_set_tensor[i, 0].item())
-            indices[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
         result = [list() for _ in range(self._num_clusters)]
-        for k, i in enumerate(indices):
-            l = list(set(i))
-            random.shuffle(l)
-            result[k] = l[:int(len(l) * alpha)]
+        for i in edges_different_clusters:
+            result[edge_set_tensor[i, 2].item()].append(edge_set_tensor[i, 0].item())
+            result[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
+
+        for i in range(self._num_clusters):
+            threshold = max(int(alpha * 100), int(len(result[i]) * alpha))
+            threshold = min(len(result[i]), threshold)
+            result[i] = result[i][:threshold]
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 
@@ -119,7 +119,9 @@ class AbstractClusteringAlgorithm(ABC):
         #randomly sample from the remaining elements of each list in result according to the ratio alpha
         for i in range(self._num_clusters):
             random.shuffle(result[i])
-            result[i] = result[i][:int(len(result[i]) * alpha)]
+            threshold = max(int(alpha * 100), int(len(result[i]) * alpha))
+            threshold = min(len(result[i]), threshold)
+            result[i] = result[i][:threshold]
         self._wandb.log({f'exemplars added': sum([len(x) for x in result])})
         return result
 
@@ -140,6 +142,8 @@ class AbstractClusteringAlgorithm(ABC):
             result[i] = sorted(result[i], key=lambda x: graph.node_dynamic[x], reverse=True)
         # for each list in result, take the alpha percentage indices
         for i in range(self._num_clusters):
-            result[i] = result[i][:int(len(result[i]) * alpha)]
+            threshold = max(int(alpha * 100), int(len(result[i]) * alpha))
+            threshold = min(len(result[i]), threshold)
+            result[i] = result[i][:threshold]
         self._wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
         return result
