@@ -106,7 +106,9 @@ class AbstractClusteringAlgorithm(ABC):
         for k, i in enumerate(indices):
             l = list(set(i))
             random.shuffle(l)
-            result[k] = l[:int(len(l) * alpha)]
+            threshold = max(int(alpha * 100), int(len(result[k]) * alpha))
+            threshold = min(len(result[k]), threshold)
+            result[k] = result[k][:threshold]
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 
@@ -119,7 +121,9 @@ class AbstractClusteringAlgorithm(ABC):
         #randomly sample from the remaining elements of each list in result according to the ratio alpha
         for i in range(self._num_clusters):
             random.shuffle(result[i])
-            result[i] = result[i][:int(len(result[i]) * alpha)]
+            threshold = max(int(alpha * 100), int(len(result[i]) * alpha))
+            threshold = min(len(result[i]), threshold)
+            result[i] = result[i][:threshold]
         self._wandb.log({f'exemplars added': sum([len(x) for x in result])})
         return result
 
@@ -140,6 +144,8 @@ class AbstractClusteringAlgorithm(ABC):
             result[i] = sorted(result[i], key=lambda x: graph.node_dynamic[x], reverse=True)
         # for each list in result, take the alpha percentage indices
         for i in range(self._num_clusters):
-            result[i] = result[i][:int(len(result[i]) * alpha)]
+            threshold = max(int(alpha * 100), int(len(result[i]) * alpha))
+            threshold = min(len(result[i]), threshold)
+            result[i] = result[i][:threshold]
         self._wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
         return result
