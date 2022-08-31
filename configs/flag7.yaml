@@ -35,7 +35,7 @@ params:
     epochs: 15
     trajectories: 1000
     mode: all
-    prefetch_factor: 7
+    prefetch_factor: 5
     test:
       trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
       rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
@@ -54,7 +54,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 5
+    message_passing_steps: 7
     rmp:
       num_clusters: 20
       frequency: 1
