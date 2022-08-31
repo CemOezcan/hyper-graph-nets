@@ -98,18 +98,15 @@ class AbstractClusteringAlgorithm(ABC):
         # find all elements of edge_set_tensor that have a different sender_label and receiver_label
         edges_different_clusters = torch.nonzero(torch.abs(edge_set_tensor[:, 2] - edge_set_tensor[:, 3]) > 0).squeeze()
         # for each element in edges_different_clusters, put them in a list of length labels and put the senders and receivers to their corresponding labels
-        indices = [list() for _ in range(self._num_clusters)]
-        for i in edges_different_clusters:
-            indices[edge_set_tensor[i, 2].item()].append(edge_set_tensor[i, 0].item())
-            indices[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
         result = [list() for _ in range(self._num_clusters)]
-        for k, i in enumerate(indices):
-            l = list(set(i))
-            random.shuffle(l)
-            result[k] = l
-            threshold = max(int(alpha * 100), int(len(result[k]) * alpha))
-            threshold = min(len(result[k]), threshold)
-            result[k] = result[k][:threshold]
+        for i in edges_different_clusters:
+            result[edge_set_tensor[i, 2].item()].append(edge_set_tensor[i, 0].item())
+            result[edge_set_tensor[i, 3].item()].append(edge_set_tensor[i, 1].item())
+
+        for i in range(self._num_clusters):
+            threshold = max(int(alpha * 100), int(len(result[i]) * alpha))
+            threshold = min(len(result[i]), threshold)
+            result[i] = result[i][:threshold]
         self._wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 
