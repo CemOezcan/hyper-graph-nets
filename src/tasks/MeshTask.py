@@ -61,25 +61,23 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
 
-    def run_iteration(self):
-        assert isinstance(
-            self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
-        train_files = [file for file in os.listdir(
-            IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
-        valid_files = [file for file in os.listdir(
-            IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
+    def run_iteration(self, current_epoch):
+        assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
+
+        train_files = [file for file in os.listdir(IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
         assert self._num_val_files <= len(valid_files)
         random.shuffle(valid_files)
         valid_files = valid_files[:self._num_val_files]
 
-        for e in trange(self._epochs, desc='Epochs'):
+        for e in trange(current_epoch, self._epochs, desc='Epochs'):
             for train_file in tqdm(train_files, desc='Train files', leave=False):
                 with open(os.path.join(IN_DIR, train_file), 'rb') as f:
                     train_data = torch.load(f)
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
 
-            self._algorithm.save(f'{self._task_name}_mp:{self._mp}_epoch:{e}')
+            self._algorithm.save(f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}')
             # TODO: Always visualize the second trajectory
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)

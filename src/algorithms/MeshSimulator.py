@@ -44,6 +44,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._optimizer = None
         self._scheduler = None
         self._wandb_run = None
+        self._wandb_url = None
         self._initialized = False
 
         self.loss_function = F.mse_loss
@@ -52,8 +53,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
-        self._wandb_run = wandb.init(project='rmp', config=task_information,
-                                     mode=self._wandb_mode)
+        self._wandb_run = wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
         wandb.define_metric('epoch')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
@@ -61,6 +61,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('position_mean', step_metric='epoch')
         wandb.define_metric('rollout_loss', step_metric='epoch')
         wandb.define_metric('video', step_metric='epoch')
+
+        if self._wandb_url is not None:
+            # TODO: Inconsistent with stored model
+            api = wandb.Api()
+            run = api.run(self._wandb_url)
+            curr_epoch = max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
+            b = False
+            for x in run.scan_history():
+                if b:
+                    break
+                try:
+                    b = x['epoch'] >= curr_epoch
+                except KeyError:
+                    b = False
+                wandb.log(x)
+
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
@@ -126,6 +142,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
+        self._wandb_url = self._wandb_run.path
         random.shuffle(train_dataloader)
         for trajectory in tqdm(train_dataloader, desc='Trajectories in train file', leave=False):
             random.shuffle(trajectory)

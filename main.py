@@ -27,26 +27,31 @@ def main(preprocess: bool, train: bool, compute_rollout: bool):
     np.random.seed(seed=random_seed)
     torch.manual_seed(seed=random_seed)
 
-    if train:
-        algorithm = MeshSimulator(params)
-        task = MeshTask(algorithm, params)
-        if preprocess:
-            task.preprocess()
-        task.run_iteration()
-
     cluster = get_from_nested_dict(params, ['model', 'rmp', 'clustering'])
     num_clusters = get_from_nested_dict(params, ['model', 'rmp', 'num_clusters'])
     balancer = get_from_nested_dict(params, ['model', 'graph_balancer', 'algorithm'])
     mp = get_from_nested_dict(params, ['model', 'message_passing_steps'])
     model_name = f'model_{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{mp}_epoch:'
 
-    epochs = max([file.split('_epoch:')[1][:-4] for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)])
-    model_path = os.path.join(OUT_DIR, f'{model_name}{epochs}.pkl')
-    with open(model_path, 'rb') as file:
-        algorithm = pickle.load(file)
+    epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
+    epochs = list() if train else epochs
+    if epochs:
+        last_epoch = max(epochs)
+        model_path = os.path.join(OUT_DIR, f'{model_name}{last_epoch}.pkl')
+        with open(model_path, 'rb') as file:
+            algorithm = pickle.load(file)
+            task = MeshTask(algorithm, params)
+            task.run_iteration(last_epoch)
+            task.get_scalars()
+    else:
+        algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
-        task.get_scalars()
+        if preprocess:
+            task.preprocess()
+            exit()
+        task.run_iteration(0)
 
+    task.get_scalars()
     task.plot()
 
 
