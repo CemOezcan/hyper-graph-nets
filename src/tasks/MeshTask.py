@@ -78,7 +78,6 @@ class MeshTask(AbstractTask):
                 del train_data
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
-            self._algorithm.save(task_name)
             # TODO: Always visualize the second trajectory
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
@@ -91,7 +90,10 @@ class MeshTask(AbstractTask):
             dir = self.save_plot(a, w, task_name)
 
             animation = {"video": wandb.Video(dir, fps=4, format="gif")}
-            self._algorithm.log_epoch([one_step, rollout, animation], e + 1)
+            data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
+            data['epoch'] = e + 1
+            self._algorithm.save(task_name)
+            self._algorithm.log_epoch(data)
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
