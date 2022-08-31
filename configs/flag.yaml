@@ -58,10 +58,10 @@ params:
     rmp:
       num_clusters: 20
       frequency: 1
-      clustering: gmm
-      connector: hierarchical
+      clustering: none
+      connector: none
       intra_cluster_sampling:
-        enabled: True
+        enabled: False
         alpha: 0.1
       hdbscan:
         max_cluster_size: 50
