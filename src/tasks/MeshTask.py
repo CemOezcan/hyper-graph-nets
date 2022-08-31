@@ -143,7 +143,7 @@ class MeshTask(AbstractTask):
 
         fig = plt.figure(figsize=(19.2, 10.8))
         ax = fig.add_subplot(111, projection='3d')
-        skip = 10
+        skip = 3
         num_steps = rollout_data[0]['pred_pos'].shape[0]
         num_frames = num_steps
 
@@ -179,8 +179,8 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames * 0.1), interval=200)
-        writergif = ani.PillowWriter(fps=30)
+        animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames / 3))
+        writergif = ani.PillowWriter(fps=10)
 
         return animation, writergif
 
