@@ -106,6 +106,7 @@ class AbstractClusteringAlgorithm(ABC):
         for k, i in enumerate(indices):
             l = list(set(i))
             random.shuffle(l)
+            result[k] = l
             threshold = max(int(alpha * 100), int(len(result[k]) * alpha))
             threshold = min(len(result[k]), threshold)
             result[k] = result[k][:threshold]
