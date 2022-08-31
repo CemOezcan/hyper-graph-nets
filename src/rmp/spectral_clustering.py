@@ -12,11 +12,12 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     Spectral Clustering
     """
 
-    def __init__(self, num_clusters, sampling, alpha):
+    def __init__(self, num_clusters, sampling, alpha, threshold):
         super().__init__()
         self._sampling = sampling
         self._num_clusters = num_clusters
         self._alpha = alpha
+        self._threshold = threshold
 
     def _initialize(self):
         pass

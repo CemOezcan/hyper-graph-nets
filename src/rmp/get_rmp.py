@@ -29,6 +29,7 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     num_clusters = get_from_nested_dict(config, list_of_keys=["rmp", "num_clusters"], raise_error=True)
     sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "enabled"], raise_error=True)
     alpha = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "alpha"], raise_error=True)
+    spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "spotter_threshold"], raise_error=True)
     hdbscan_spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "threshold"], raise_error=True)
     hdbscan_max_cluster_size = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "max_cluster_size"], raise_error=True)
     hdbscan_min_samples = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "min_samples"], raise_error=True)
@@ -37,11 +38,11 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     if name == "hdbscan":
         return HDBSCAN(sampling, hdbscan_max_cluster_size, hdbscan_min_cluster_size, hdbscan_min_samples, hdbscan_spotter_threshold)
     elif name == "random":
-        return RandomClustering(num_clusters, sampling, alpha)
+        return RandomClustering(num_clusters, sampling, alpha, spotter_threshold)
     elif name == "spectral":
-        return SpectralClustering(num_clusters, sampling, alpha)
+        return SpectralClustering(num_clusters, sampling, alpha, spotter_threshold)
     elif name == "gmm":
-        return GaussianMixtureClustering(num_clusters, sampling, alpha)
+        return GaussianMixtureClustering(num_clusters, sampling, alpha, spotter_threshold)
     elif name == "none":
         return None
     else:

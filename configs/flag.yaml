@@ -63,6 +63,7 @@ params:
       intra_cluster_sampling:
         enabled: False
         alpha: 0.1
+        spotter_threshold: 0
       hdbscan:
         max_cluster_size: 50
         min_cluster_size: 20
