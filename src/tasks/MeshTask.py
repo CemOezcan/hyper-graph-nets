@@ -179,7 +179,7 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
+        animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames * 0.1), interval=200)
         writergif = ani.PillowWriter(fps=30)
 
         return animation, writergif
