@@ -71,6 +71,25 @@ class MeshTask(AbstractTask):
         valid_files = valid_files[:self._num_val_files]
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
+
+            task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
+
+            del self._test_loader
+            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+            next(self._test_loader)
+
+            one_step = self._algorithm.one_step_evaluator(valid_files, self._num_val_trajectories, task_name)
+            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
+
+            a, w = self.plot()
+            dir = self.save_plot(a, w, task_name)
+
+            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
+            self._algorithm.log_epoch([one_step, rollout, animation], e + 1)
+
+            if e >= self._config.get('model').get('scheduler_epoch'):
+                self._algorithm.lr_scheduler_step()
+
             for train_file in tqdm(train_files, desc='Train files', leave=False):
                 with open(os.path.join(IN_DIR, train_file), 'rb') as f:
                     train_data = torch.load(f)
@@ -160,15 +179,14 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = ani.FuncAnimation(
-            fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
-        writervideo = ani.FFMpegWriter(fps=30)
+        animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
+        writergif = animation.PillowWriter(fps=30)
 
-        return animation, writervideo
+        return animation, writergif
 
     @staticmethod
     def save_plot(animation, writervideo, task_name):
-        dir = os.path.join(OUT_DIR, f'{task_name}_animation.mp4')
+        dir = os.path.join(OUT_DIR, f'{task_name}_animation.gif')
         animation.save(dir, writer=writervideo)
         plt.show(block=True)
         return dir
