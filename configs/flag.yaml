@@ -42,7 +42,7 @@ params:
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
       n_steps: 60
     validation:
-      files: 5
+      files: 2
       trajectories: 5 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
