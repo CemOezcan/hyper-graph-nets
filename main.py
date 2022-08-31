@@ -65,4 +65,8 @@ def main(config_name=CONFIG_NAME):
 
 if __name__ == '__main__':
     set_start_method('spawn')
-    main(CONFIG_NAME)
+    try:
+        args = sys.argv[1]
+        main(args)
+    except IndexError:
+        main(CONFIG_NAME)
