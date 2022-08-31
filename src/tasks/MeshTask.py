@@ -163,7 +163,6 @@ class MeshTask(AbstractTask):
         animation = ani.FuncAnimation(
             fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
         writervideo = ani.FFMpegWriter(fps=30)
-        plt.show(block=True)
 
         return animation, writervideo
 
@@ -171,4 +170,5 @@ class MeshTask(AbstractTask):
     def save_plot(animation, writervideo, task_name):
         dir = os.path.join(OUT_DIR, f'{task_name}_animation.mp4')
         animation.save(dir, writer=writervideo)
+        plt.show(block=True)
         return dir

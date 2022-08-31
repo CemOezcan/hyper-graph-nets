@@ -23,6 +23,10 @@ import_path: "default.yaml"
 optuna:
     loss_key: "test_accuracy"
 
+compute:
+  preprocessing: False
+  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
+
 params:
   task:
     dataset: flag_simple

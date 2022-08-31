@@ -285,7 +285,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
 
-        path = os.path.join(OUT_DIR, f'{task_name}one_step.csv')
+        path = os.path.join(OUT_DIR, f'{task_name}_one_step.csv')
         data_frame = pd.DataFrame.from_dict(
             {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
              'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]

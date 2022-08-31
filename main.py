@@ -19,8 +19,12 @@ from util.Functions import get_from_nested_dict
 warnings.filterwarnings('ignore', category=UserWarning)
 
 
-def main(preprocess: bool, train: bool, compute_rollout: bool):
-    params = read_yaml(CONFIG_NAME)['params']
+def main(config_name: str):
+    config_file = read_yaml(config_name)
+    preprocess = config_file['compute']['preprocessing']
+    retrain = config_file['compute']['retrain']
+
+    params = config_file['params']
     print(f'Device used for this run: {device}')
     random_seed = params.get('random_seed')
     random.seed(random_seed)
@@ -34,7 +38,14 @@ def main(preprocess: bool, train: bool, compute_rollout: bool):
     model_name = f'model_{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{mp}_epoch:'
 
     epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
-    epochs = list() if train else epochs
+    epochs = list() if retrain else epochs
+
+    if preprocess:
+        algorithm = MeshSimulator(params)
+        task = MeshTask(algorithm, params)
+        task.preprocess()
+        exit()
+
     if epochs:
         last_epoch = max(epochs)
         model_path = os.path.join(OUT_DIR, f'{model_name}{last_epoch}.pkl')
@@ -46,9 +57,6 @@ def main(preprocess: bool, train: bool, compute_rollout: bool):
     else:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
-        if preprocess:
-            task.preprocess()
-            exit()
         task.run_iteration(0)
 
     task.get_scalars()
@@ -56,16 +64,5 @@ def main(preprocess: bool, train: bool, compute_rollout: bool):
 
 
 if __name__ == '__main__':
-    """from optuna_work.experiment_wrappers import wrap_iterative_experiment
-
-    cw = cluster_work.ClusterWork(wrap_iterative_experiment(IterativeExperiment, display_skip_warning=False))
-    cw.run()"""
-    args = [True, True, True]
     set_start_method('spawn')
-    try:
-        args[0] = sys.argv[1] == 'True'
-        args[1] = sys.argv[2] == 'True'
-        args[2] = sys.argv[3] == 'True'
-    except IndexError:
-        pass
-    main(*args)
+    main(CONFIG_NAME)
