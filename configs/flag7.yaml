@@ -42,7 +42,7 @@ params:
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
       n_steps: 60
     validation:
-      files: 2
+      files: 5
       trajectories: 5 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
@@ -53,8 +53,8 @@ params:
     gamma: 0.9
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 1.0e-4
-    message_passing_steps: 5
+    learning_rate: 5.0e-5
+    message_passing_steps: 7
     rmp:
       num_clusters: 20
       frequency: 1

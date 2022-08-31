@@ -374,9 +374,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         artifact.add_file(path)
         wandb.log_artifact(artifact)
 
-    def log_epoch(self, list_of_dicts, epoch):
-        data = {k: v for dictionary in list_of_dicts for k, v in dictionary.items()}
-        data['epoch'] = epoch
+    def log_epoch(self, data):
         wandb.log(data)
 
     @property
