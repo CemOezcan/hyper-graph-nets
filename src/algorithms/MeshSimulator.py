@@ -44,6 +44,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._optimizer = None
         self._scheduler = None
         self._wandb_run = None
+        self._wandb_url = None
         self._initialized = False
 
         self.loss_function = F.mse_loss
@@ -52,8 +53,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
-        self._wandb_run = wandb.init(project='rmp', config=task_information,
-                                     mode=self._wandb_mode)
+        self._wandb_run = wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
         wandb.define_metric('epoch')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
@@ -61,6 +61,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('position_mean', step_metric='epoch')
         wandb.define_metric('rollout_loss', step_metric='epoch')
         wandb.define_metric('video', step_metric='epoch')
+
+        if self._wandb_url is not None:
+            # TODO: Inconsistent with stored model
+            api = wandb.Api()
+            run = api.run(self._wandb_url)
+            curr_epoch = max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
+            b = False
+            for x in run.scan_history():
+                if b:
+                    break
+                try:
+                    b = x['epoch'] >= curr_epoch
+                except KeyError:
+                    b = False
+                wandb.log(x)
+
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
@@ -126,6 +142,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
+        self._wandb_url = self._wandb_run.path
         random.shuffle(train_dataloader)
         for trajectory in tqdm(train_dataloader, desc='Trajectories in train file', leave=False):
             random.shuffle(trajectory)
@@ -244,7 +261,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return batches
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances, logging=True):
+    def one_step_evaluator(self, ds_loader, instances, task_name, logging=True):
         trajectory_loss = list()
         for valid_file in ds_loader:
             with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
@@ -268,6 +285,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
 
+        path = os.path.join(OUT_DIR, f'{task_name}_one_step.csv')
+        data_frame = pd.DataFrame.from_dict(
+            {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
+             'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
+             }
+        )
+        data_frame.to_csv(path)
+
         if logging:
             # TODO: Log csv
             val_loss, pos_loss = zip(*mean)
@@ -282,16 +307,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             }
             return log_dict
         else:
-            path = os.path.join(OUT_DIR, 'one_step.csv')
-            data_frame = pd.DataFrame.from_dict(
-                {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
-                 'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
-                 }
-            )
-            data_frame.to_csv(path)
             self.publish_csv(data_frame, 'one_step', path)
 
-    def evaluator(self, ds_loader, rollouts, logging=True):
+    def evaluator(self, ds_loader, rollouts, task_name, logging=True):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
@@ -315,16 +333,17 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self.save_rollouts(trajectories)
 
+        path = os.path.join(OUT_DIR, f'{task_name}_rollout_losses.csv')
+        data_frame = pd.DataFrame.from_dict(rollout_losses)
+        data_frame.to_csv(path)
+
         if logging:
             # TODO: Log csv
             return {'rollout_loss': rollout_losses['mse_loss'][-1]}
         else:
-            path = os.path.join(OUT_DIR, 'rollout_losses.csv')
-            data_frame = pd.DataFrame.from_dict(rollout_losses)
-            data_frame.to_csv(path)
             self.publish_csv(data_frame, 'rollout_losses', path)
 
-    def n_step_evaluator(self, ds_loader, n_step_list=[60], n_traj=2):
+    def n_step_evaluator(self, ds_loader, task_name, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
         # TODO: Decide on how to summarize
         losses = list()
@@ -341,7 +360,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             std = torch.std(torch.stack(n_step_losses)).item()
             losses.append((means, std))
 
-        path = os.path.join(OUT_DIR, 'n_step_losses.csv')
+        path = os.path.join(OUT_DIR, f'{task_name}_n_step_losses.csv')
         n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(path)

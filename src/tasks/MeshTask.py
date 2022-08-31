@@ -61,35 +61,36 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
 
-    def run_iteration(self):
-        assert isinstance(
-            self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
-        train_files = [file for file in os.listdir(
-            IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
-        valid_files = [file for file in os.listdir(
-            IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
+    def run_iteration(self, current_epoch):
+        assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
+
+        train_files = [file for file in os.listdir(IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
         assert self._num_val_files <= len(valid_files)
         random.shuffle(valid_files)
         valid_files = valid_files[:self._num_val_files]
 
-        for e in trange(self._epochs, desc='Epochs'):
+        for e in trange(current_epoch, self._epochs, desc='Epochs'):
             for train_file in tqdm(train_files, desc='Train files', leave=False):
                 with open(os.path.join(IN_DIR, train_file), 'rb') as f:
                     train_data = torch.load(f)
                 self._algorithm.fit_iteration(train_dataloader=train_data)
                 del train_data
 
-            self._algorithm.save(f'{self._task_name}_mp:{self._mp}_epoch:{e}')
+            task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
+            self._algorithm.save(task_name)
             # TODO: Always visualize the second trajectory
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
-            one_step = self._algorithm.one_step_evaluator(valid_files, self._num_val_trajectories)
-            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts)
+            one_step = self._algorithm.one_step_evaluator(valid_files, self._num_val_trajectories, task_name)
+            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
-            self.plot()
-            animation = {"video": wandb.Video(OUT_DIR + '/animation.mp4', fps=4, format="gif")}
+            a, w = self.plot()
+            dir = self.save_plot(a, w, task_name)
+
+            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
             self._algorithm.log_epoch([one_step, rollout, animation], e + 1)
 
             if e >= self._config.get('model').get('scheduler_epoch'):
@@ -102,18 +103,18 @@ class MeshTask(AbstractTask):
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
-
+        task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
         valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        self._algorithm.one_step_evaluator(valid_files, self._num_test_trajectories, logging=False)
+        self._algorithm.one_step_evaluator(valid_files, self._num_test_trajectories, task_name, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, logging=False)
+        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         # TODO: Different rollouts value for n_step_loss
-        self._algorithm.n_step_evaluator(self._test_loader, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
+        self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
     def plot(self) -> go.Figure:
         rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
@@ -162,6 +163,12 @@ class MeshTask(AbstractTask):
         animation = ani.FuncAnimation(
             fig, animate, frames=math.floor(num_frames * 0.1), interval=100)
         writervideo = ani.FFMpegWriter(fps=30)
-        animation.save(os.path.join(OUT_DIR, 'animation.mp4'),
-                       writer=writervideo)
+
+        return animation, writervideo
+
+    @staticmethod
+    def save_plot(animation, writervideo, task_name):
+        dir = os.path.join(OUT_DIR, f'{task_name}_animation.mp4')
+        animation.save(dir, writer=writervideo)
         plt.show(block=True)
+        return dir
