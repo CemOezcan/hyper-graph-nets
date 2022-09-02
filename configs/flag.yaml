@@ -57,7 +57,7 @@ params:
     message_passing_steps: 5
     rmp:
       num_clusters: 20
-      frequency: 1
+      frequency: 399
       clustering: gmm
       connector: hierarchical
       intra_cluster_sampling:
