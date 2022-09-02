@@ -17,12 +17,12 @@ OUT_DIR = os.path.join(TASK_DIR, 'output')
 IN_DIR = os.path.join(TASK_DIR, 'input')
 CONFIG_NAME = 'flag'
 
-def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True, shuffle=False):
+def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):
     dataset_name = get_from_nested_dict(config, list_of_keys=["task", "dataset"], raise_error=True)
     if dataset_name == 'flag_minimal' or dataset_name == 'flag_simple':
         dataset = FlagDatasetIterative(path=IN_DIR, split=split, add_targets=add_targets,
                                        split_and_preprocess=split_and_preprocess, config=config, in_dir=IN_DIR)
         ################################################################################## TODO
-        return GraphDataLoader(dataset, shuffle=shuffle)
+        return GraphDataLoader(dataset)
     else:
         raise NotImplementedError("Implement your data loading here!")
