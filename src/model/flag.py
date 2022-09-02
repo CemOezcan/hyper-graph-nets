@@ -211,7 +211,7 @@ class FlagModel(nn.Module):
 
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
-            coordinates = graph.target_feature.tolist()
+            coordinates = graph.target_feature.cpu().detach().numpy()
         if self._balancer:
             if step % math.ceil(399 / self._balance_frequency) == 0:
                 self.reset_balancer()

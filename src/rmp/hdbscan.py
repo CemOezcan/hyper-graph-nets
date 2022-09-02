@@ -60,6 +60,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size, min_samples=self._min_samples,
                                      min_cluster_size=self._min_cluster_size, prediction_data=True).fit(X)
         labels = clustering.labels_
+        unique = len(set(labels))
         self._wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
         return clustering

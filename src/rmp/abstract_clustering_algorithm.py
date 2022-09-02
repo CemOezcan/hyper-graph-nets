@@ -6,7 +6,7 @@ import torch
 import wandb
 from src.util import MultiGraphWithPos
 from torch import Tensor
-
+import numpy as np
 
 class AbstractClusteringAlgorithm(ABC):
     """
@@ -67,8 +67,11 @@ class AbstractClusteringAlgorithm(ABC):
         return self._combine_samples(spotter, exemplars, top_k)
 
     def visualize_cluster(self, coordinates):
-        colors = [self._labels[x] for x in range(len(self._labels))]
-        self._wandb.log({f'cluster': [wandb.Object3D(coordinates, colors=colors)]})
+        indices = [list() for _ in range(self._num_clusters)]
+        [indices[l].append(p) for p, l in zip(coordinates, self._labels)]
+        data = [np.array(i) for i in indices]
+        objects = [wandb.Object3D(x) for x in data]
+        self._wandb.log({f'cluster': objects})
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
         """
