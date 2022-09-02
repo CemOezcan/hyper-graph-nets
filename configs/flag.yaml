@@ -58,8 +58,8 @@ params:
     rmp:
       num_clusters: 20
       frequency: 1
-      clustering: none
-      connector: none
+      clustering: gmm
+      connector: hierarchical
       intra_cluster_sampling:
         enabled: False
         alpha: 0.1
