@@ -67,11 +67,7 @@ class AbstractClusteringAlgorithm(ABC):
         return self._combine_samples(spotter, exemplars, top_k)
 
     def visualize_cluster(self, coordinates):
-        indices = [list() for _ in range(self._num_clusters)]
-        [indices[l].append(p) for p, l in zip(coordinates, self._labels)]
-        data = [np.array(i) for i in indices]
-        objects = [wandb.Object3D(x) for x in data]
-        self._wandb.log({f'cluster': objects})
+        pass
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
         """
