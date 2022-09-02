@@ -38,12 +38,12 @@ params:
     prefetch_factor: 5
     test:
       trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
-      rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      rollouts: 10 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
       n_steps: 60
     validation:
-      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during training
-      rollouts: 10 # Number of trajectories that are going to be used to compute the rollout loss during training
+      trajectories: 50 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
     field: world_pos
     history: True
@@ -56,7 +56,7 @@ params:
     message_passing_steps: 5
     rmp:
       num_clusters: 15
-      frequency: 399
+      frequency: 1
       clustering: gmm
       connector: hierarchical
       intra_cluster_sampling:
