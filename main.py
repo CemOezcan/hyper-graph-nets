@@ -42,7 +42,7 @@ def main(config_name=CONFIG_NAME):
 
     algorithm = MeshSimulator(params)
     task = MeshTask(algorithm, params)
-    task.run_iteration_2(0)
+    task.run_iteration(0)
     exit()
 
     if preprocess:
@@ -57,12 +57,12 @@ def main(config_name=CONFIG_NAME):
         with open(model_path, 'rb') as file:
             algorithm = pickle.load(file)
             task = MeshTask(algorithm, params)
-            task.run_iteration(last_epoch)
+            task.run_iteration_pp(last_epoch)
             task.get_scalars()
     else:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
-        task.run_iteration(0)
+        task.run_iteration_pp(0)
 
     task.get_scalars()
     task.plot()

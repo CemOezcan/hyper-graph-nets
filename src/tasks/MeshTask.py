@@ -61,11 +61,11 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
 
-    def run_iteration_2(self, current_epoch):
+    def run_iteration(self, current_epoch):
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
-            self._algorithm.fit_iteration_2(train_dataloader=self.train_loader)
+            self._algorithm.fit_iteration(train_dataloader=self.train_loader)
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
             # TODO: Always visualize the second trajectory
@@ -163,7 +163,7 @@ class MeshTask(AbstractTask):
         self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
         self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
 
-    def run_iteration(self, current_epoch):
+    def run_iteration_pp(self, current_epoch):
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         train_files = [file for file in os.listdir(IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
@@ -176,7 +176,7 @@ class MeshTask(AbstractTask):
             for train_file in tqdm(train_files, desc='Train files', leave=False):
                 with open(os.path.join(IN_DIR, train_file), 'rb') as f:
                     train_data = torch.load(f)
-                self._algorithm.fit_iteration(train_dataloader=train_data)
+                self._algorithm.fit_iteration_pp(train_dataloader=train_data)
                 del train_data
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'

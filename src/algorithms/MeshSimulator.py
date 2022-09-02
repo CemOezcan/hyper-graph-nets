@@ -86,12 +86,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
-    def fit_iteration_2(self, train_dataloader: DataLoader):
+    def fit_iteration(self, train_dataloader: DataLoader):
         self._network.train()
         self._wandb_url = self._wandb_run.path
 
         for i, trajectory in enumerate(train_dataloader):
-            batches = self.fetch_data_2(trajectory, True)
+            batches = self.fetch_data(trajectory, True)
             batches = self.get_batched(batches, self._batch_size)
             random.shuffle(batches)
 
@@ -99,7 +99,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
                 start_instance = time.time()
 
-                loss = self._network.old_training_step(graph, data_frame)
+                loss = self._network.training_step(graph, data_frame)
                 loss.backward()
 
                 self._optimizer.step()
@@ -174,7 +174,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return batched_data
 
-    def fetch_data_2(self, trajectory, is_training):
+    def fetch_data(self, trajectory, is_training):
         graphs = []
         graph_amt = len(trajectory)
         balanced_edge_set = None
@@ -328,7 +328,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def lr_scheduler_step(self):
         self._scheduler.step()
 
-    def fetch_data(self, trajectory, is_training):
+    def fetch_data_pp(self, trajectory, is_training):
         graphs = []
         graph_amt = len(trajectory)
         balanced_edge_set = None
@@ -392,7 +392,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             except StopIteration:
                 break
             with mp.Pool() as pool:
-                result = pool.map(functools.partial(self.fetch_data, is_training=is_training), train)
+                result = pool.map(functools.partial(self.fetch_data_pp, is_training=is_training), train)
             with open(os.path.join(IN_DIR, f'{split}_{task_name}_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
                 torch.save(result, f)
                 del result
@@ -411,7 +411,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         print(f'Preprocessing {split} graphs done.')
 
-    def fit_iteration(self, train_dataloader: DataLoader) -> None:
+    def fit_iteration_pp(self, train_dataloader: DataLoader) -> None:
         self._network.train()
         self._wandb_url = self._wandb_run.path
         random.shuffle(train_dataloader)
@@ -422,7 +422,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
                 start_instance = time.time()
 
-                loss = self._network.training_step(graph, data_frame)
+                loss = self._network.training_step_pp(graph, data_frame)
                 loss.backward()
 
                 self._optimizer.step()

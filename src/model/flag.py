@@ -112,8 +112,7 @@ class FlagModel(nn.Module):
     def forward(self, graph):
         return self.learned_model(graph)
 
-    def old_training_step(self, graph, data_frame):
-        # TODO:
+    def training_step(self, graph, data_frame):
         network_output = self(graph)
         target_normalized = self.get_target(data_frame)
 
@@ -267,7 +266,7 @@ class FlagModel(nn.Module):
             return self._remote_graph.connect_cluster(graph, clusters, is_training)
         return graph
 
-    def training_step(self, graph, data_frame):
+    def training_step_pp(self, graph, data_frame):
         network_output = self(graph)
         target = data_frame['target']
         target_normalized = self._output_normalizer(target, True)
