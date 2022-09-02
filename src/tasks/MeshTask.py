@@ -61,43 +61,6 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         self._wandb = wandb.init(reinit=False)
 
-    def run_iteration(self, current_epoch):
-        assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
-
-        train_files = [file for file in os.listdir(IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
-        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        assert self._num_val_files <= len(valid_files)
-        random.shuffle(valid_files)
-        valid_files = valid_files[:self._num_val_files]
-
-        for e in trange(current_epoch, self._epochs, desc='Epochs'):
-            for train_file in tqdm(train_files, desc='Train files', leave=False):
-                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
-                    train_data = torch.load(f)
-                self._algorithm.fit_iteration(train_dataloader=train_data)
-                del train_data
-
-            task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
-            # TODO: Always visualize the second trajectory
-            del self._test_loader
-            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-            next(self._test_loader)
-
-            one_step = self._algorithm.one_step_evaluator(valid_files, self._num_val_trajectories, task_name)
-            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
-
-            a, w = self.plot()
-            dir = self.save_plot(a, w, task_name)
-
-            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
-            data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
-            data['epoch'] = e + 1
-            self._algorithm.save(task_name)
-            self._algorithm.log_epoch(data)
-
-            if e >= self._config.get('model').get('scheduler_epoch'):
-                self._algorithm.lr_scheduler_step()
-
     def run_iteration_2(self, current_epoch):
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
@@ -123,10 +86,6 @@ class MeshTask(AbstractTask):
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
-
-    def preprocess(self):
-        self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
-        self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
 
     # TODO add trajectories from evaluate method
     def get_scalars(self) -> ScalarDict:
@@ -199,3 +158,44 @@ class MeshTask(AbstractTask):
         animation.save(dir, writer=writervideo)
         plt.show(block=True)
         return dir
+
+    def preprocess(self):
+        self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
+        self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
+
+    def run_iteration(self, current_epoch):
+        assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
+
+        train_files = [file for file in os.listdir(IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
+        assert self._num_val_files <= len(valid_files)
+        random.shuffle(valid_files)
+        valid_files = valid_files[:self._num_val_files]
+
+        for e in trange(current_epoch, self._epochs, desc='Epochs'):
+            for train_file in tqdm(train_files, desc='Train files', leave=False):
+                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
+                    train_data = torch.load(f)
+                self._algorithm.fit_iteration(train_dataloader=train_data)
+                del train_data
+
+            task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
+            # TODO: Always visualize the second trajectory
+            del self._test_loader
+            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+            next(self._test_loader)
+
+            one_step = self._algorithm.one_step_evaluator(valid_files, self._num_val_trajectories, task_name)
+            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
+
+            a, w = self.plot()
+            dir = self.save_plot(a, w, task_name)
+
+            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
+            data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
+            data['epoch'] = e + 1
+            self._algorithm.save(task_name)
+            self._algorithm.log_epoch(data)
+
+            if e >= self._config.get('model').get('scheduler_epoch'):
+                self._algorithm.lr_scheduler_step()
