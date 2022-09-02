@@ -87,7 +87,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
         self._wandb_url = self._wandb_run.path
 
-        for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False)):
+        for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
             if i >= self._trajectories:
                 break
             batches = self.fetch_data(trajectory, True)

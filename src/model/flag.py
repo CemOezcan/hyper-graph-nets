@@ -37,6 +37,9 @@ class FlagModel(nn.Module):
             'graph_balancer').get('algorithm') != 'none'
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
+        self._balance_frequency = params.get('graph_balancer').get('frequency')
+        self._rmp_frequency = params.get('rmp').get('frequency')
+        self._visualized = False
 
         self._edge_sets = ['mesh_edges']
         if self._balancer:
@@ -184,6 +187,7 @@ class FlagModel(nn.Module):
         for i in range(num_steps):
             prev_pos, cur_pos, pred_trajectory = self._step_fn(
                 initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
+        self._visualized = False
 
         predictions = torch.stack(pred_trajectory)
 
@@ -206,15 +210,21 @@ class FlagModel(nn.Module):
         input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
 
         graph = self.build_graph(input, is_training=False)
+        if not self._visualized:
+            coordinates = graph.target_feature.cpu().detach().numpy()
         if self._balancer:
             if step % math.ceil(399 / self._balance_frequency) == 0:
                 self.reset_balancer()
-            graph = self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training=False)
+            graph = self.balance_graph(graph, self._mesh_edge_normalizer, is_training=False)
 
         if self._rmp:
             if step % math.ceil(399 / self._rmp_frequency) == 0:
-                self.reset_rmp()
+                self.reset_remote_graph()
             graph = self.cluster_graph(graph, is_training=False)
+            if not self._visualized:
+                self._remote_graph.visualize_cluster(coordinates)
+                self._visualized = True
+
 
         prediction = self.update(input, self(graph))
 
