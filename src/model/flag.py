@@ -114,8 +114,7 @@ class FlagModel(nn.Module):
 
     def training_step(self, graph, data_frame):
         network_output = self(graph)
-        target = data_frame['target']
-        target_normalized = self._output_normalizer(target, True)
+        target_normalized = self.get_target(data_frame)
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor(
@@ -164,16 +163,6 @@ class FlagModel(nn.Module):
         target_acceleration = target_position - 2 * cur_position + prev_position
 
         return self._output_normalizer(target_acceleration, is_training).to(device)
-
-    def get_target_unnormalized(self, data_frame):
-        cur_position = data_frame['world_pos']
-        prev_position = data_frame['prev|world_pos']
-        target_position = data_frame['target|world_pos']
-
-        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
-        target_acceleration = target_position - 2 * cur_position + prev_position
-
-        return target_acceleration
 
     @torch.no_grad()
     def rollout(self, trajectory, num_steps):
@@ -247,28 +236,6 @@ class FlagModel(nn.Module):
         if self._rmp:
             self._remote_graph.reset_clusters()
 
-    def save_model(self, path):
-        torch.save(self.learned_model, path + "_learned_model.pth")
-        torch.save(self._output_normalizer, path + "_output_normalizer.pth")
-        torch.save(self._mesh_edge_normalizer,
-                   path + "_mesh_edge_normalizer.pth")
-        torch.save(self._world_edge_normalizer,
-                   path + "_world_edge_normalizer.pth")
-        torch.save(self._node_normalizer, path + "_node_normalizer.pth")
-        torch.save(self._node_dynamic_normalizer,
-                   path + "_node_dynamic_normalizer.pth")
-
-    def load_model(self, path):
-        self.learned_model = torch.load(path + "_learned_model.pth")
-        self._output_normalizer = torch.load(path + "_output_normalizer.pth")
-        self._mesh_edge_normalizer = torch.load(
-            path + "_mesh_edge_normalizer.pth")
-        self._world_edge_normalizer = torch.load(
-            path + "_world_edge_normalizer.pth")
-        self._node_normalizer = torch.load(path + "_node_normalizer.pth")
-        self._node_dynamic_normalizer = torch.load(
-            path + "_node_dynamic_normalizer.pth")
-
     def evaluate(self):
         self.eval()
         self.learned_model.eval()
@@ -298,3 +265,25 @@ class FlagModel(nn.Module):
             graph = graph._replace(node_features=graph.node_features[0])
             return self._remote_graph.connect_cluster(graph, clusters, is_training)
         return graph
+
+    def training_step_pp(self, graph, data_frame):
+        network_output = self(graph)
+        target = data_frame['target']
+        target_normalized = self._output_normalizer(target, True)
+
+        node_type = data_frame['node_type']
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor(
+            [NodeType.NORMAL.value], device=device).int())
+        loss = self.loss_fn(
+            target_normalized[loss_mask], network_output[loss_mask])
+
+        return loss
+    def get_target_unnormalized(self, data_frame):
+        cur_position = data_frame['world_pos']
+        prev_position = data_frame['prev|world_pos']
+        target_position = data_frame['target|world_pos']
+
+        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
+        target_acceleration = target_position - 2 * cur_position + prev_position
+
+        return target_acceleration
