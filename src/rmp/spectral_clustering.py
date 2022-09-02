@@ -30,7 +30,7 @@ class SpectralClustering(AbstractClusteringAlgorithm):
     @staticmethod
     def _compute_affinity_matrix(graph: MultiGraphWithPos):
         # TODO: Inverse normalization of edge features?
-        num_nodes = graph.node_features[0].shape[0]
+        num_nodes = len(graph.node_features)
         affinity_matrix = np.zeros((num_nodes, num_nodes), float)
 
         mesh_edges = graph.unnormalized_edges
