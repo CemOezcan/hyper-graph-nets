@@ -247,14 +247,14 @@ class FlagModel(nn.Module):
         self.eval()
         self.learned_model.eval()
 
-    def run_balancer(self, graph, is_training):
+    def balance_graph(self, graph, is_training):
         if self._balancer:
-            return self._graph_balancer.get_balanced_graph(
-                graph, self._mesh_edge_normalizer, is_training)
-        return graph, None
+            return self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training)
+        return graph
 
-    def add_balanced_edges(self, graph, added_edges, is_training):
-        return self._graph_balancer.add_graph_balance_edges(graph, added_edges, self._mesh_edge_normalizer, is_training)
+    def reset_balancer(self):
+        if self._balancer:
+            self._graph_balancer.reset_balancer()
 
     def rmp(self, graph, is_training):
         # TODO: Normalize hyper nodes
@@ -285,6 +285,7 @@ class FlagModel(nn.Module):
             target_normalized[loss_mask], network_output[loss_mask])
 
         return loss
+
     def get_target_unnormalized(self, data_frame):
         cur_position = data_frame['world_pos']
         prev_position = data_frame['prev|world_pos']
