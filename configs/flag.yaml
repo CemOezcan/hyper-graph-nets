@@ -33,7 +33,7 @@ params:
     rollout_split: valid
     batch_size: 21
     epochs: 15
-    trajectories: 1000
+    trajectories: 10
     mode: all
     prefetch_factor: 5
     test:
