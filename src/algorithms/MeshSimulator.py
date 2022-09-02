@@ -148,13 +148,13 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
                     senders = torch.tensor(
                         [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
-                         for x in e.senders.tolist()]
+                         for x in e.senders]
                     )
                     edge_dict[e.name]['snd'].append(senders)
 
                     receivers = torch.tensor(
                         [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
-                         for x in e.receivers.tolist()]
+                         for x in e.receivers]
                     )
                     edge_dict[e.name]['rcv'].append(receivers)
 
