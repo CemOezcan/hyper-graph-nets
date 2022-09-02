@@ -56,6 +56,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         """
         labels = list(self._cluster(graph))
+        self._labels = labels
 
         if not self._sampling:
             return self._labels_to_indices(labels)
@@ -65,6 +66,9 @@ class AbstractClusteringAlgorithm(ABC):
         top_k = self.highest_dynamics(graph, labels, self._alpha)
         return self._combine_samples(spotter, exemplars, top_k)
 
+    def visualize_cluster(self, coordinates):
+        colors = [self._labels[x] for x in range(len(self._labels))]
+        self._wandb.log({f'cluster': [wandb.Object3D(coordinates, colors=colors)]})
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
         """

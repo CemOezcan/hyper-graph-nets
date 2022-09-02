@@ -50,6 +50,12 @@ class RemoteMessagePassing:
         """
         self._clusters = None
 
+    def visualize_cluster(self, graph):
+        """
+        Visualize the clusters of the input graph.
+        """
+        self._clustering_algorithm.visualize_cluster(graph)
+
     @staticmethod
     def _graph_to_device(graph, dev):
         return MultiGraphWithPos(node_features=graph.node_features.to(dev),
