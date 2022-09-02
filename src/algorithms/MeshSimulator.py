@@ -226,10 +226,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             val_loss, pos_loss = zip(*mean)
             log_dict = {
                 'validation_loss': wandb.Histogram(
-                    [x for x in val_loss if np.quantile(val_loss, 0.95) > x > np.quantile(val_loss, 0.01)],
+                    [x for x in val_loss if np.quantile(val_loss, 0.90) > x],
                     num_bins=256),
                 'position_loss': wandb.Histogram(
-                    [x for x in pos_loss if np.quantile(pos_loss, 0.95) > x > np.quantile(pos_loss, 0.01)],
+                    [x for x in pos_loss if np.quantile(pos_loss, 0.90) > x],
                     num_bins=256),
                 'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss)
             }
@@ -246,7 +246,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for i, trajectory in enumerate(ds_loader):
             if i >= rollouts:
                 break
-            self._network.reset_remote_graph()
             prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=num_steps)
             trajectories.append(prediction_trajectory)
             mse_losses.append(mse_loss.cpu())
