@@ -208,13 +208,13 @@ class FlagModel(nn.Module):
         graph = self.build_graph(input, is_training=False)
         if self._balancer:
             if step % math.ceil(399 / self._balance_frequency) == 0:
-                self._graph_balancer.reset_balancer()
+                self.reset_balancer()
             graph = self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training=False)
 
         if self._rmp:
             if step % math.ceil(399 / self._rmp_frequency) == 0:
-                self._remote_graph.reset_clusters()
-            graph = self._remote_graph.create_graph(graph, is_training=False)
+                self.reset_rmp()
+            graph = self.cluster_graph(graph, is_training=False)
 
         prediction = self.update(input, self(graph))
 
@@ -239,9 +239,6 @@ class FlagModel(nn.Module):
     def get_output_normalizer(self):
         return self._output_normalizer
 
-    def reset_remote_graph(self):
-        if self._rmp:
-            self._remote_graph.reset_clusters()
 
     def evaluate(self):
         self.eval()
@@ -256,22 +253,15 @@ class FlagModel(nn.Module):
         if self._balancer:
             self._graph_balancer.reset_balancer()
 
-    def rmp(self, graph, is_training):
+    def cluster_graph(self, graph, is_training):
         # TODO: Normalize hyper nodes
         if self._rmp:
             return self._remote_graph.create_graph(graph, is_training)
         return graph
 
-    def get_rmp_clusters(self, graph):
+    def reset_remote_graph(self):
         if self._rmp:
-            return self._remote_graph.get_clusters(graph)
-        return None
-
-    def connect_rmp_cluster(self, graph, clusters, is_training):
-        if self._rmp:
-            graph = graph._replace(node_features=graph.node_features[0])
-            return self._remote_graph.connect_cluster(graph, clusters, is_training)
-        return graph
+            self._remote_graph.reset_clusters()
 
     def training_step_pp(self, graph, data_frame):
         network_output = self(graph)
