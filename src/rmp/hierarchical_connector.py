@@ -3,7 +3,6 @@ from typing import List, Tuple
 import numpy as np
 import scipy.spatial as ss
 import torch
-from profilehooks import profile
 from torch import Tensor
 
 from src import util
@@ -23,7 +22,6 @@ class HierarchicalConnector(AbstractConnector):
         super().initialize(intra, inter)
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']
 
-    @profile(immediate=True)
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
         clustering_features = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to(device_0)

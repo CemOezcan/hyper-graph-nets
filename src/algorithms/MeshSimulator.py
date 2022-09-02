@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import wandb
 from matplotlib import pyplot as plt
+from profilehooks import profile
 from tqdm import tqdm, trange
 
 from src.data.data_loader import OUT_DIR, IN_DIR
@@ -113,6 +114,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
 
+    @profile(immediate=True)
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
         assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
@@ -176,6 +178,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return batched_data
 
+    @profile(immediate=True)
     def fetch_data(self, trajectory, is_training):
         graphs = []
         graph_amt = len(trajectory)
