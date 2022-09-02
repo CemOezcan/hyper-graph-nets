@@ -49,7 +49,7 @@ def main(config_name=CONFIG_NAME):
     else:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
-        task.run_iteration_pp(0)
+        task.run_iteration(0)
 
     task.get_scalars()
     task.plot()
