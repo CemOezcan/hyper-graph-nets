@@ -73,13 +73,14 @@ class MeshTask(AbstractTask):
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
+            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot()
             dir = self.save_plot(a, w, task_name)
 
             animation = {"video": wandb.Video(dir, fps=4, format="gif")}
-            data = {k: v for dictionary in [rollout, animation] for k, v in dictionary.items()}
+            data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
             self._algorithm.log_epoch(data)
@@ -92,7 +93,7 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
         valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        self._algorithm.one_step_evaluator(valid_files, self._num_test_trajectories, task_name, logging=False)
+        self._algorithm.one_step_evaluator_pp(valid_files, self._num_test_trajectories, task_name, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
@@ -185,7 +186,7 @@ class MeshTask(AbstractTask):
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)
 
-            one_step = self._algorithm.one_step_evaluator(valid_files, self._num_val_trajectories, task_name)
+            one_step = self._algorithm.one_step_evaluator_pp(valid_files, self._num_val_trajectories, task_name)
             rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot()
