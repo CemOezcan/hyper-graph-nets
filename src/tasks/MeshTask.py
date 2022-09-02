@@ -70,7 +70,7 @@ class MeshTask(AbstractTask):
             self._algorithm.fit_iteration(train_dataloader=self.train_loader)
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
-            # TODO: Always visualize the second trajectory
+            # TODO: Find a solution to this (Maybe not returning a GraphDataLoader)
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
             next(self._test_loader)

@@ -204,7 +204,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 break
 
             instance_loss = list()
-            for graph, data_frame in trajectory:
+            data = self.fetch_data(trajectory, False)
+            for graph, data_frame in data:
                 loss, pos_error = self._network.validation_step(graph, data_frame)
                 instance_loss.append([loss, pos_error])
 
