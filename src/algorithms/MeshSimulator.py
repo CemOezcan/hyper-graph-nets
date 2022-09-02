@@ -91,6 +91,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._wandb_url = self._wandb_run.path
 
         for i, trajectory in enumerate(train_dataloader):
+            if i >= self._trajectories:
+                break
             batches = self.fetch_data(trajectory, True)
             batches = self.get_batched(batches, self._batch_size)
             random.shuffle(batches)
