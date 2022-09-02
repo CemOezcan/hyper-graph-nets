@@ -63,8 +63,9 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
-            del self.train_loader
-            self.train_loader = get_data(config=self._config)
+            # TODO
+            # del self.train_loader
+            # self.train_loader = get_data(config=self._config)
             self._algorithm.fit_iteration(train_dataloader=self.train_loader)
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
