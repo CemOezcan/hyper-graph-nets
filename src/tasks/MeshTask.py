@@ -92,8 +92,10 @@ class MeshTask(AbstractTask):
     def get_scalars(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
-        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        self._algorithm.one_step_evaluator_pp(valid_files, self._num_test_trajectories, task_name, logging=False)
+
+        del self._valid_loader
+        self._valid_loader = get_data(config=self._config, split='valid')
+        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
@@ -200,3 +202,18 @@ class MeshTask(AbstractTask):
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
+
+    def get_scalars_pp(self) -> ScalarDict:
+        assert isinstance(self._algorithm, MeshSimulator)
+        task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
+        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
+        self._algorithm.one_step_evaluator_pp(valid_files, self._num_test_trajectories, task_name, logging=False)
+
+        del self._test_loader
+        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
+
+        del self._test_loader
+        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+        # TODO: Different rollouts value for n_step_loss
+        self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)

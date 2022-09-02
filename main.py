@@ -21,7 +21,6 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 def main(config_name=CONFIG_NAME):
     config_file = read_yaml(config_name)
-    preprocess = config_file['compute']['preprocessing']
     retrain = config_file['compute']['retrain']
 
     params = config_file['params']
@@ -40,25 +39,13 @@ def main(config_name=CONFIG_NAME):
     epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
     epochs = list() if retrain else epochs
 
-    algorithm = MeshSimulator(params)
-    task = MeshTask(algorithm, params)
-    task.run_iteration(0)
-    exit()
-
-    if preprocess:
-        algorithm = MeshSimulator(params)
-        task = MeshTask(algorithm, params)
-        task.preprocess()
-        epochs = list()
-
     if epochs:
         last_epoch = max(epochs)
         model_path = os.path.join(OUT_DIR, f'{model_name}{last_epoch}.pkl')
         with open(model_path, 'rb') as file:
             algorithm = pickle.load(file)
             task = MeshTask(algorithm, params)
-            task.run_iteration_pp(last_epoch)
-            task.get_scalars()
+            task.run_iteration(last_epoch)
     else:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
