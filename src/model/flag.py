@@ -125,6 +125,19 @@ class FlagModel(nn.Module):
 
         return loss
 
+    def old_training_step(self, graph, data_frame):
+        # TODO:
+        network_output = self(graph)
+        target_normalized = self.get_target(data_frame)
+
+        node_type = data_frame['node_type']
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor(
+            [NodeType.NORMAL.value], device=device).int())
+        loss = self.loss_fn(
+            target_normalized[loss_mask], network_output[loss_mask])
+
+        return loss
+
     @torch.no_grad()
     def validation_step(self, graph, data_frame):
         prediction = self(graph)

@@ -98,6 +98,32 @@ class MeshTask(AbstractTask):
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
 
+    def run_iteration_2(self, current_epoch):
+        assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
+
+        for e in trange(current_epoch, self._epochs, desc='Epochs'):
+            self._algorithm.fit_iteration_2(train_dataloader=self.train_loader)
+
+            task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
+            # TODO: Always visualize the second trajectory
+            del self._test_loader
+            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+            next(self._test_loader)
+
+            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
+
+            a, w = self.plot()
+            dir = self.save_plot(a, w, task_name)
+
+            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
+            data = {k: v for dictionary in [rollout, animation] for k, v in dictionary.items()}
+            data['epoch'] = e + 1
+            self._algorithm.save(task_name)
+            self._algorithm.log_epoch(data)
+
+            if e >= self._config.get('model').get('scheduler_epoch'):
+                self._algorithm.lr_scheduler_step()
+
     def preprocess(self):
         self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
         self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)

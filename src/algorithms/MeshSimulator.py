@@ -165,6 +165,31 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             wandb.log({'training time per trajectory': end_trajectory -
                        start_trajectory}, commit=False)
 
+    def fit_iteration_2(self, train_dataloader: DataLoader):
+        self._network.train()
+        self._wandb_url = self._wandb_run.path
+
+        for i, trajectory in enumerate(train_dataloader):
+            batches = self.fetch_data_2(trajectory, True)
+            batches = self.get_batched(batches, self._batch_size)
+            random.shuffle(batches)
+
+            start_trajectory = time.time()
+            for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
+                start_instance = time.time()
+
+                loss = self._network.old_training_step(graph, data_frame)
+                loss.backward()
+
+                self._optimizer.step()
+                self._optimizer.zero_grad()
+
+                end_instance = time.time()
+                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+
+            end_trajectory = time.time()
+            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
         assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
@@ -259,6 +284,26 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         data = list(zip(graphs, trajectory))
         batches = self.get_batched(data, 1)
         return batches
+
+    def fetch_data_2(self, trajectory, is_training):
+        graphs = []
+        graph_amt = len(trajectory)
+        balanced_edge_set = None
+        rmp_clusters = None
+        for i, data_frame in enumerate(trajectory):
+            graph = self._network.build_graph(data_frame, is_training)
+            if i % math.ceil(graph_amt / self._balance_frequency) == 0:
+                graph, balanced_edge_set = self._network.run_balancer(graph, is_training)
+            elif balanced_edge_set is not None:
+                graph = self._network.add_balanced_edges(graph, balanced_edge_set, is_training)
+
+            if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
+                rmp_clusters = self._network.get_rmp_clusters(graph)
+            graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
+
+            graphs.append(graph)
+
+        return list(zip(graphs, trajectory))
 
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances, task_name, logging=True):

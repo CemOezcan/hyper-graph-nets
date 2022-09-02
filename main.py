@@ -40,6 +40,11 @@ def main(config_name=CONFIG_NAME):
     epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
     epochs = list() if retrain else epochs
 
+    algorithm = MeshSimulator(params)
+    task = MeshTask(algorithm, params)
+    task.run_iteration_2(0)
+    exit()
+
     if preprocess:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)
