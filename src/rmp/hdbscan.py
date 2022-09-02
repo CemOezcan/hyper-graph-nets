@@ -1,6 +1,8 @@
+import random
 from typing import List
 
 import numpy as np
+import torch
 from sklearn.preprocessing import StandardScaler
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
@@ -39,13 +41,14 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         """
         clustering = self._cluster(graph)
         labels = clustering.labels_
+        self._num_clusters = len(self._labels_to_indices(labels))
 
         if not self._sampling:
             return self._labels_to_indices(labels)
         
         spotter = self.spotter(clustering, self._spotter_threshold)
         exemplars = self.exemplars(clustering)
-        top_k = self.highest_dynamics(graph, labels[1:], self._top_k)
+        top_k = self.highest_dynamics(graph, labels, self._alpha)
         return self._combine_samples(spotter, exemplars, top_k)
 
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:

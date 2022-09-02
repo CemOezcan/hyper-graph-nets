@@ -30,7 +30,7 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "enabled"], raise_error=True)
     alpha = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "alpha"], raise_error=True)
     spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "spotter_threshold"], raise_error=True)
-    hdbscan_spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "threshold"], raise_error=True)
+    hdbscan_spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "spotter_threshold"], raise_error=True)
     hdbscan_max_cluster_size = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "max_cluster_size"], raise_error=True)
     hdbscan_min_samples = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "min_samples"], raise_error=True)
     hdbscan_min_cluster_size = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "min_cluster_size"], raise_error=True)
