@@ -16,7 +16,7 @@ import torch
 
 from util.Functions import get_from_nested_dict
 
-warnings.filterwarnings('ignore', category=UserWarning)
+warnings.filterwarnings('ignore')
 
 
 def main(config_name=CONFIG_NAME):

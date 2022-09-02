@@ -1,6 +1,4 @@
-import functools
 import math
-import torch.multiprocessing as mp
 import os
 import pickle
 import random
@@ -13,8 +11,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import wandb
-from matplotlib import pyplot as plt
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
@@ -90,7 +87,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
         self._wandb_url = self._wandb_run.path
 
-        for i, trajectory in enumerate(train_dataloader):
+        for i, trajectory in enumerate(tqdm(train_dataloader), desc='Trajectories', leave=False):
             if i >= self._trajectories:
                 break
             batches = self.fetch_data(trajectory, True)
@@ -320,38 +317,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def lr_scheduler_step(self):
         self._scheduler.step()
 
-    def fetch_data_pp(self, trajectory, is_training):
-        graphs = []
-        graph_amt = len(trajectory)
-        balanced_edge_set = None
-        rmp_clusters = None
-        for i, data_frame in enumerate(trajectory):
-            graph = self._network.build_graph(data_frame, is_training)
-            if i % math.ceil(graph_amt / self._balance_frequency) == 0:
-                graph, balanced_edge_set = self._network.run_balancer(graph, is_training)
-            elif balanced_edge_set is not None:
-                graph = self._network.add_balanced_edges(graph, balanced_edge_set, is_training)
-
-            if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
-                rmp_clusters = self._network.get_rmp_clusters(graph)
-            graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
-
-            graphs.append(graph)
-
-        if is_training:
-            targets = [self._network.get_target_unnormalized(
-                x) for x in trajectory]
-            keys = [key for key in trajectory[0].keys() if key != 'node_type']
-
-            for i in range(len(trajectory)):
-                trajectory[i]['target'] = targets[i]
-                for key in keys:
-                    trajectory[i].pop(key, None)
-
-        data = list(zip(graphs, trajectory))
-        batches = self.get_batched(data, 1)
-        return batches
-
     def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:  # TODO check usability
         with torch.no_grad():
             inputs = torch.Tensor(inputs)
@@ -370,63 +335,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             samples = torch.Tensor(samples.astype(np.float32))
         evaluations = self._network(samples)
         return detach(evaluations)
-
-    def preprocess(self, train_dataloader: DataLoader, split: str, task_name: str):
-        assert self._trajectories % self._prefetch_factor == 0, f'{self._trajectories} must be divisible by prefetch factor {self._prefetch_factor}.'
-        is_training = split == 'train'
-        print(f'Start preprocessing {split} graphs...')
-        start_preprocessing = time.time()
-        for r in trange(0, self._trajectories, self._prefetch_factor, desc='Preprocessing progress'):
-            start_preprocessing_batch = time.time()
-            try:
-                train = [next(train_dataloader)
-                         for _ in range(self._prefetch_factor)]
-            except StopIteration:
-                break
-            with mp.Pool() as pool:
-                result = pool.map(functools.partial(self.fetch_data_pp, is_training=is_training), train)
-            with open(os.path.join(IN_DIR, f'{split}_{task_name}_{int(r / self._prefetch_factor)}.pth'), 'wb') as f:
-                torch.save(result, f)
-                del result
-            end_preprocessing_batch = time.time()
-            wandb.log(
-                {'preprocess time per batch': end_preprocessing_batch - start_preprocessing_batch,
-                 'preprocess completed percentage': int((r / self._trajectories) * 100)
-                 }
-            )
-
-        end_preprocessing = time.time()
-        wandb.log(
-            {'preprocess time per batch': end_preprocessing - start_preprocessing
-             }
-        )
-
-        print(f'Preprocessing {split} graphs done.')
-
-    def fit_iteration_pp(self, train_dataloader: DataLoader) -> None:
-        self._network.train()
-        self._wandb_url = self._wandb_run.path
-        random.shuffle(train_dataloader)
-        for trajectory in tqdm(train_dataloader, desc='Trajectories in train file', leave=False):
-            random.shuffle(trajectory)
-            batches = self.get_batched(trajectory, self._batch_size)
-            start_trajectory = time.time()
-            for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
-                start_instance = time.time()
-
-                loss = self._network.training_step_pp(graph, data_frame)
-                loss.backward()
-
-                self._optimizer.step()
-                self._optimizer.zero_grad()
-
-                end_instance = time.time()
-                wandb.log(
-                    {'loss': loss, 'training time per instance': end_instance - start_instance})
-
-            end_trajectory = time.time()
-            wandb.log({'training time per trajectory': end_trajectory -
-                                                       start_trajectory}, commit=False)
 
     @torch.no_grad()
     def one_step_evaluator_pp(self, ds_loader, instances, task_name, logging=True):
