@@ -87,7 +87,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
         self._wandb_url = self._wandb_run.path
 
-        for i, trajectory in enumerate(tqdm(train_dataloader), desc='Trajectories', leave=False):
+        for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False)):
             if i >= self._trajectories:
                 break
             batches = self.fetch_data(trajectory, True)
@@ -184,7 +184,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             graph = self._network.balance_graph(graph, is_training)
 
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
-                self._network.reset_rmp()
+                self._network.reset_remote_graph()
             graph = self._network.cluster_graph(graph, is_training)
 
             graphs.append(graph)
