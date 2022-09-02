@@ -179,18 +179,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def fetch_data(self, trajectory, is_training):
         graphs = []
         graph_amt = len(trajectory)
-        balanced_edge_set = None
-        rmp_clusters = None
         for i, data_frame in enumerate(trajectory):
             graph = self._network.build_graph(data_frame, is_training)
+
             if i % math.ceil(graph_amt / self._balance_frequency) == 0:
-                graph, balanced_edge_set = self._network.run_balancer(graph, is_training)
-            elif balanced_edge_set is not None:
-                graph = self._network.add_balanced_edges(graph, balanced_edge_set, is_training)
+                self._network.reset_balancer()
+            graph = self._network.balance_graph(graph, is_training)
 
             if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
-                rmp_clusters = self._network.get_rmp_clusters(graph)
-            graph = self._network.connect_rmp_cluster(graph, rmp_clusters, is_training)
+                self._network.reset_rmp()
+            graph = self._network.cluster_graph(graph, is_training)
 
             graphs.append(graph)
 
