@@ -56,12 +56,12 @@ params:
     learning_rate: 1.0e-4
     message_passing_steps: 5
     rmp:
-      num_clusters: 20
+      num_clusters: 5
       frequency: 399
       clustering: gmm
       connector: hierarchical
       intra_cluster_sampling:
-        enabled: False
+        enabled: True
         alpha: 0.1
         spotter_threshold: 0
       hdbscan:
