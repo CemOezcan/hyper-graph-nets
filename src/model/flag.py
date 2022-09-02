@@ -1,4 +1,5 @@
 """Model for FlagSimple."""
+import math
 
 import src.rmp.get_rmp as rmp
 import torch
@@ -180,9 +181,9 @@ class FlagModel(nn.Module):
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
 
         pred_trajectory = list()
-        for _ in range(num_steps):
+        for i in range(num_steps):
             prev_pos, cur_pos, pred_trajectory = self._step_fn(
-                initial_state, prev_pos, cur_pos, pred_trajectory, mask)
+                initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
 
         predictions = torch.stack(pred_trajectory)
 
@@ -201,14 +202,20 @@ class FlagModel(nn.Module):
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask):
-        input = {**initial_state,
-                 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask, step):
+        input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+
         graph = self.build_graph(input, is_training=False)
         if self._balancer:
+            if step % math.ceil(399 / self._balance_frequency) == 0:
+                self._graph_balancer.reset_balancer()
             graph = self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training=False)
+
         if self._rmp:
+            if step % math.ceil(399 / self._rmp_frequency) == 0:
+                self._remote_graph.reset_clusters()
             graph = self._remote_graph.create_graph(graph, is_training=False)
+
         prediction = self.update(input, self(graph))
 
         next_pos = torch.where(mask, torch.squeeze(
