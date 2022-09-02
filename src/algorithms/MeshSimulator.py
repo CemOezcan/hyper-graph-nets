@@ -199,7 +199,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     @torch.no_grad()
     def one_step_evaluator(self, ds_loader, instances, task_name, logging=True):
         trajectory_loss = list()
-        for i, trajectory in ds_loader:
+        for i, trajectory in enumerate(ds_loader):
             if i >= instances:
                 break
 

@@ -32,8 +32,8 @@ params:
     dataset: flag_simple
     rollout_split: valid
     batch_size: 21
-    epochs: 20
-    trajectories: 1
+    epochs: 5
+    trajectories: 1000
     mode: all
     prefetch_factor: 5
     test:
@@ -43,7 +43,7 @@ params:
       n_steps: 60
     validation:
       files: 2
-      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during training
+      trajectories: 10 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
     field: world_pos
