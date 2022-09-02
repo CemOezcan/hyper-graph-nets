@@ -32,7 +32,7 @@ params:
     dataset: flag_simple
     rollout_split: valid
     batch_size: 21
-    epochs: 5
+    epochs: 15
     trajectories: 1000
     mode: all
     prefetch_factor: 5
