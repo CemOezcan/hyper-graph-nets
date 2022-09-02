@@ -97,7 +97,7 @@ class HierarchicalConnector(AbstractConnector):
 
         # Inter cluster communication
         senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type) \
-            if clustering_means.shape[0] >= 4 else self._fully_connected(clustering_features, hyper_nodes, model_type)
+            if clustering_means.shape[0] >= 4 else self._fully_connected(clustering_features, torch.tensor([hyper_nodes[0]]), model_type)
 
         world_edges = EdgeSet(
             name='inter_cluster',
