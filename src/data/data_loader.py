@@ -23,6 +23,6 @@ def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_t
         dataset = FlagDatasetIterative(path=IN_DIR, split=split, add_targets=add_targets,
                                        split_and_preprocess=split_and_preprocess, config=config, in_dir=IN_DIR)
         ################################################################################## TODO
-        return dataset# GraphDataLoader(dataset)
+        return GraphDataLoader(dataset)
     else:
         raise NotImplementedError("Implement your data loading here!")
