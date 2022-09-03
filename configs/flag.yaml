@@ -25,7 +25,7 @@ optuna:
 
 compute:
   preprocessing: False
-  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
+  retrain: True # Start training a new model if True. Continue training the most recent version of the model if False.
 
 params:
   task:
