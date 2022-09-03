@@ -57,7 +57,7 @@ params:
     rmp:
       num_clusters: 15
       frequency: 399
-      clustering: spectral
+      clustering: gmm
       connector: hierarchical
       intra_cluster_sampling:
         enabled: False
