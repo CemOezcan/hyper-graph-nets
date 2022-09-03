@@ -41,6 +41,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         """
         clustering = self._cluster(graph)
         labels = clustering.labels_
+        self._labels = labels
         self._num_clusters = len(self._labels_to_indices(labels))
 
         if not self._sampling:
