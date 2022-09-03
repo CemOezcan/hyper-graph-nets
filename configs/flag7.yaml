@@ -57,16 +57,16 @@ params:
     rmp:
       num_clusters: 15
       frequency: 399
-      clustering: spectral
+      clustering: hdbscan
       connector: hierarchical
       intra_cluster_sampling:
         enabled: False
         alpha: 0.1
         spotter_threshold: 0
       hdbscan:
-        max_cluster_size: 50
-        min_cluster_size: 20
-        min_samples: 1
+        max_cluster_size: 200
+        min_cluster_size: 15
+        min_samples: 2
         spotter_threshold: 0.9
     graph_balancer:
       algorithm: none
