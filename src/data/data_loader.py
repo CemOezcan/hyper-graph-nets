@@ -1,12 +1,12 @@
 import os
+from tfrecord.torch import TFRecordDataset
 
 from src.data.graphloader import GraphDataLoader
+from src.data.preprocessing import Preprocessing
 from src.util import read_yaml
 
 from util.Types import ConfigDict
 from util.Functions import get_from_nested_dict
-from torch.utils.data import DataLoader
-from src.data.FlagDatasetIterative import FlagDatasetIterative
 from os.path import dirname as up
 
 ROOT_DIR = up(up(up(os.path.join(os.path.abspath(__file__)))))
@@ -20,9 +20,10 @@ CONFIG_NAME = 'flag'
 def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):
     dataset_name = get_from_nested_dict(config, list_of_keys=["task", "dataset"], raise_error=True)
     if dataset_name == 'flag_minimal' or dataset_name == 'flag_simple':
-        dataset = FlagDatasetIterative(path=IN_DIR, split=split, add_targets=add_targets,
-                                       split_and_preprocess=split_and_preprocess, config=config, in_dir=IN_DIR)
-        ################################################################################## TODO
-        return GraphDataLoader(dataset)
+        pp = Preprocessing(config, split, split_and_preprocess, add_targets, in_dir=IN_DIR)
+        tfrecord_path = os.path.join(IN_DIR, split + ".tfrecord")
+        index_path = os.path.join(IN_DIR, split + ".idx")
+        tf_dataset = TFRecordDataset(tfrecord_path, index_path, None, transform=pp.preprocess)
+        return GraphDataLoader(tf_dataset)
     else:
         raise NotImplementedError("Implement your data loading here!")

@@ -31,7 +31,6 @@ class MeshTask(AbstractTask):
         """
         super().__init__(algorithm=algorithm, config=config)
         self._config = config
-        self._raw_data = get_data(config=config)
         self._epochs = config.get('task').get('epochs')
         self._trajectories = config.get('task').get('trajectories')
 
@@ -63,18 +62,10 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
-            del self.train_loader
-            self.train_loader = get_data(config=self._config)
-            self._algorithm.fit_iteration(train_dataloader=self.train_loader)
-
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
-            # TODO: Find a solution to this (Maybe not returning a GraphDataLoader)
-            del self._valid_loader
-            self._valid_loader = get_data(config=self._config, split='valid')
-            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
 
-            del self._test_loader
-            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
+            self._algorithm.fit_iteration(train_dataloader=self.train_loader)
+            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot()
@@ -94,16 +85,8 @@ class MeshTask(AbstractTask):
         assert isinstance(self._algorithm, MeshSimulator)
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
 
-        del self._valid_loader
-        self._valid_loader = get_data(config=self._config, split='valid')
+        self._algorithm.one_step_evaluator(self._valid_loader, self._num_test_trajectories, task_name, logging=False)
         self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
-
-        del self._test_loader
-        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
-
-        del self._test_loader
-        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
         # TODO: Different rollouts value for n_step_loss
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 

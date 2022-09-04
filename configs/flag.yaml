@@ -43,7 +43,7 @@ params:
       n_steps: 60
     validation:
       trajectories: 20 # Number of trajectories that are going to be used to compute the validation loss during training
-      rollouts: 3 # Number of trajectories that are going to be used to compute the rollout loss during training
+      rollouts: 5 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
     field: world_pos
     history: True
