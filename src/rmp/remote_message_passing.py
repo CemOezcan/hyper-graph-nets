@@ -40,14 +40,8 @@ class RemoteMessagePassing:
         # TODO: Replace lists with tensors
         graph = graph._replace(node_features=graph.node_features[0])
         self._clusters = self._clustering_algorithm.run(graph) if self._clusters is None else self._clusters
-        new_graph = self.connect_cluster(graph, self._clusters, is_training)
+        new_graph = self._node_connector.run(graph, self._clusters, is_training)
         return new_graph
-
-    def get_clusters(self, graph):
-        return self._clustering_algorithm.run(graph)
-
-    def connect_cluster(self, graph, clusters, is_training):
-        return self._node_connector.run(graph, clusters, is_training)
 
     def reset_clusters(self):
         """
@@ -55,6 +49,12 @@ class RemoteMessagePassing:
         on the next call of :func:`RemoteMessagePassing.create_graph`
         """
         self._clusters = None
+
+    def visualize_cluster(self, graph):
+        """
+        Visualize the clusters of the input graph.
+        """
+        self._clustering_algorithm.visualize_cluster(graph)
 
     @staticmethod
     def _graph_to_device(graph, dev):

@@ -70,3 +70,6 @@ class AbstractGraphBalancer(ABC):
         else:
             graph = self.add_graph_balance_edges(graph, self._added_edges, mesh_edge_normalizer, is_training)
         return graph
+
+    def reset_edges(self):
+        self._added_edges = None

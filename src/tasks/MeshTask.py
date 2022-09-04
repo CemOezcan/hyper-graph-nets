@@ -1,7 +1,6 @@
 import math
 import os
 import pickle
-import random
 import re
 
 import matplotlib.animation as ani
@@ -15,7 +14,7 @@ from src.algorithms.AbstractIterativeAlgorithm import \
 from src.algorithms.MeshSimulator import MeshSimulator
 from src.data.data_loader import IN_DIR, OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
-from tqdm import tqdm, trange
+from tqdm import trange
 from util.Types import ConfigDict, ScalarDict
 from util.Functions import get_from_nested_dict
 
@@ -36,7 +35,6 @@ class MeshTask(AbstractTask):
         self._epochs = config.get('task').get('epochs')
         self._trajectories = config.get('task').get('trajectories')
 
-        self._num_val_files = self._config.get('task').get('validation').get('files')
         self._num_val_trajectories = config.get('task').get('validation').get('trajectories')
         self._num_val_rollouts = self._config.get('task').get('validation').get('rollouts')
 
@@ -71,11 +69,12 @@ class MeshTask(AbstractTask):
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
             # TODO: Find a solution to this (Maybe not returning a GraphDataLoader)
+            del self._valid_loader
+            self._valid_loader = get_data(config=self._config, split='valid')
+            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
+
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-            next(self._test_loader)
-
-            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot()
@@ -167,43 +166,6 @@ class MeshTask(AbstractTask):
     def preprocess(self):
         self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
         self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
-
-    def run_iteration_pp(self, current_epoch):
-        assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
-
-        train_files = [file for file in os.listdir(IN_DIR) if re.match(rf'train_{self._task_name}_[0-9]+\.pth', file)]
-        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        assert self._num_val_files <= len(valid_files)
-        random.shuffle(valid_files)
-        valid_files = valid_files[:self._num_val_files]
-
-        for e in trange(current_epoch, self._epochs, desc='Epochs'):
-            for train_file in tqdm(train_files, desc='Train files', leave=False):
-                with open(os.path.join(IN_DIR, train_file), 'rb') as f:
-                    train_data = torch.load(f)
-                self._algorithm.fit_iteration_pp(train_dataloader=train_data)
-                del train_data
-
-            task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
-            # TODO: Always visualize the second trajectory
-            del self._test_loader
-            self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-            next(self._test_loader)
-
-            one_step = self._algorithm.one_step_evaluator_pp(valid_files, self._num_val_trajectories, task_name)
-            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
-
-            a, w = self.plot()
-            dir = self.save_plot(a, w, task_name)
-
-            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
-            data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
-            data['epoch'] = e + 1
-            self._algorithm.save(task_name)
-            self._algorithm.log_epoch(data)
-
-            if e >= self._config.get('model').get('scheduler_epoch'):
-                self._algorithm.lr_scheduler_step()
 
     def get_scalars_pp(self) -> ScalarDict:
         assert isinstance(self._algorithm, MeshSimulator)

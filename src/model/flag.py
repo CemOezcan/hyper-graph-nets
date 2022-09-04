@@ -1,4 +1,5 @@
 """Model for FlagSimple."""
+import math
 
 import src.rmp.get_rmp as rmp
 import torch
@@ -36,6 +37,9 @@ class FlagModel(nn.Module):
             'graph_balancer').get('algorithm') != 'none'
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
+        self._balance_frequency = params.get('graph_balancer').get('frequency')
+        self._rmp_frequency = params.get('rmp').get('frequency')
+        self._visualized = False
 
         self._edge_sets = ['mesh_edges']
         if self._balancer:
@@ -180,9 +184,10 @@ class FlagModel(nn.Module):
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
 
         pred_trajectory = list()
-        for _ in range(num_steps):
+        for i in range(num_steps):
             prev_pos, cur_pos, pred_trajectory = self._step_fn(
-                initial_state, prev_pos, cur_pos, pred_trajectory, mask)
+                initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
+        self._visualized = False
 
         predictions = torch.stack(pred_trajectory)
 
@@ -201,14 +206,26 @@ class FlagModel(nn.Module):
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask):
-        input = {**initial_state,
-                 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask, step):
+        input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
+
         graph = self.build_graph(input, is_training=False)
+        if not self._visualized:
+            coordinates = graph.target_feature.cpu().detach().numpy()
         if self._balancer:
-            graph = self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training=False)
+            if step % math.ceil(399 / self._balance_frequency) == 0:
+                self.reset_balancer()
+            graph = self.balance_graph(graph, self._mesh_edge_normalizer, is_training=False)
+
         if self._rmp:
-            graph = self._remote_graph.create_graph(graph, is_training=False)
+            if step % math.ceil(399 / self._rmp_frequency) == 0:
+                self.reset_remote_graph()
+            graph = self.cluster_graph(graph, is_training=False)
+            if not self._visualized:
+                self._remote_graph.visualize_cluster(coordinates)
+                self._visualized = True
+
+
         prediction = self.update(input, self(graph))
 
         next_pos = torch.where(mask, torch.squeeze(
@@ -232,39 +249,29 @@ class FlagModel(nn.Module):
     def get_output_normalizer(self):
         return self._output_normalizer
 
-    def reset_remote_graph(self):
-        if self._rmp:
-            self._remote_graph.reset_clusters()
 
     def evaluate(self):
         self.eval()
         self.learned_model.eval()
 
-    def run_balancer(self, graph, is_training):
+    def balance_graph(self, graph, is_training):
         if self._balancer:
-            return self._graph_balancer.get_balanced_graph(
-                graph, self._mesh_edge_normalizer, is_training)
-        return graph, None
+            return self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training)
+        return graph
 
-    def add_balanced_edges(self, graph, added_edges, is_training):
-        return self._graph_balancer.add_graph_balance_edges(graph, added_edges, self._mesh_edge_normalizer, is_training)
+    def reset_balancer(self):
+        if self._balancer:
+            self._graph_balancer.reset_balancer()
 
-    def rmp(self, graph, is_training):
+    def cluster_graph(self, graph, is_training):
         # TODO: Normalize hyper nodes
         if self._rmp:
             return self._remote_graph.create_graph(graph, is_training)
         return graph
 
-    def get_rmp_clusters(self, graph):
+    def reset_remote_graph(self):
         if self._rmp:
-            return self._remote_graph.get_clusters(graph)
-        return None
-
-    def connect_rmp_cluster(self, graph, clusters, is_training):
-        if self._rmp:
-            graph = graph._replace(node_features=graph.node_features[0])
-            return self._remote_graph.connect_cluster(graph, clusters, is_training)
-        return graph
+            self._remote_graph.reset_clusters()
 
     def training_step_pp(self, graph, data_frame):
         network_output = self(graph)
@@ -278,6 +285,7 @@ class FlagModel(nn.Module):
             target_normalized[loss_mask], network_output[loss_mask])
 
         return loss
+
     def get_target_unnormalized(self, data_frame):
         cur_position = data_frame['world_pos']
         prev_position = data_frame['prev|world_pos']
