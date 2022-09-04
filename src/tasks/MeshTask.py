@@ -69,11 +69,12 @@ class MeshTask(AbstractTask):
 
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
             # TODO: Find a solution to this (Maybe not returning a GraphDataLoader)
+            del self._valid_loader
+            self._valid_loader = get_data(config=self._config, split='valid')
+            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
+
             del self._test_loader
             self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-            next(self._test_loader)
-
-            one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot()

@@ -90,11 +90,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
             if i >= self._trajectories:
                 break
+
+            start_trajectory = time.time()
             batches = self.fetch_data(trajectory, True)
             batches = self.get_batched(batches, self._batch_size)
             random.shuffle(batches)
 
-            start_trajectory = time.time()
             for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
                 start_instance = time.time()
 
