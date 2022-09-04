@@ -1,14 +1,17 @@
-
+import numpy as np
 from torch.utils.data import DataLoader
 
 
 class GraphDataLoader(DataLoader):
 
-    def __init__(self, graphs, **kwargs):
-        super().__init__(graphs, **kwargs)
+    def __init__(self, graphs):
+        super().__init__(graphs)
+
 
     def __iter__(self):
-        return self.dataset
+        np.random.seed(0)
+        self._iterator = iter(self.dataset)
+        return self
 
     def __next__(self):
-        return next(self.dataset)
+        return next(self._iterator)

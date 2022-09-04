@@ -45,7 +45,7 @@ class Preprocessing():
 
         # decode bytes into corresponding dtypes
         for key, value in trajectory_data.items():
-            raw_data = value.numpy().tobytes()
+            raw_data = value.tobytes()
             mature_data = np.frombuffer(
                 raw_data, dtype=getattr(np, dtypes[key]))
             mature_data = torch.from_numpy(mature_data).to(device)
