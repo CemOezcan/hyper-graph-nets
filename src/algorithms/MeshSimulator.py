@@ -260,7 +260,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self.save_rollouts(trajectories)
 
-        path = os.path.join(OUT_DIR, f'rollout_losses.csv')
+        path = os.path.join(OUT_DIR, f'{task_name}_rollout_losses.csv')
         data_frame = pd.DataFrame.from_dict(rollout_losses)
         data_frame.to_csv(path)
 
