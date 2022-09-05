@@ -26,5 +26,5 @@ class GaussianMixtureClustering(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = GaussianMixture(n_components=self._num_clusters, random_state=0, init_params='kmeans++').fit(X)
+        clustering = GaussianMixture(n_components=self._num_clusters, random_state=0, init_params='k-means++').fit(X)
         return clustering.predict(X)
