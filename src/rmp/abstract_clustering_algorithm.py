@@ -57,7 +57,7 @@ class AbstractClusteringAlgorithm(ABC):
         -------
 
         """
-        labels = list(self._cluster(graph))
+        labels = self._empty_cluster_handling(list(self._cluster(graph)))
         self._labels = labels
 
         if not self._sampling:
@@ -78,6 +78,16 @@ class AbstractClusteringAlgorithm(ABC):
         palette = [[e * 255 for e in x] for x in sns.color_palette(cc.glasbey, len(set(self._labels)))]
         coordinates = [np.concatenate([c, palette[l]]) for c, l in zip(coordinates, self._labels)]
         self._wandb.log({'cluster': [wandb.Object3D(np.vstack(coordinates))]})
+
+    def _empty_cluster_handling(self, labels: List[int]):
+        '''If a cluster is empty, add a random element from another cluster'''
+        result = [list() for _ in range(self._num_clusters)]
+        for i in range(len(labels)):
+            result[labels[i]].append(i)
+        for i in range(self._num_clusters):
+            if len(result[i]) == 0:
+                labels[random.choice(result[random.randint(0, self._num_clusters - 1)])] = i
+        return labels
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
         """
