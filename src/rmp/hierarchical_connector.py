@@ -15,8 +15,9 @@ class HierarchicalConnector(AbstractConnector):
     """
     Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
     """
-    def __init__(self):
+    def __init__(self, fully_connect):
         super().__init__()
+        self._fully_connect = fully_connect
 
     def initialize(self, intra, inter):
         super().initialize(intra, inter)
@@ -96,8 +97,10 @@ class HierarchicalConnector(AbstractConnector):
         hyper_edges.append(world_edges_to_mesh)
 
         # Inter cluster communication
-        senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type) \
-            if clustering_means.shape[0] >= 4 else self._fully_connected(clustering_features, torch.tensor([hyper_nodes[0]]), model_type)
+        if self._fully_connect or clustering_means.shape[0] < 4:
+            senders, receivers, edge_features = self._fully_connected(clustering_features, torch.tensor([hyper_nodes[0]]), model_type)
+        else:
+            senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
 
         world_edges = EdgeSet(
             name='inter_cluster',

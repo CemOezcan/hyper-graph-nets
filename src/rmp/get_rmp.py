@@ -20,16 +20,18 @@ def get_rmp(config: ConfigDict) -> RemoteMessagePassing:
     connector_name = get_from_nested_dict(config, list_of_keys=["rmp", "connector"], raise_error=True).lower()
 
     clustering = get_clustering_algorithm(clustering_name, config)
-    connector = get_connector(connector_name)
+    connector = get_connector(connector_name, config)
 
     return RemoteMessagePassing(clustering, connector)
 
 
 def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
     num_clusters = get_from_nested_dict(config, list_of_keys=["rmp", "num_clusters"], raise_error=True)
+
     sampling = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "enabled"], raise_error=True)
     alpha = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "alpha"], raise_error=True)
     spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "intra_cluster_sampling", "spotter_threshold"], raise_error=True)
+
     hdbscan_spotter_threshold = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "spotter_threshold"], raise_error=True)
     hdbscan_max_cluster_size = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "max_cluster_size"], raise_error=True)
     hdbscan_min_samples = get_from_nested_dict(config, list_of_keys=["rmp", "hdbscan", "min_samples"], raise_error=True)
@@ -49,9 +51,11 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
         raise NotImplementedError("Implement your clustering algorithms here!")
 
 
-def get_connector(name: str) -> AbstractConnector:
+def get_connector(name: str, config) -> AbstractConnector:
+    fully_connect = get_from_nested_dict(config, list_of_keys=["rmp", "fully_connect"], raise_error=True)
+
     if name == "hierarchical":
-        return HierarchicalConnector()
+        return HierarchicalConnector(fully_connect)
     elif name == "multigraph":
         return MultigraphConnector()
     elif name == "none":
