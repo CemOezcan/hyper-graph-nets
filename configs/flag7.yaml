@@ -59,6 +59,7 @@ params:
       frequency: 57
       clustering: gmm
       connector: hierarchical
+      fully_connect: False
       intra_cluster_sampling:
         enabled: False
         alpha: 0.1
