@@ -7,6 +7,7 @@ import wandb
 from src.util import MultiGraphWithPos
 from torch import Tensor
 import seaborn as sns
+import colorcet as cc
 import numpy as np
 
 class AbstractClusteringAlgorithm(ABC):
@@ -68,7 +69,7 @@ class AbstractClusteringAlgorithm(ABC):
         return self._combine_samples(spotter, exemplars, top_k)
 
     def visualize_cluster(self, coordinates):
-        palette = [[e * 255 for e in x] for x in sns.color_palette('deep', len(set(self._labels)))]
+        palette = [[e * 255 for e in x] for x in sns.color_palette(cc.glasbey, len(set(self._labels)))]
         coordinates = [np.concatenate([c, palette[l]]) for c, l in zip(coordinates, self._labels)]
         self._wandb.log({'cluster': [wandb.Object3D(np.vstack(coordinates))]})
 
