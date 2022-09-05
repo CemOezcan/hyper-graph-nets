@@ -61,7 +61,13 @@ class AbstractClusteringAlgorithm(ABC):
         self._labels = labels
 
         if not self._sampling:
-            return self._labels_to_indices(labels)
+            indices = self._labels_to_indices(labels)
+            if self.__class__.__name__ == 'RandomClustering':
+                for i, cluster in enumerate(indices):
+                    perm = torch.randperm(cluster.size(0))
+                    idx = perm[:len(cluster) // 2]
+                    indices[i] = cluster[idx]
+            return indices
         
         spotter = self.spotter(graph, labels, self._alpha, self._threshold)
         exemplars = self.exemplars(labels, spotter, self._alpha)
