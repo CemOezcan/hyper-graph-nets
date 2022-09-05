@@ -22,17 +22,14 @@ class Ricci(AbstractGraphBalancer):
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool):
-        new_graph, added_edges, removed_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
+    def run(self, graph: MultiGraphWithPos):
+        added_edges, removed_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
             graph), loops=self._loops, remove_edges=self._remove_edges, tau=self._tau, is_undirected=True)
-        new_graph = self.add_graph_balance_edges(
-            graph, added_edges, mesh_edge_normalizer, is_training)
         self._wandb.log({'ricci added edges': len(added_edges['senders'])})
         if self._remove_edges:
-            new_graph = self.remove_graph_balance_edges(new_graph, removed_edges, mesh_edge_normalizer, is_training)
             self._wandb.log({'ricci removed edges': len(removed_edges['senders'])})
-            return new_graph, added_edges, removed_edges
-        return new_graph, added_edges, None
+            return added_edges, removed_edges
+        return added_edges, None
 
     @staticmethod
     def transform_multigraph_to_pyg(graph: MultiGraphWithPos) -> Data:
@@ -126,7 +123,7 @@ class Ricci(AbstractGraphBalancer):
                     if can_add is False:
                         break
 
-        return from_networkx(G), added_edges, removed_edges
+        return added_edges, removed_edges
 
     @staticmethod
     def balanced_forman_curvature(A, C=None):

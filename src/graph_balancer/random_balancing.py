@@ -12,7 +12,7 @@ class RandomGraphBalancer(AbstractGraphBalancer):
     def _initialize(self):
         pass
 
-    def run(self, graph: MultiGraphWithPos, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraphWithPos):
         added_edges = {'senders': [], 'receivers': []}
         removed_edges = {'senders': [], 'receivers': []}
         vertices_amt = graph.node_features[0].size(dim=0)
@@ -21,8 +21,6 @@ class RandomGraphBalancer(AbstractGraphBalancer):
         for e in random_edge_pairs:
             added_edges['senders'].append(e[0])
             added_edges['receivers'].append(e[1])
-        graph = self.add_graph_balance_edges(
-            graph, added_edges, mesh_edge_normalizer, is_training)
         self._wandb.log({'random added edges': len(added_edges['senders'])})
         if self._remove_edges:
             random_edge_removal = np.random.choice(
@@ -30,6 +28,6 @@ class RandomGraphBalancer(AbstractGraphBalancer):
             for e in random_edge_removal:
                 removed_edges['senders'].append(e[0])
                 removed_edges['receivers'].append(e[1])
-            graph = self.remove_graph_balance_edges(graph, self._mask, mesh_edge_normalizer, is_training)
-            return graph, added_edges, removed_edges
-        return graph, added_edges, None
+            self._wandb.log({'random removed edges': len(removed_edges['senders'])})
+            return added_edges, removed_edges
+        return added_edges, None

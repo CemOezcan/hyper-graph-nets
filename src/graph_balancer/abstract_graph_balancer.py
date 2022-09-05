@@ -64,7 +64,7 @@ class AbstractGraphBalancer(ABC):
 
     def remove_graph_balance_edges(self, graph: MultiGraphWithPos, mask: torch.Tensor, mesh_edge_normalizer, is_training: bool) -> MultiGraphWithPos:
         graph_edges = graph.edge_sets[0]
-        graph_edge_set = EdgeSet(name=graph_edges.name, features=mesh_edge_normalizer(graph_edges.features[self._mask], is_training), senders=graph_edges.senders[self._mask], receivers=graph_edges.receivers[self._mask])
+        graph_edge_set = EdgeSet(name=graph_edges.name, features=mesh_edge_normalizer(graph_edges.features[mask, :], is_training), senders=graph_edges.senders[mask], receivers=graph_edges.receivers[mask])
         #create a new graph with the filtered edges
         edge_sets = [graph_edge_set, graph.edge_sets[1]]
         graph = graph._replace(edge_sets=edge_sets)
@@ -72,11 +72,11 @@ class AbstractGraphBalancer(ABC):
         
     @staticmethod
     def _determine_mask(graph_edges: EdgeSet, removed_edges: Dict) -> torch.Tensor:
-        mask = torch.ones(len(graph_edges.senders), dtype=torch.bool, device=device)
+        mask = torch.ones(len(graph_edges.senders.tolist()), dtype=torch.bool, device=device)
         G = nx.Graph()
         G.add_edges_from(zip(removed_edges['senders'], removed_edges['receivers']))
-        for i, (sender, receiver) in enumerate(zip(graph_edges.senders, graph_edges.receivers)):
-            if G.has_edge(sender.item(), receiver.item()):
+        for i, (sender, receiver) in enumerate(zip(graph_edges.senders.tolist(), graph_edges.receivers.tolist())):
+            if G.has_edge(sender, receiver):
                 mask[i] = False
         return mask
     
@@ -85,14 +85,12 @@ class AbstractGraphBalancer(ABC):
         Create a graph with balance edges.
         """
         if self._added_edges is None:
-            graph, added_edges, removed_edges = self.run(graph, mesh_edge_normalizer, is_training)
-            self._added_edges = added_edges
+            self._added_edges, removed_edges = self.run(graph)
             if removed_edges is not None:
                 self._mask = self._determine_mask(graph.edge_sets[0], removed_edges)
-        else:
-            graph = self.add_graph_balance_edges(graph, self._added_edges, mesh_edge_normalizer, is_training)
-            if self._mask is not None:
-                graph = self.remove_graph_balance_edges(graph, self._mask, mesh_edge_normalizer, is_training)
+        graph = self.add_graph_balance_edges(graph, self._added_edges, mesh_edge_normalizer, is_training)
+        if self._mask is not None:
+            graph = self.remove_graph_balance_edges(graph, self._mask, mesh_edge_normalizer, is_training)
         return graph
 
     def reset_edges(self):
