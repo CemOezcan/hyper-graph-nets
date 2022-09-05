@@ -1,3 +1,5 @@
+from typing import Optional
+
 from util.Types import *
 
 def get_from_nested_dict(dictionary: Dict[Any, Any], list_of_keys: List[Any],
