@@ -63,7 +63,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             # TODO: Inconsistent with stored model
             api = wandb.Api()
             run = api.run(self._wandb_url)
+            this_run = api.run(self._wandb_run.path)
             curr_epoch = max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
+            for file in run.files():
+                this_run.upload_file(file.download(replace=True).name)
             b = False
             for x in run.scan_history():
                 if b:
