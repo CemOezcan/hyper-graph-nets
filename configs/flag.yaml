@@ -31,19 +31,19 @@ params:
   task:
     dataset: flag_simple
     rollout_split: valid
-    batch_size: 21
-    epochs: 15
-    trajectories: 1000
+    batch_size: 7
+    epochs: 1
+    trajectories: 1
     mode: all
     prefetch_factor: 5
     test:
-      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
-      rollouts: 10 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during evaluation
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
-      n_steps: 60
+      n_steps: 1
     validation:
-      trajectories: 20 # Number of trajectories that are going to be used to compute the validation loss during training
-      rollouts: 5 # Number of trajectories that are going to be used to compute the rollout loss during training
+      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
     field: world_pos
     history: True
@@ -53,11 +53,11 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 5
+    message_passing_steps: 1
     rmp:
-      num_clusters: 15
-      frequency: 399
-      clustering: gmm
+      num_clusters: 5
+      frequency: 1
+      clustering: spectral
       connector: hierarchical
       fully_connect: False
       intra_cluster_sampling:
@@ -70,8 +70,9 @@ params:
         min_samples: 1
         spotter_threshold: 0.9
     graph_balancer:
-      algorithm: none
+      algorithm: ricci
       frequency: 1
+      remove_edges: True
       ricci:
         loops: 150
         tau: 150

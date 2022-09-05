@@ -23,3 +23,4 @@ class GraphBalancer:
 
     def reset_balancer(self):
         self._balancer.reset_edges()
+        self._balancer.reset_mask()
