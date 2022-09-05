@@ -71,7 +71,7 @@ class MeshTask(AbstractTask):
             a, w = self.plot()
             dir = self.save_plot(a, w, task_name)
 
-            animation = {"video": wandb.Video(dir, fps=4, format="gif")}
+            animation = {"video": wandb.Video(dir, fps=5, format="gif")}
             data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
