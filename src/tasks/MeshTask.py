@@ -131,7 +131,7 @@ class MeshTask(AbstractTask):
             return fig,
 
         animation = ani.FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
-        writergif = ani.PillowWriter(fps=5)
+        writergif = ani.PillowWriter(fps=10)
 
         return animation, writergif
 
