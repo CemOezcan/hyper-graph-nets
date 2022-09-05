@@ -53,11 +53,6 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         return self._combine_samples(spotter, exemplars, top_k)
 
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
-        # TODO: Currently, all clusterings of the initial state of a trajectory return the same result, hence ...
-        # TODO: More features !!! (or don't run clustering algorithm more than once for efficiency)
-        # TODO: Add velocity as fourth dimension, but only for later instances in a trajectory
-        # TODO: Experimental parameter: Many clusters vs few clusters (min_pts=None vs. min_pts=10)
-        # TODO: Normalize
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)

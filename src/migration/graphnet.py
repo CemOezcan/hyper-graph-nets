@@ -94,7 +94,6 @@ class GraphNet(nn.Module):
 
     @staticmethod
     def _mask_operation(mask, new_node_features, graph):
-        # TODO: why is this function necessary?
         mask = mask.repeat(new_node_features.shape[-1])
         mask = mask.view(new_node_features.shape[0], new_node_features.shape[1])
         return torch.where(mask, new_node_features, graph.node_features)

@@ -87,7 +87,6 @@ class MeshTask(AbstractTask):
 
         self._algorithm.one_step_evaluator(self._valid_loader, self._num_test_trajectories, task_name, logging=False)
         self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
-        # TODO: Different rollouts value for n_step_loss
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
     def plot(self) -> go.Figure:
@@ -158,5 +157,4 @@ class MeshTask(AbstractTask):
 
         del self._test_loader
         self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        # TODO: Different rollouts value for n_step_loss
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
