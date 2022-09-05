@@ -29,9 +29,9 @@ compute:
 
 params:
   task:
-    dataset: flag_simple
+    dataset: flag_minimal
     rollout_split: valid
-    batch_size: 7
+    batch_size: 1
     epochs: 1
     trajectories: 1
     mode: all
@@ -57,8 +57,8 @@ params:
     rmp:
       num_clusters: 5
       frequency: 1
-      clustering: spectral
-      connector: hierarchical
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
