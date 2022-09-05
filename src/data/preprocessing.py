@@ -1,10 +1,9 @@
-import csv
 import json
 import os
 
 import numpy as np
 import torch
-from src.util import device, NodeType, EdgeSet, MultiGraphWithPos, MultiGraph
+from src.util import device, NodeType
 from util.Types import ConfigDict
 
 

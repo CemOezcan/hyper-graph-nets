@@ -340,55 +340,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         evaluations = self._network(samples)
         return detach(evaluations)
 
-    @torch.no_grad()
-    def one_step_evaluator_pp(self, ds_loader, instances, task_name, logging=True):
-        trajectory_loss = list()
-        for valid_file in ds_loader:
-            with open(os.path.join(IN_DIR, valid_file), 'rb') as f:
-                valid_data = torch.load(f)
-            random.shuffle(valid_data)
-            for i, trajectory in enumerate(valid_data):
-                random.shuffle(trajectory)
-                instance_loss = list()
-                if i >= instances:
-                    break
-
-                for graph, data_frame in trajectory:
-                    loss, pos_error = self._network.validation_step(
-                        graph, data_frame)
-                    instance_loss.append([loss, pos_error])
-
-                trajectory_loss.append(instance_loss)
-
-            del valid_data
-
-        mean = np.mean(trajectory_loss, axis=0)
-        std = np.std(trajectory_loss, axis=0)
-
-        path = os.path.join(OUT_DIR, f'{task_name}_one_step.csv')
-        data_frame = pd.DataFrame.from_dict(
-            {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
-             'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
-             }
-        )
-        data_frame.to_csv(path)
-
-        if logging:
-            # TODO: Log csv
-            val_loss, pos_loss = zip(*mean)
-            log_dict = {
-                'validation_loss': wandb.Histogram(
-                    [x for x in val_loss if np.quantile(val_loss, 0.95) > x > np.quantile(val_loss, 0.01)],
-                    num_bins=256),
-                'position_loss': wandb.Histogram(
-                    [x for x in pos_loss if np.quantile(pos_loss, 0.95) > x > np.quantile(pos_loss, 0.01)],
-                    num_bins=256),
-                'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss)
-            }
-            return log_dict
-        else:
-            self.publish_csv(data_frame, 'one_step', path)
-
 
 
 

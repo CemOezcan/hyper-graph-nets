@@ -7,7 +7,7 @@ from numba import cuda
 from src.graph_balancer.abstract_graph_balancer import AbstractGraphBalancer
 from src.util import MultiGraphWithPos
 from torch_geometric.data import Data
-from torch_geometric.utils import (from_networkx, remove_self_loops,
+from torch_geometric.utils import (remove_self_loops,
                                    to_dense_adj, to_networkx, to_undirected)
 
 

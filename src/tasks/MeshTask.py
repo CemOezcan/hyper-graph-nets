@@ -1,7 +1,7 @@
+
 import math
 import os
 import pickle
-import re
 
 import matplotlib.animation as ani
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ import wandb
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
-from src.data.data_loader import IN_DIR, OUT_DIR, get_data
+from src.data.data_loader import OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
 from tqdm import trange
 from util.Types import ConfigDict, ScalarDict
@@ -145,18 +145,3 @@ class MeshTask(AbstractTask):
     def preprocess(self):
         self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
         self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
-
-    def get_scalars_pp(self) -> ScalarDict:
-        assert isinstance(self._algorithm, MeshSimulator)
-        task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
-        valid_files = [file for file in os.listdir(IN_DIR) if re.match(rf'valid_{self._task_name}_[0-9]+\.pth', file)]
-        self._algorithm.one_step_evaluator_pp(valid_files, self._num_test_trajectories, task_name, logging=False)
-
-        del self._test_loader
-        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
-
-        del self._test_loader
-        self._test_loader = get_data(config=self._config, split='test', split_and_preprocess=False)
-        # TODO: Different rollouts value for n_step_loss
-        self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)

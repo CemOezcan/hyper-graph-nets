@@ -1,12 +1,10 @@
-from typing import List, Tuple
+from typing import List
 
-import numpy as np
 import scipy.spatial as ss
 import torch
 from torch import Tensor
 
 from src import util
-from src.migration.normalizer import Normalizer
 from src.rmp.abstract_connector import AbstractConnector
 from src.util import MultiGraphWithPos, EdgeSet, device, MultiGraph
 

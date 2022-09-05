@@ -4,7 +4,6 @@ from typing import List, Tuple
 from torch import Tensor
 import torch
 
-from src.migration.normalizer import Normalizer
 from src.util import MultiGraphWithPos, MultiGraph
 
 

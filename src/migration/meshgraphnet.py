@@ -3,13 +3,12 @@ import functools
 
 from collections import OrderedDict
 
-import torch
 from torch import nn
 
 from src.migration.encoder import Encoder
 from src.migration.processor import Processor
 from src.migration.decoder import Decoder
-from src.util import device, MultiGraph, EdgeSet
+from src.util import device
 
 
 class MeshGraphNet(nn.Module):

@@ -1,6 +1,5 @@
 from typing import List
 
-import torch
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
