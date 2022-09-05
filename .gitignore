@@ -10,3 +10,4 @@ meta.json
 /wandb
 *.csv
 *.pth
+*.gif
