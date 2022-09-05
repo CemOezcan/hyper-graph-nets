@@ -98,9 +98,9 @@ class MeshTask(AbstractTask):
 
         fig = plt.figure(figsize=(19.2, 10.8))
         ax = fig.add_subplot(111, projection='3d')
-        skip = 3
+        skip = 4
         num_steps = rollout_data[0]['pred_pos'].shape[0]
-        num_frames = num_steps
+        num_frames = math.floor(num_steps / skip)
 
         # compute bounds
         bounds = []
@@ -111,9 +111,9 @@ class MeshTask(AbstractTask):
                 trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
             bounds.append((bb_min, bb_max))
 
-        def animate(num):
-            step = (num * skip) % num_steps
-            traj = (num * skip) // num_steps
+        def animate(frame):
+            step = (frame * skip) % num_steps
+            traj = (frame * skip) // num_steps
 
             ax.cla()
             bound = bounds[traj]
@@ -122,20 +122,16 @@ class MeshTask(AbstractTask):
             ax.set_ylim([bound[0][1], bound[1][1]])
             ax.set_zlim([bound[0][2], bound[1][2]])
 
-            pos = torch.squeeze(rollout_data[traj]['pred_pos'], dim=0)[
-                step].to('cpu')
-            original_pos = torch.squeeze(rollout_data[traj]['gt_pos'], dim=0)[
-                step].to('cpu')
-            faces = torch.squeeze(rollout_data[traj]['faces'], dim=0)[
-                step].to('cpu')
+            pos = torch.squeeze(rollout_data[traj]['pred_pos'], dim=0)[step].to('cpu')
+            original_pos = torch.squeeze(rollout_data[traj]['gt_pos'], dim=0)[step].to('cpu')
+            faces = torch.squeeze(rollout_data[traj]['faces'], dim=0)[step].to('cpu')
             ax.plot_trisurf(pos[:, 0], pos[:, 1], faces, pos[:, 2], shade=True)
-            ax.plot_trisurf(original_pos[:, 0], original_pos[:, 1], faces, original_pos[:, 2], shade=True,
-                            alpha=0.3)
+            ax.plot_trisurf(original_pos[:, 0], original_pos[:, 1], faces, original_pos[:, 2], shade=True, alpha=0.3)
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = ani.FuncAnimation(fig, animate, frames=math.floor(num_frames / 3))
-        writergif = ani.PillowWriter(fps=10)
+        animation = ani.FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
+        writergif = ani.PillowWriter(fps=5)
 
         return animation, writergif
 
