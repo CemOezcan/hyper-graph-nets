@@ -60,7 +60,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('video', step_metric='epoch')
 
         if self._wandb_url is not None:
-            # TODO: Inconsistent with stored model
             api = wandb.Api()
             run = api.run(self._wandb_url)
             this_run = api.run(self._wandb_run.path)
@@ -272,7 +271,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def n_step_evaluator(self, ds_loader, task_name, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
-        # TODO: Decide on how to summarize
         losses = list()
         for n_steps in n_step_list:
             n_step_losses = list()

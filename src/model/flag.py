@@ -93,9 +93,6 @@ class FlagModel(nn.Module):
             receivers=receivers,
             senders=senders)
 
-        # TODO: Add world_edges here? (FlagDynamic instead of FlagSimple)
-        # TODO: Change data structure
-
         num_nodes = node_type.shape[0]
         max_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
                                                            num_nodes,
@@ -264,7 +261,6 @@ class FlagModel(nn.Module):
             self._graph_balancer.reset_balancer()
 
     def cluster_graph(self, graph, is_training):
-        # TODO: Normalize hyper nodes
         if self._rmp:
             return self._remote_graph.create_graph(graph, is_training)
         return graph

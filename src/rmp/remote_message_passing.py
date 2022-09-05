@@ -10,8 +10,6 @@ class RemoteMessagePassing:
         """
         Initialize the remote message passing strategy.
         """
-        # TODO: Parameterize
-        # TODO: Set normalizers in initialization method
         self._clustering_algorithm = clustering_algorithm
         self._node_connector = connector
         self._clusters = None
@@ -32,7 +30,6 @@ class RemoteMessagePassing:
         -------
 
         """
-        # TODO: Replace lists with tensors
         graph = graph._replace(node_features=graph.node_features[0])
         self._clusters = self._clustering_algorithm.run(graph) if self._clusters is None else self._clusters
         new_graph = self._node_connector.run(graph, self._clusters, is_training)
