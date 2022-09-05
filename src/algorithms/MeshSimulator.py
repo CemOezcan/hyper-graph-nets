@@ -271,7 +271,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def n_step_evaluator(self, ds_loader, task_name, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
-        losses = list()
+        means = list()
+        stds = list()
         for n_steps in n_step_list:
             n_step_losses = list()
             for i, trajectory in enumerate(ds_loader):
@@ -281,12 +282,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 loss = self._network.n_step_computation(trajectory, n_steps)
                 n_step_losses.append(loss)
 
-            means = torch.mean(torch.stack(n_step_losses)).item()
-            std = torch.std(torch.stack(n_step_losses)).item()
-            losses.append((means, std))
+            means.append(torch.mean(torch.stack(n_step_losses)).item())
+            stds.append(torch.std(torch.stack(n_step_losses)).item())
 
         path = os.path.join(OUT_DIR, f'{task_name}_n_step_losses.csv')
-        n_step_stats = {'n_step': n_step_list, 'mean': losses[0], 'std': losses[1]}
+        n_step_stats = {'n_step': n_step_list, 'mean': means, 'std': stds}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(path)
         self.publish_csv(data_frame, f'n_step_losses', path)
