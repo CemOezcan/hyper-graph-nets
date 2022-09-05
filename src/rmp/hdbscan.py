@@ -1,8 +1,6 @@
-import random
 from typing import List
 
 import numpy as np
-import torch
 from sklearn.preprocessing import StandardScaler
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
