@@ -29,7 +29,7 @@ compute:
 
 params:
   task:
-    dataset: flag_minimal
+    dataset: flag_simple
     rollout_split: valid
     batch_size: 1
     epochs: 1
