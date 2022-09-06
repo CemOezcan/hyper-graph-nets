@@ -221,7 +221,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         data_frame.to_csv(path)
 
         if logging:
-            # TODO: Log csv
+            table = wandb.Table(dataframe=data_frame)
             val_loss, pos_loss = zip(*mean)
             log_dict = {
                 'validation_loss': wandb.Histogram(
@@ -230,11 +230,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 'position_loss': wandb.Histogram(
                     [x for x in pos_loss if np.quantile(pos_loss, 0.90) > x],
                     num_bins=256),
-                'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss)
+                'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss),
+                f'{task_name}_one_step': table
             }
             return log_dict
         else:
-            self.publish_csv(data_frame, 'one_step', path)
+            self.publish_csv(data_frame, f'one_step', path)
 
     def evaluator(self, ds_loader, rollouts, task_name, logging=True):
         """Run a model rollout trajectory."""
@@ -264,10 +265,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         data_frame.to_csv(path)
 
         if logging:
-            # TODO: Log csv
-            return {'rollout_loss': rollout_losses['mse_loss'][-1]}
+            table = wandb.Table(dataframe=data_frame)
+            return {'rollout_loss': rollout_losses['mse_loss'][-1], f'{task_name}_rollout_losses': table}
         else:
-            self.publish_csv(data_frame, 'rollout_losses', path)
+            self.publish_csv(data_frame, f'rollout_losses', path)
 
     def n_step_evaluator(self, ds_loader, task_name, n_step_list=[60], n_traj=2):
         # Take n_traj trajectories from valid set for n_step loss calculation
