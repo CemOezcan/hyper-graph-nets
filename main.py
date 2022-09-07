@@ -56,7 +56,8 @@ def main(config_name=CONFIG_NAME):
 
 
 if __name__ == '__main__':
-    set_start_method('spawn')
+    import torch.multiprocessing as mp
+    mp.set_start_method('fork')
     try:
         args = sys.argv[1]
         main(args)
