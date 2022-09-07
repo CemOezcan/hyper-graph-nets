@@ -35,7 +35,7 @@ params:
     epochs: 15
     trajectories: 1000
     mode: all
-    prefetch_factor: 5
+    prefetch_factor: 10
     test:
       trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
       rollouts: 10 # Number of trajectories that are going to be used to compute the rollout loss during evaluation

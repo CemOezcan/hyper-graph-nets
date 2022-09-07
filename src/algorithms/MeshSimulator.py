@@ -1,3 +1,4 @@
+import functools
 import math
 import os
 import pickle
@@ -12,6 +13,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import wandb
 from tqdm import tqdm
+import multiprocessing as mp
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
@@ -89,29 +91,46 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
         self._wandb_url = self._wandb_run.path
 
-        for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
-            if i >= self._trajectories:
-                break
+        train_dataloader = iter(train_dataloader)
+        compute = True
 
+        assert self._trajectories % self._prefetch_factor == 0, f'{self._trajectories} must be divisible by prefetch factor {self._prefetch_factor}.'
+
+        for _ in range(self._trajectories // self._prefetch_factor):
             start_trajectory = time.time()
-            batches = self.fetch_data(trajectory, True)
-            batches = self.get_batched(batches, self._batch_size)
-            random.shuffle(batches)
+            train = list()
+            if not compute:
+                return
+            try:
+                for _ in range(self._prefetch_factor):
+                    train.append(next(train_dataloader))
+            except StopIteration:
+                compute = False
 
-            for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
-                start_instance = time.time()
+            with mp.Pool() as pool:
+                prefetched_batches = pool.map(functools.partial(self.fetch_data_2, is_training=True), train)
 
-                loss = self._network.training_step(graph, data_frame)
-                loss.backward()
+            for batches in prefetched_batches:
+                for graph, data_frame in batches:
+                    start_instance = time.time()
 
-                self._optimizer.step()
-                self._optimizer.zero_grad()
+                    loss = self._network.training_step(graph, data_frame)
+                    loss.backward()
 
-                end_instance = time.time()
-                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+                    self._optimizer.step()
+                    self._optimizer.zero_grad()
+
+                    end_instance = time.time()
+                    wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+
+    def fetch_data_2(self, trajectory, is_training):
+        batches = self.fetch_data(trajectory, is_training)
+        batches = self.get_batched(batches, self._batch_size)
+        random.shuffle(batches)
+        return  batches
 
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
