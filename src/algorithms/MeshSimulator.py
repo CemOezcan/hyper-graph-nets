@@ -110,8 +110,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             with mp.Pool() as pool:
                 prefetched_batches = pool.map(functools.partial(self.fetch_data_2, is_training=True), train)
 
-            for batches in prefetched_batches:
-                for graph, data_frame in batches:
+            del train
+
+            for i in range(len(prefetched_batches)):
+                for graph, data_frame in prefetched_batches[i]:
                     start_instance = time.time()
 
                     loss = self._network.training_step(graph, data_frame)
@@ -122,6 +124,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
                     end_instance = time.time()
                     wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+
+                prefetched_batches[i] = 0
+
+            del prefetched_batches
 
             end_trajectory = time.time()
             wandb.log({f'training time per {self._prefetch_factor} trajectories': end_trajectory - start_trajectory}, commit=False)
