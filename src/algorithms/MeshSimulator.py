@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 import time
+from multiprocessing import Queue
 
 import numpy as np
 
@@ -17,7 +18,7 @@ from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import \
     AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
-from src.util import detach, EdgeSet, MultiGraph
+from src.util import detach, EdgeSet, MultiGraph, NodeType, device
 from torch.utils.data import DataLoader
 from util.Types import ConfigDict, ScalarDict, Union
 
@@ -89,6 +90,41 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network.train()
         self._wandb_url = self._wandb_run.path
 
+        import multiprocessing as mp
+        i = 0
+        queue = Queue()
+        self.wrapper(train_dataloader, queue)
+        while True:
+            if i >= self._trajectories:
+                break
+            try:
+                start_trajectory = time.time()
+                batches = queue.get()
+                thread_1 = mp.Process(target=self.wrapper, args=(train_dataloader, queue))
+                thread_1.start()
+                # self.helper(graph, trajectory)
+                for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
+                    start_instance = time.time()
+
+                    loss = self._network.training_step(graph, data_frame)
+                    loss.backward()
+
+                    self._optimizer.step()
+                    self._optimizer.zero_grad()
+
+                    end_instance = time.time()
+                    wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+
+                end_trajectory = time.time()
+                wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+
+                thread_1.join()
+                i += 1
+            except StopIteration:
+                break
+
+        return
+
         for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
             if i >= self._trajectories:
                 break
@@ -112,6 +148,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+
+    def wrapper(self, loader, queue):
+        data = next(loader)
+        batches = self.fetch_data(data, True)
+        batches = self.get_batched(batches, self._batch_size)
+        queue.put(batches)
 
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
