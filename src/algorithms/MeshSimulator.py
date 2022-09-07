@@ -92,7 +92,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         train_dataloader = iter(train_dataloader)
 
 
-        import torch.multiprocessing as mp
+        import threading as thread
         i = 0
         queue = Queue()
         self.wrapper(next(train_dataloader), queue)
@@ -102,7 +102,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             try:
                 start_trajectory = time.time()
                 batches = queue.get()
-                thread_1 = mp.Process(target=self.wrapper, args=(next(train_dataloader), queue))
+                thread_1 = thread.Thread(target=self.wrapper, args=(next(train_dataloader), queue))
                 thread_1.start()
                 # self.helper(graph, trajectory)
                 for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
