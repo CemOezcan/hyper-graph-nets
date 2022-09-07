@@ -103,24 +103,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 start_trajectory = time.time()
                 batches = queue.get()
                 thread_1 = mp.Process(target=self.wrapper, args=(next(train_dataloader), queue))
+                thread_2 = mp.Process(target=self.train_wrapper, args=batches)
                 thread_1.start()
+                thread_2.start()
                 # self.helper(graph, trajectory)
-                for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
-                    start_instance = time.time()
-
-                    loss = self._network.training_step(graph, data_frame)
-                    loss.backward()
-
-                    self._optimizer.step()
-                    self._optimizer.zero_grad()
-
-                    end_instance = time.time()
-                    wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
 
                 end_trajectory = time.time()
                 wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
 
                 thread_1.join()
+                thread_2.join()
                 i += 1
             except StopIteration:
                 break
@@ -156,6 +148,19 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         batches = self.fetch_data(data, True)
         batches = self.get_batched(batches, self._batch_size)
         queue.put(batches)
+
+    def train_wrapper(self, batches):
+        for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
+            start_instance = time.time()
+
+            loss = self._network.training_step(graph, data_frame)
+            loss.backward()
+
+            self._optimizer.step()
+            self._optimizer.zero_grad()
+
+            end_instance = time.time()
+            wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
 
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
