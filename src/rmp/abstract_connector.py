@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
-from profilehooks import profile
 from torch import Tensor
 import torch
 
@@ -56,11 +55,10 @@ class AbstractConnector(ABC):
         raise NotImplementedError
 
     @staticmethod
-    @profile(immediate=True)
     def _get_subgraph(model_type: str, target_feature: List[Tensor], senders_list: Tensor, receivers_list: Tensor) \
             -> Tuple[Tensor, Tensor, Tensor]:
         target_feature = torch.cat(
-            [x.clone().detach() for x in target_feature], dim=0)
+            tuple(map(lambda x: x.clone().detach(), target_feature)), dim=0)
         senders = torch.cat(
             (senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
         receivers = torch.cat(
