@@ -108,7 +108,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 compute = False
 
             with mp.Pool() as pool:
-                prefetched_batches = pool.map(functools.partial(self.fetch_data_2, is_training=True), train)
+                prefetched_batches = pool.imap(functools.partial(self.fetch_data_2, is_training=True), train)
 
                 for batch in prefetched_batches:
                     for graph, data_frame in batch:
