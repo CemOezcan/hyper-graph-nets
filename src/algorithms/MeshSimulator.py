@@ -103,7 +103,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 start_trajectory = time.time()
                 batches = queue.get()
                 thread_1 = mp.Process(target=self.wrapper, args=(next(train_dataloader), queue))
-                thread_2 = mp.Process(target=self.train_wrapper, args=batches)
+                thread_2 = mp.Process(target=self.train_wrapper, args=(batches, ))
                 thread_1.start()
                 thread_2.start()
                 # self.helper(graph, trajectory)
