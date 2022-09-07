@@ -212,7 +212,7 @@ class FlagModel(nn.Module):
         if self._balancer:
             if step % math.ceil(399 / self._balance_frequency) == 0:
                 self.reset_balancer()
-            graph = self.balance_graph(graph, self._mesh_edge_normalizer, is_training=False)
+            graph = self.balance_graph(graph, is_training=False)
 
         if self._rmp:
             if step % math.ceil(399 / self._rmp_frequency) == 0:
