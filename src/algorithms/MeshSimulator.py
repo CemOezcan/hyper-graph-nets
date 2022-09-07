@@ -89,6 +89,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def fit_iteration(self, train_dataloader: DataLoader):
         self._network.train()
         self._wandb_url = self._wandb_run.path
+        train_dataloader = iter(train_dataloader)
+
 
         import multiprocessing as mp
         i = 0
