@@ -124,7 +124,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
 
             end_trajectory = time.time()
-            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            wandb.log({f'training time per {self._prefetch_factor} trajectories': end_trajectory - start_trajectory}, commit=False)
 
     def fetch_data_2(self, trajectory, is_training):
         batches = self.fetch_data(trajectory, is_training)
