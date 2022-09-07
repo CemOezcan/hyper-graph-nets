@@ -136,7 +136,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         batches = self.fetch_data(trajectory, is_training)
         batches = self.get_batched(batches, self._batch_size)
         random.shuffle(batches)
-        return  batches
+        return batches
 
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
