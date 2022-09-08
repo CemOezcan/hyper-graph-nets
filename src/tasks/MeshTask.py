@@ -68,7 +68,7 @@ class MeshTask(AbstractTask):
             one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
-            a, w = self.plot()
+            a, w = self.plot(task_name)
             dir = self.save_plot(a, w, task_name)
 
             animation = {"video": wandb.Video(dir, fps=5, format="gif")}
@@ -89,8 +89,8 @@ class MeshTask(AbstractTask):
         self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
-    def plot(self) -> go.Figure:
-        rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
+    def plot(self, task_name) -> go.Figure:
+        rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
