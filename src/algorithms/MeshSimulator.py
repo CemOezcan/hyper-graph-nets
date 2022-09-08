@@ -258,7 +258,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             'mse_std': [mse.item() for mse in mse_stds]
         }
 
-        self.save_rollouts(trajectories)
+        self.save_rollouts(trajectories, task_name)
 
         path = os.path.join(OUT_DIR, f'{task_name}_rollout_losses.csv')
         data_frame = pd.DataFrame.from_dict(rollout_losses)
@@ -311,10 +311,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         with open(os.path.join(OUT_DIR, f'model_{name}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
-    def save_rollouts(self, rollouts):
-        rollouts = [{key: value.to('cpu')
-                     for key, value in x.items()} for x in rollouts]
-        with open(os.path.join(OUT_DIR, 'rollouts.pkl'), 'wb') as file:
+    def save_rollouts(self, rollouts, task_name):
+        rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
+        with open(os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
 
     def lr_scheduler_step(self):

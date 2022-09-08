@@ -90,7 +90,7 @@ class MeshTask(AbstractTask):
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
     def plot(self) -> go.Figure:
-        rollouts = os.path.join(OUT_DIR, 'rollouts.pkl')
+        rollouts = os.path.join(OUT_DIR, f'{self._task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
