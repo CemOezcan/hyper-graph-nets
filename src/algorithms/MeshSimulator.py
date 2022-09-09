@@ -40,7 +40,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network = None
         self._optimizer = None
         self._scheduler = None
-        self._wandb_run = None
         self._wandb_url = None
         self._initialized = False
 
@@ -50,7 +49,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
-        self._wandb_run = wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
+        wandb_run = wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
         wandb.define_metric('epoch')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
@@ -62,7 +61,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if self._wandb_url is not None:
             api = wandb.Api()
             run = api.run(self._wandb_url)
-            this_run = api.run(self._wandb_run.path)
+            this_run = api.run(wandb_run.path)
             curr_epoch = max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
             for file in run.files():
                 this_run.upload_file(file.download(replace=True).name)
@@ -76,6 +75,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     b = False
                 wandb.log(x)
 
+        self._wandb_url = wandb_run.path
+
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
@@ -87,7 +88,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader):
         self._network.train()
-        self._wandb_url = self._wandb_run.path
 
         for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
             if i >= self._trajectories:
