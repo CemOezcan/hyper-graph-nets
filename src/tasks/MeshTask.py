@@ -56,7 +56,7 @@ class MeshTask(AbstractTask):
         self._task_name = f'{num_clusters}_cluster:{cluster}_balancer:{balancer}'
         self._algorithm.initialize(task_information=config)
         self._dataset_name = config.get('task').get('dataset')
-        self._wandb = wandb.init(reinit=False)
+        wandb.init(reinit=False)
 
     def run_iteration(self, current_epoch):
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
