@@ -40,6 +40,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._network = None
         self._optimizer = None
         self._scheduler = None
+        self._wandb_run = None
         self._wandb_url = None
         self._initialized = False
 
@@ -48,6 +49,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._gamma = self._network_config.get('gamma')
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
+        self._wandb_run = None
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
         wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
         wandb.define_metric('epoch')
