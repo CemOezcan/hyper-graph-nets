@@ -51,8 +51,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._gamma = self._network_config.get('gamma')
 
     def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
+        self._wandb_run = None
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
-        self._wandb_run = wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
+        wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
         wandb.define_metric('epoch')
         wandb.define_metric('validation_loss', step_metric='epoch')
         wandb.define_metric('position_loss', step_metric='epoch')
@@ -64,7 +65,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if self._wandb_url is not None:
             api = wandb.Api()
             run = api.run(self._wandb_url)
-            this_run = api.run(self._wandb_run.path)
+            this_run = api.run(wandb.run.path)
             curr_epoch = max([x['epoch'] for x in run.scan_history(keys=['epoch'])])
             for file in run.files():
                 this_run.upload_file(file.download(replace=True).name)
@@ -78,6 +79,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                     b = False
                 wandb.log(x)
 
+        self._wandb_url = wandb.run.path
+
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
@@ -89,7 +92,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def fit_iteration(self, train_dataloader: DataLoader):
         self._network.train()
-        self._wandb_url = self._wandb_run.path
 
         train_dataloader = iter(train_dataloader)
         compute = True
@@ -280,7 +282,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             'mse_std': [mse.item() for mse in mse_stds]
         }
 
-        self.save_rollouts(trajectories)
+        self.save_rollouts(trajectories, task_name)
 
         path = os.path.join(OUT_DIR, f'{task_name}_rollout_losses.csv')
         data_frame = pd.DataFrame.from_dict(rollout_losses)
@@ -333,10 +335,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         with open(os.path.join(OUT_DIR, f'model_{name}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
-    def save_rollouts(self, rollouts):
-        rollouts = [{key: value.to('cpu')
-                     for key, value in x.items()} for x in rollouts]
-        with open(os.path.join(OUT_DIR, 'rollouts.pkl'), 'wb') as file:
+    def save_rollouts(self, rollouts, task_name):
+        rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
+        with open(os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
 
     def lr_scheduler_step(self):

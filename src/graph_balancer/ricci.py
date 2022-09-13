@@ -17,7 +17,7 @@ class Ricci(AbstractGraphBalancer):
         self._loops = params.get('graph_balancer').get('ricci').get('loops')
         self._tau = params.get('graph_balancer').get('ricci').get('tau')
         self._remove_edges = params.get('graph_balancer').get('remove_edges')
-        self._wandb = wandb.init(reinit=False)
+        wandb.init(reinit=False)
 
     def _initialize(self):
         pass
@@ -25,9 +25,9 @@ class Ricci(AbstractGraphBalancer):
     def run(self, graph: MultiGraphWithPos):
         added_edges, removed_edges = Ricci.sdrf(data=self.transform_multigraph_to_pyg(
             graph), loops=self._loops, remove_edges=self._remove_edges, tau=self._tau, is_undirected=True)
-        self._wandb.log({'ricci added edges': len(added_edges['senders'])})
+        wandb.log({'ricci added edges': len(added_edges['senders'])})
         if self._remove_edges:
-            self._wandb.log({'ricci removed edges': len(removed_edges['senders'])})
+            wandb.log({'ricci removed edges': len(removed_edges['senders'])})
             return added_edges, removed_edges
         return added_edges, None
 

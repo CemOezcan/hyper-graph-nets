@@ -1,6 +1,7 @@
 from typing import List
 
 import numpy as np
+import wandb
 from sklearn.preprocessing import StandardScaler
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
@@ -58,7 +59,7 @@ class HDBSCAN(AbstractClusteringAlgorithm):
                                      min_cluster_size=self._min_cluster_size, prediction_data=True).fit(X)
         labels = clustering.labels_
         unique = len(set(labels))
-        self._wandb.log({'hdbscan cluster': labels.max(
+        wandb.log({'hdbscan cluster': labels.max(
         ), 'hdbscan noise': len([x for x in labels if x < 0])})
         return clustering
 

@@ -44,8 +44,9 @@ def main(config_name=CONFIG_NAME):
         model_path = os.path.join(OUT_DIR, f'{model_name}{last_epoch}.pkl')
         with open(model_path, 'rb') as file:
             algorithm = pickle.load(file)
-            task = MeshTask(algorithm, params)
-            task.run_iteration(last_epoch)
+
+        task = MeshTask(algorithm, params)
+        task.run_iteration(last_epoch)
     else:
         algorithm = MeshSimulator(params)
         task = MeshTask(algorithm, params)

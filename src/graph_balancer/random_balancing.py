@@ -1,4 +1,6 @@
 import numpy as np
+import wandb
+
 from src.graph_balancer.abstract_graph_balancer import AbstractGraphBalancer
 from src.util import MultiGraphWithPos
 
@@ -21,13 +23,13 @@ class RandomGraphBalancer(AbstractGraphBalancer):
         for e in random_edge_pairs:
             added_edges['senders'].append(e[0])
             added_edges['receivers'].append(e[1])
-        self._wandb.log({'random added edges': len(added_edges['senders'])})
+        wandb.log({'random added edges': len(added_edges['senders'])})
         if self._remove_edges:
             random_edge_removal = np.random.choice(
                 vertices_amt, size=(self._edge_amount, 2), replace=False)
             for e in random_edge_removal:
                 removed_edges['senders'].append(e[0])
                 removed_edges['receivers'].append(e[1])
-            self._wandb.log({'random removed edges': len(removed_edges['senders'])})
+            wandb.log({'random removed edges': len(removed_edges['senders'])})
             return added_edges, removed_edges
         return added_edges, None

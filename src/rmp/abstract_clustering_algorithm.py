@@ -23,7 +23,7 @@ class AbstractClusteringAlgorithm(ABC):
         self._threshold = 0
         self._alpha = 0.5
         self._sampling = False
-        self._wandb = wandb.init(reinit=False)
+        wandb.init(reinit=False)
         self._initialize()
         # TODO: Change graph input to initialize in order to preprocess the graph
 
@@ -71,7 +71,7 @@ class AbstractClusteringAlgorithm(ABC):
     def visualize_cluster(self, coordinates):
         palette = [[e * 255 for e in x] for x in sns.color_palette(cc.glasbey, len(set(self._labels)))]
         coordinates = [np.concatenate([c, palette[l]]) for c, l in zip(coordinates, self._labels)]
-        self._wandb.log({'cluster': [wandb.Object3D(np.vstack(coordinates))]})
+        wandb.log({'cluster': [wandb.Object3D(np.vstack(coordinates))]})
 
     def _empty_cluster_handling(self, labels: List[int]):
         '''If a cluster is empty, add a random element from another cluster'''
@@ -122,7 +122,7 @@ class AbstractClusteringAlgorithm(ABC):
         for i in range(self._num_clusters):
             result[i] = [x for x in set(result[i]) if result[i].count(x) >= threshold]
         result = self._reduce_samples(result, alpha, True)
-        self._wandb.log({f'spotter added': sum([len(x) for x in result])})
+        wandb.log({f'spotter added': sum([len(x) for x in result])})
         return result
 
     def exemplars(self, labels: List[List[int]], spotter: List[List[int]], alpha: float) -> List[List[int]]:
@@ -133,7 +133,7 @@ class AbstractClusteringAlgorithm(ABC):
                 result[e].append(i)
         #randomly sample from the remaining elements of each list in result according to the ratio alpha
         result = self._reduce_samples(result, alpha, True)
-        self._wandb.log({f'exemplars added': sum([len(x) for x in result])})
+        wandb.log({f'exemplars added': sum([len(x) for x in result])})
         return result
 
     def _combine_samples(self, spotter: List[List[int]], exemplars: List[List[int]], top_k: List[List[int]]) -> List[List[int]]:
@@ -153,7 +153,7 @@ class AbstractClusteringAlgorithm(ABC):
             result[i] = sorted(result[i], key=lambda x: graph.node_dynamic[x], reverse=True)
         # for each list in result, take the alpha percentage indices
         result = self._reduce_samples(result, alpha, False)
-        self._wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
+        wandb.log({f'highest dynamics added': sum([len(x) for x in result])})
         return result
 
     def _reduce_samples(self, result: List[List[int]], alpha: float, shuffle: bool) -> List[List[int]]:
