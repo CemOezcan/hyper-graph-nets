@@ -10,6 +10,7 @@ class RandomGraphBalancer(AbstractGraphBalancer):
         super().__init__()
         self._edge_amount = params.get('graph_balancer').get(
             'random').get('edge_amount')
+        self._remove_edges = params.get('graph_balancer').get('remove_edges')
 
     def _initialize(self):
         pass

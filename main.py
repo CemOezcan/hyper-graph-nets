@@ -53,7 +53,7 @@ def main(config_name=CONFIG_NAME):
         task.run_iteration(0)
 
     task.get_scalars()
-    task.plot()
+    task.plot(f'{model_name}_final')
 
 
 if __name__ == '__main__':
