@@ -80,7 +80,8 @@ class AbstractClusteringAlgorithm(ABC):
             result[labels[i]].append(i)
         for i in range(self._num_clusters):
             if len(result[i]) == 0:
-                labels[random.choice(result[random.randint(0, self._num_clusters - 1)])] = i
+                random_cluster = random.choice([x for x in range(self._num_clusters) if len(result[x]) > 0])
+                labels[random.choice(result[random_cluster])] = i
         return labels
 
     def _labels_to_indices(self, labels: List[int]) -> List[Tensor]:
