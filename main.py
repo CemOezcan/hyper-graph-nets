@@ -1,5 +1,7 @@
 import re
 
+import wandb
+
 from src.util import device, read_yaml
 from src.tasks.MeshTask import MeshTask
 from src.data.data_loader import CONFIG_NAME, OUT_DIR
@@ -20,6 +22,31 @@ warnings.filterwarnings('ignore')
 
 
 def main(config_name=CONFIG_NAME):
+    wandb_url = "rmp/rmp/1ofcx3x4"
+    api = wandb.Api()
+    run = api.run(wandb_url)
+
+    wandb.init(project='rmp', config=run.config, mode='run')
+    wandb.define_metric('epoch')
+    wandb.define_metric('validation_loss', step_metric='epoch')
+    wandb.define_metric('position_loss', step_metric='epoch')
+    wandb.define_metric('validation_mean', step_metric='epoch')
+    wandb.define_metric('position_mean', step_metric='epoch')
+    wandb.define_metric('rollout_loss', step_metric='epoch')
+
+    step = 0
+    for x in run.scan_history(keys=['loss', '_runtime', '_timestamp']):
+        wandb.log(x)
+        step += 1
+        del x
+
+    for x in run.scan_history(keys=['_step', 'rollout_loss', 'position_loss', 'validation_loss', 'validation_mean', 'position_mean', '_runtime', '_timestamp', 'epoch']):
+        x['_step'] = step
+        wandb.log(x)
+        del x
+
+    exit()
+
     config_file = read_yaml(config_name)
     retrain = config_file['compute']['retrain']
 
