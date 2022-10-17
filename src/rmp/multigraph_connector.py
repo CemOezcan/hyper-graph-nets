@@ -45,7 +45,8 @@ class MultigraphConnector(AbstractConnector):
             name='intra_cluster',
             features=self._intra_normalizer(edges, is_training),
             receivers=rcv,
-            senders=snd)
+            senders=snd
+        )
 
         remote_edges.append(world_edges)
 
@@ -59,7 +60,8 @@ class MultigraphConnector(AbstractConnector):
             name='inter_cluster',
             features=self._inter_normalizer(edge_features, is_training),
             receivers=receivers,
-            senders=senders)
+            senders=senders
+        )
 
         remote_edges.append(world_edges)
 

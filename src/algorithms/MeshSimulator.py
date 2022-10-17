@@ -14,8 +14,7 @@ import wandb
 from tqdm import tqdm
 
 from src.data.data_loader import OUT_DIR, IN_DIR
-from src.algorithms.AbstractIterativeAlgorithm import \
-    AbstractIterativeAlgorithm
+from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
 from src.util import detach, EdgeSet, MultiGraph
 from torch.utils.data import DataLoader
@@ -48,7 +47,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._learning_rate = self._network_config.get('learning_rate')
         self._gamma = self._network_config.get('gamma')
 
-    def initialize(self, task_information: ConfigDict) -> None:  # TODO check usability
+    def initialize(self, task_information: ConfigDict) -> None:
         self._wandb_run = None
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
         wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
@@ -82,10 +81,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = FlagModel(self._network_config)
-            self._optimizer = optim.Adam(
-                self._network.parameters(), lr=self._learning_rate)
-            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                self._optimizer, self._gamma, last_epoch=-1)
+            self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
+            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
     def fit_iteration(self, train_dataloader: DataLoader):
@@ -118,8 +115,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
         assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
-        batches = [data[i: i + batch_size]
-                   for i in range(0, len(data), batch_size)]
+        batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
 
@@ -127,48 +123,45 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         batched_data = list()
         for batch in batches:
-            edge_dict = {name: {'snd': list(), 'rcv': list(), 'features': list()}
-                         for name in edge_names}
+            edge_dict = {name: {'snd': list(), 'rcv': list(), 'features': list()} for name in edge_names}
             trajectory_dict = {key: list() for key in trajectory_attributes}
 
             node_features = list()
             for i, (graph, traj) in enumerate(batch):
                 # This fixes instance wise clustering
-                num_nodes = tuple(
-                    map(lambda x: x.shape[0], graph.node_features))
-                num_nodes, num_hyper_nodes = num_nodes if len(
-                    num_nodes) > 1 else (num_nodes[0], 0)
+                num_nodes = tuple(map(lambda x: x.shape[0], graph.node_features))
+                num_nodes, num_hyper_nodes = num_nodes if len(num_nodes) > 1 else (num_nodes[0], 0)
                 hyper_node_offset = batch_size * num_nodes
 
                 node_features.append(graph.node_features)
                 for key, value in traj.items():
                     trajectory_dict[key].append(value)
+
                 for e in graph.edge_sets:
                     edge_dict[e.name]['features'].append(e.features)
 
                     senders = torch.tensor(
-                        [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
+                        [x + i * num_nodes
+                         if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
                          for x in e.senders.tolist()]
                     )
                     edge_dict[e.name]['snd'].append(senders)
 
                     receivers = torch.tensor(
-                        [x + i * num_nodes if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
+                        [x + i * num_nodes
+                         if x < hyper_node_offset else x + (batch_size - 1) * num_nodes + i * num_hyper_nodes
                          for x in e.receivers.tolist()]
                     )
                     edge_dict[e.name]['rcv'].append(receivers)
 
-            new_traj = {key: torch.cat(value, dim=0)
-                        for key, value in trajectory_dict.items()}
+            new_traj = {key: torch.cat(value, dim=0) for key, value in trajectory_dict.items()}
 
-            all_nodes = list(
-                map(lambda x: torch.cat(x, dim=0), zip(*node_features)))
+            all_nodes = list(map(lambda x: torch.cat(x, dim=0), zip(*node_features)))
             new_graph = MultiGraph(
                 node_features=all_nodes,
                 edge_sets=[
                     EdgeSet(name=n,
-                            features=torch.cat(
-                                edge_dict[n]['features'], dim=0),
+                            features=torch.cat(edge_dict[n]['features'], dim=0),
                             senders=torch.cat(edge_dict[n]['snd'], dim=0),
                             receivers=torch.cat(edge_dict[n]['rcv'], dim=0))
                     for n in edge_dict.keys()
@@ -226,13 +219,18 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             table = wandb.Table(dataframe=data_frame)
             val_loss, pos_loss = zip(*mean)
             log_dict = {
-                'validation_loss': wandb.Histogram(
-                    [x for x in val_loss if np.quantile(val_loss, 0.90) > x],
-                    num_bins=256),
-                'position_loss': wandb.Histogram(
-                    [x for x in pos_loss if np.quantile(pos_loss, 0.90) > x],
-                    num_bins=256),
-                'validation_mean': np.mean(val_loss), 'position_mean': np.mean(pos_loss),
+                'validation_loss':
+                    wandb.Histogram(
+                        [x for x in val_loss if np.quantile(val_loss, 0.90) > x],
+                        num_bins=256
+                    ),
+                'position_loss':
+                    wandb.Histogram(
+                        [x for x in pos_loss if np.quantile(pos_loss, 0.90) > x],
+                        num_bins=256
+                    ),
+                'validation_mean': np.mean(val_loss),
+                'position_mean': np.mean(pos_loss),
                 f'{task_name}_one_step': table
             }
             return log_dict

@@ -51,10 +51,14 @@ class RemoteMessagePassing:
     @staticmethod
     def _graph_to_device(graph, dev):
         return MultiGraphWithPos(node_features=graph.node_features.to(dev),
-                                 edge_sets=[EdgeSet(name=e.name,
-                                                    features=e.features.to(dev),
-                                                    senders=e.senders.to(dev),
-                                                    receivers=e.receivers.to(dev)) for e in graph.edge_sets],
+                                 edge_sets=[
+                                     EdgeSet(
+                                         name=e.name,
+                                         features=e.features.to(dev),
+                                         senders=e.senders.to(dev),
+                                         receivers=e.receivers.to(dev)
+                                     ) for e in graph.edge_sets],
                                  target_feature=graph.target_feature.to(dev),
                                  model_type=graph.model_type,
-                                 node_dynamic=graph.node_dynamic.to(dev))
+                                 node_dynamic=graph.node_dynamic.to(dev)
+                                 )

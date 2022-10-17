@@ -9,8 +9,7 @@ import plotly.graph_objects as go
 import torch
 import wandb
 
-from src.algorithms.AbstractIterativeAlgorithm import \
-    AbstractIterativeAlgorithm
+from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
 from src.data.data_loader import OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
@@ -104,10 +103,8 @@ class MeshTask(AbstractTask):
         # compute bounds
         bounds = []
         for trajectory in rollout_data:
-            bb_min = torch.squeeze(
-                trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
-            bb_max = torch.squeeze(
-                trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
+            bb_min = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
+            bb_max = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
             bounds.append((bb_min, bb_max))
 
         def animate(frame):

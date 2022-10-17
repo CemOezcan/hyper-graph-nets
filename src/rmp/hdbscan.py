@@ -55,18 +55,24 @@ class HDBSCAN(AbstractClusteringAlgorithm):
         sc = StandardScaler()
         X = graph.target_feature.to('cpu')
         X = sc.fit_transform(X)
-        clustering = hdbscan.HDBSCAN(core_dist_n_jobs=-1, max_cluster_size=self._max_cluster_size, min_samples=self._min_samples,
-                                     min_cluster_size=self._min_cluster_size, prediction_data=True).fit(X)
+        clustering = hdbscan.HDBSCAN(
+            core_dist_n_jobs=-1,
+            max_cluster_size=self._max_cluster_size,
+            min_samples=self._min_samples,
+            min_cluster_size=self._min_cluster_size,
+            prediction_data=True
+        ).fit(X)
+
         labels = clustering.labels_
         unique = len(set(labels))
-        wandb.log({'hdbscan cluster': labels.max(
-        ), 'hdbscan noise': len([x for x in labels if x < 0])})
+        wandb.log({'hdbscan cluster': labels.max(), 'hdbscan noise': len([x for x in labels if x < 0])})
+
         return clustering
 
+    # TODO: Fix sampling approach
     def exemplars(self, clustering):
         selected_clusters = clustering.condensed_tree_._select_clusters()
         raw_condensed_tree = clustering.condensed_tree_._raw_tree
-
         exemplars = []
         for cluster in selected_clusters:
             cluster_exemplars = np.array([], dtype=np.int64)
