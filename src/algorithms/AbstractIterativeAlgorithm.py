@@ -44,36 +44,6 @@ class AbstractIterativeAlgorithm(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def score(self, *args, **kwargs) -> ValueDict:
-        """
-        Evaluate given input data and potentially auxiliary information to create a dictionary of resulting values.
-        What kinds of things are scored/evaluated depends on the concrete algorithm.
-        Args:
-            *args:
-            **kwargs:
-
-        Returns: A dictionary with different values that are evaluated from the given input data. May e.g., the
-        accuracy of the model.
-
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def predict(self, *args, **kwargs) -> Result:
-        """
-        Give some prediction for the given input data. The difference to score() is that the prediction is meant to only
-         get a set list of input samples and output the model evaluates for it, while the score() function also has
-         access to auxiliary information and is meant to give a dictionary of different interesting values.
-        Args:
-            *args:
-            **kwargs:
-
-        Returns: A single result that scores the input, potentially per sample
-
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def one_step_evaluator(self, *args, **kwargs) -> Result:
         """
         Predict the system state for the next time step and evaluate the predictions over the test data.
