@@ -101,7 +101,7 @@ class AbstractIterativeAlgorithm(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def evaluator(self, *args, **kwargs) -> Result:
+    def rollout_evaluator(self, *args, **kwargs) -> Result:
         # TODO: Rename to rollout loss
         """
         Recursive prediction of the system state at the end of trajectories.

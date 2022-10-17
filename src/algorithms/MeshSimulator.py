@@ -257,7 +257,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         else:
             self.publish_csv(data_frame, f'one_step', path)
 
-    def evaluator(self, ds_loader, rollouts, task_name, logging=True):
+    def rollout_evaluator(self, ds_loader, rollouts, task_name, logging=True):
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
