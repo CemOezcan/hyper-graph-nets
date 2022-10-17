@@ -74,5 +74,5 @@ class AbstractIterativeAlgorithm(ABC):
         raise NotImplementedError
 
     @property
-    def config(self)-> ConfigDict:
+    def config(self) -> ConfigDict:
         return self._config

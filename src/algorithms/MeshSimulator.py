@@ -111,6 +111,26 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+
+    def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:  # TODO check usability
+        with torch.no_grad():
+            inputs = torch.Tensor(inputs)
+            labels = torch.Tensor(labels)
+            self._network.evaluate()
+            predictions = self._network(inputs)
+            predictions = predictions.squeeze()
+            loss = self.loss_function(predictions, labels)
+            loss = loss.item()
+
+        return {"loss": loss}
+
+    # TODO check usability
+    def predict(self, samples: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
+        if isinstance(samples, np.ndarray):
+            samples = torch.Tensor(samples.astype(np.float32))
+        evaluations = self._network(samples)
+        return detach(evaluations)
 
     def get_batched(self, data, batch_size):
         graph_amt = len(data)
@@ -318,29 +338,3 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
     def lr_scheduler_step(self):
         self._scheduler.step()
-
-    def score(self, inputs: np.ndarray, labels: np.ndarray) -> ScalarDict:  # TODO check usability
-        with torch.no_grad():
-            inputs = torch.Tensor(inputs)
-            labels = torch.Tensor(labels)
-            self._network.evaluate()
-            predictions = self._network(inputs)
-            predictions = predictions.squeeze()
-            loss = self.loss_function(predictions, labels)
-            loss = loss.item()
-
-        return {"loss": loss}
-
-    # TODO check usability
-    def predict(self, samples: Union[np.ndarray, torch.Tensor]) -> np.ndarray:
-        if isinstance(samples, np.ndarray):
-            samples = torch.Tensor(samples.astype(np.float32))
-        evaluations = self._network(samples)
-        return detach(evaluations)
-
-
-
-
-
-
-
