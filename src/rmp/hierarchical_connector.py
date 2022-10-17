@@ -27,7 +27,6 @@ class HierarchicalConnector(AbstractConnector):
         node_feature = graph.node_features.to(device_0)
         model_type = graph.model_type
         num_nodes = len(graph.node_features)
-
         hyper_edges = list()
 
         # Intra cluster communication

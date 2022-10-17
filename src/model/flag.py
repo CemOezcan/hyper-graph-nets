@@ -27,14 +27,10 @@ class FlagModel(nn.Module):
         self._inter_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
 
         self._model_type = 'flag'
-        self._rmp = params.get('rmp').get('clustering') != 'none' and params.get(
-            'rmp').get('connector') != 'none'
-        self._hierarchical = params.get('rmp').get(
-            'connector') == 'hierarchical' and self._rmp
-        self._multi = params.get('rmp').get(
-            'connector') == 'multigraph' and self._rmp
-        self._balancer = params.get(
-            'graph_balancer').get('algorithm') != 'none'
+        self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
+        self._hierarchical = params.get('rmp').get('connector') == 'hierarchical' and self._rmp
+        self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
+        self._balancer = params.get('graph_balancer').get('algorithm') != 'none'
         self.message_passing_steps = params.get('message_passing_steps')
         self.message_passing_aggregator = params.get('aggregation')
         self._balance_frequency = params.get('graph_balancer').get('frequency')
@@ -81,32 +77,48 @@ class FlagModel(nn.Module):
                               torch.index_select(input=world_pos, dim=0, index=receivers))
         relative_mesh_pos = (torch.index_select(mesh_pos, 0, senders) -
                              torch.index_select(mesh_pos, 0, receivers))
-        edge_features = torch.cat((
-            relative_world_pos,
-            torch.norm(relative_world_pos, dim=-1, keepdim=True),
-            relative_mesh_pos,
-            torch.norm(relative_mesh_pos, dim=-1, keepdim=True)), dim=-1)
+        edge_features = torch.cat(
+            (
+                relative_world_pos,
+                torch.norm(relative_world_pos, dim=-1, keepdim=True),
+                relative_mesh_pos,
+                torch.norm(relative_mesh_pos, dim=-1, keepdim=True)
+            ), dim=-1
+        )
 
         mesh_edges = EdgeSet(
             name='mesh_edges',
             features=self._mesh_edge_normalizer(edge_features, is_training),
             receivers=receivers,
-            senders=senders)
+            senders=senders
+        )
 
         num_nodes = node_type.shape[0]
-        max_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
-                                                           num_nodes,
-                                                           operation='max').to(device)
-        min_node_dynamic = util.unsorted_segment_operation(torch.norm(relative_world_pos, dim=-1), receivers,
-                                                           num_nodes,
-                                                           operation='min').to(device)
-        node_dynamic = self._node_dynamic_normalizer(
-            max_node_dynamic - min_node_dynamic)
+        max_node_dynamic = util.unsorted_segment_operation(
+            torch.norm(relative_world_pos, dim=-1), receivers,
+            num_nodes,
+            operation='max'
+        ).to(device)
 
-        graph = MultiGraphWithPos(node_features=[self._node_normalizer(node_features, is_training)],
-                                  edge_sets=[mesh_edges], target_feature=world_pos, mesh_features=mesh_pos,
-                                  model_type=self._model_type, node_dynamic=node_dynamic,
-                                  unnormalized_edges=EdgeSet(name='mesh_edges', features=edge_features, receivers=receivers, senders=senders))
+        min_node_dynamic = util.unsorted_segment_operation(
+            torch.norm(relative_world_pos, dim=-1),
+            receivers,
+            num_nodes,
+            operation='min'
+        ).to(device)
+
+        node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)
+
+        graph = MultiGraphWithPos(
+            node_features=[self._node_normalizer(node_features, is_training)], edge_sets=[mesh_edges],
+            target_feature=world_pos, mesh_features=mesh_pos, model_type=self._model_type, node_dynamic=node_dynamic,
+            unnormalized_edges=EdgeSet(
+                name='mesh_edges',
+                features=edge_features,
+                receivers=receivers,
+                senders=senders
+            )
+        )
 
         return graph
 
@@ -118,10 +130,8 @@ class FlagModel(nn.Module):
         target_normalized = self.get_target(data_frame)
 
         node_type = data_frame['node_type']
-        loss_mask = torch.eq(node_type[:, 0], torch.tensor(
-            [NodeType.NORMAL.value], device=device).int())
-        loss = self.loss_fn(
-            target_normalized[loss_mask], network_output[loss_mask])
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
 
         return loss
 
@@ -131,14 +141,11 @@ class FlagModel(nn.Module):
         target_normalized = self.get_target(data_frame, False)
 
         node_type = data_frame['node_type']
-        loss_mask = torch.eq(node_type[:, 0], torch.tensor(
-            [NodeType.NORMAL.value], device=device).int())
-        acc_loss = self.loss_fn(
-            target_normalized[loss_mask], prediction[loss_mask]).item()
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        acc_loss = self.loss_fn(target_normalized[loss_mask], prediction[loss_mask]).item()
 
         predicted_position = self.update(data_frame, prediction)
-        pos_error = self.loss_fn(
-            data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
+        pos_error = self.loss_fn(data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
 
         return acc_loss, pos_error
 
@@ -169,12 +176,10 @@ class FlagModel(nn.Module):
     def rollout(self, trajectory, num_steps):
         """Rolls out a model trajectory."""
         num_steps = trajectory['cells'].shape[0] if num_steps is None else num_steps
-        initial_state = {k: torch.squeeze(
-            v, 0)[0] for k, v in trajectory.items()}
+        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
 
         node_type = initial_state['node_type']
-        mask = torch.eq(node_type[:, 0], torch.tensor(
-            [NodeType.NORMAL.value], device=device))
+        mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
         mask = torch.stack((mask, mask, mask), dim=1)
 
         prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
@@ -182,10 +187,10 @@ class FlagModel(nn.Module):
 
         pred_trajectory = list()
         for i in range(num_steps):
-            prev_pos, cur_pos, pred_trajectory = self._step_fn(
-                initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
-        self._visualized = False
+            prev_pos, cur_pos, pred_trajectory = \
+                self._step_fn(initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
 
+        self._visualized = False
         predictions = torch.stack(pred_trajectory)
 
         traj_ops = {
@@ -196,8 +201,7 @@ class FlagModel(nn.Module):
         }
 
         mse_loss_fn = torch.nn.MSELoss(reduction='none')
-        mse_loss = mse_loss_fn(
-            trajectory['world_pos'][:num_steps], predictions)
+        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], predictions)
         mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
 
         return traj_ops, mse_loss
@@ -222,11 +226,8 @@ class FlagModel(nn.Module):
                 self._remote_graph.visualize_cluster(coordinates)
                 self._visualized = True
 
-
         prediction = self.update(input, self(graph))
-
-        next_pos = torch.where(mask, torch.squeeze(
-            prediction), torch.squeeze(cur_pos))
+        next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
         trajectory.append(cur_pos)
 
         return cur_pos, next_pos, trajectory
@@ -235,17 +236,14 @@ class FlagModel(nn.Module):
     def n_step_computation(self, trajectory, n_step):
         mse_losses = list()
         for step in range(len(trajectory['world_pos']) - n_step):
-            eval_traj = {k: v[step: step + n_step + 1]
-                         for k, v in trajectory.items()}
-            prediction_trajectory, mse_loss = self.rollout(
-                eval_traj, n_step + 1)
+            eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
+            prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
             mse_losses.append(torch.mean(mse_loss).cpu())
 
         return torch.mean(torch.stack(mse_losses))
 
     def get_output_normalizer(self):
         return self._output_normalizer
-
 
     def evaluate(self):
         self.eval()
@@ -275,10 +273,8 @@ class FlagModel(nn.Module):
         target_normalized = self._output_normalizer(target, True)
 
         node_type = data_frame['node_type']
-        loss_mask = torch.eq(node_type[:, 0], torch.tensor(
-            [NodeType.NORMAL.value], device=device).int())
-        loss = self.loss_fn(
-            target_normalized[loss_mask], network_output[loss_mask])
+        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
 
         return loss
 

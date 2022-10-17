@@ -13,17 +13,12 @@ class Normalizer(nn.Module):
         super(Normalizer, self).__init__()
         self._name = name
         self._max_accumulations = max_accumulations
-        self._std_epsilon = torch.tensor(
-            [std_epsilon], requires_grad=False).to(device)
+        self._std_epsilon = torch.tensor([std_epsilon], requires_grad=False).to(device)
 
-        self._acc_count = torch.zeros(
-            1, dtype=torch.float32, requires_grad=False).to(device)
-        self._num_accumulations = torch.zeros(
-            1, dtype=torch.float32, requires_grad=False).to(device)
-        self._acc_sum = torch.zeros(
-            size, dtype=torch.float32, requires_grad=False).to(device)
-        self._acc_sum_squared = torch.zeros(
-            size, dtype=torch.float32, requires_grad=False).to(device)
+        self._acc_count = torch.zeros(1, dtype=torch.float32, requires_grad=False).to(device)
+        self._num_accumulations = torch.zeros(1, dtype=torch.float32, requires_grad=False).to(device)
+        self._acc_sum = torch.zeros(size, dtype=torch.float32, requires_grad=False).to(device)
+        self._acc_sum_squared = torch.zeros(size, dtype=torch.float32, requires_grad=False).to(device)
 
     def forward(self, batched_data, node_num=None, accumulate=True):
         """Normalizes input data and accumulates statistics."""

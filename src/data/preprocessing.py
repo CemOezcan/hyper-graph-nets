@@ -50,8 +50,7 @@ class Preprocessing():
             mature_data = torch.from_numpy(mature_data).to(device)
             reshaped_data = torch.reshape(mature_data, shapes[key])
             if types[key] == 'static':
-                reshaped_data = torch.tile(
-                    reshaped_data, (meta['trajectory_length'], 1, 1))
+                reshaped_data = torch.tile(reshaped_data, (meta['trajectory_length'], 1, 1))
             elif types[key] == 'dynamic_varlen':
                 pass
             elif types[key] != 'dynamic':

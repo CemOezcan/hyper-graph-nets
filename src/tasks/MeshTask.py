@@ -9,8 +9,7 @@ import plotly.graph_objects as go
 import torch
 import wandb
 
-from src.algorithms.AbstractIterativeAlgorithm import \
-    AbstractIterativeAlgorithm
+from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
 from src.data.data_loader import OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
@@ -66,7 +65,7 @@ class MeshTask(AbstractTask):
 
             self._algorithm.fit_iteration(train_dataloader=self.train_loader)
             one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
-            rollout = self._algorithm.evaluator(self._test_loader, self._num_val_rollouts, task_name)
+            rollout = self._algorithm.rollout_evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot(task_name)
             dir = self.save_plot(a, w, task_name)
@@ -86,7 +85,7 @@ class MeshTask(AbstractTask):
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
 
         self._algorithm.one_step_evaluator(self._valid_loader, self._num_test_trajectories, task_name, logging=False)
-        self._algorithm.evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
+        self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
     def plot(self, task_name) -> go.Figure:
@@ -104,10 +103,8 @@ class MeshTask(AbstractTask):
         # compute bounds
         bounds = []
         for trajectory in rollout_data:
-            bb_min = torch.squeeze(
-                trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
-            bb_max = torch.squeeze(
-                trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
+            bb_min = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
+            bb_max = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
             bounds.append((bb_min, bb_max))
 
         def animate(frame):
