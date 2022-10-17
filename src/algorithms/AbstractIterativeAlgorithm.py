@@ -73,6 +73,48 @@ class AbstractIterativeAlgorithm(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def one_step_evaluator(self, *args, **kwargs) -> Result:
+        """
+        Predict the system state for the next time step and evaluate the predictions over the test data.
+        Args:
+            *args:
+            **kwargs:
+
+        Returns: A single result that scores the input, potentially per sample
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def n_step_evaluator(self, *args, **kwargs) -> Result:
+        """
+        Predict the system state after n time steps. N step predictions are performed recursively within trajectories.
+         Evaluate the predictions over the test data.
+        Args:
+            *args:
+            **kwargs:
+
+        Returns: A single result that scores the input, potentially per sample
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def evaluator(self, *args, **kwargs) -> Result:
+        # TODO: Rename to rollout loss
+        """
+        Recursive prediction of the system state at the end of trajectories.
+         Evaluate the predictions over the test data.
+        Args:
+            *args:
+            **kwargs:
+
+        Returns: A single result that scores the input, potentially per sample
+
+        """
+        raise NotImplementedError
+
     @property
     def config(self) -> ConfigDict:
         return self._config
