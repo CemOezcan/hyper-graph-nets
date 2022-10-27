@@ -7,11 +7,12 @@ import torch.nn.functional as F
 from src import util
 from src.migration.meshgraphnet import MeshGraphNet
 from src.migration.normalizer import Normalizer
+from src.model.abstract_system_model import AbstractSystemModel
 from src.util import EdgeSet, MultiGraphWithPos, NodeType, device
 from torch import nn
 
 
-class FlagModel(nn.Module):
+class FlagModel(AbstractSystemModel):
     """Model for static cloth simulation."""
 
     def __init__(self, params):

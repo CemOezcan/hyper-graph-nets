@@ -16,6 +16,7 @@ from tqdm import tqdm
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from src.model.flag import FlagModel
+from src.model.get_model import get_model
 from src.util import detach, EdgeSet, MultiGraph
 from torch.utils.data import DataLoader
 from util.Types import ConfigDict, ScalarDict, Union
@@ -59,7 +60,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('rollout_loss', step_metric='epoch')
         wandb.define_metric('video', step_metric='epoch')
 
-        if self._wandb_url is not None:
+        if self._wandb_url is not None and self._wandb_mode == 'online':
             api = wandb.Api()
             run = api.run(self._wandb_url)
             this_run = api.run(wandb.run.path)
@@ -80,7 +81,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
-            self._network = FlagModel(self._network_config)
+            self._network = get_model(task_information)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True

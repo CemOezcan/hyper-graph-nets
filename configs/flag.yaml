@@ -25,25 +25,25 @@ optuna:
 
 compute:
   preprocessing: False
-  retrain: True # Start training a new model if True. Continue training the most recent version of the model if False.
+  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
 
 params:
   task:
-    dataset: flag_simple
+    dataset: flag_minimal
     rollout_split: valid
-    batch_size: 21
-    epochs: 15
-    trajectories: 1000
+    batch_size: 1
+    epochs: 1
+    trajectories: 1
     mode: all
-    prefetch_factor: 5
+    prefetch_factor: 1
     test:
-      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
-      rollouts: 10 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during evaluation
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
       n_steps: 60
     validation:
-      trajectories: 20 # Number of trajectories that are going to be used to compute the validation loss during training
-      rollouts: 5 # Number of trajectories that are going to be used to compute the rollout loss during training
+      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
     field: world_pos
     history: True
@@ -52,13 +52,13 @@ params:
     gamma: 0.9
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 5.0e-5
-    message_passing_steps: 5
+    learning_rate: 1.0e-4
+    message_passing_steps: 1
     rmp:
       num_clusters: 15
       frequency: 1
-      clustering: gmm
-      connector: hierarchical
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
@@ -79,7 +79,7 @@ params:
       random:
         edge_amount: 100
   logging:
-    wandb_mode: run
+    wandb_mode: offline
   random_seed: 0
 
 ---
