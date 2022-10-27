@@ -1,5 +1,6 @@
 """Model for FlagSimple."""
 import math
+from typing import Dict, Tuple
 
 import src.rmp.get_rmp as rmp
 import torch
@@ -8,12 +9,14 @@ from src import util
 from src.migration.meshgraphnet import MeshGraphNet
 from src.migration.normalizer import Normalizer
 from src.model.abstract_system_model import AbstractSystemModel
-from src.util import EdgeSet, MultiGraphWithPos, NodeType, device
-from torch import nn
+from src.util import EdgeSet, MultiGraphWithPos, NodeType, device, MultiGraph
+from torch import nn, Tensor
 
 
 class FlagModel(AbstractSystemModel):
-    """Model for static cloth simulation."""
+    """
+    Model for static flag simulation.
+    """
 
     def __init__(self, params):
         super(FlagModel, self).__init__()
@@ -58,7 +61,7 @@ class FlagModel(AbstractSystemModel):
             edge_sets=self._edge_sets
         ).to(device)
 
-    def build_graph(self, inputs, is_training):
+    def build_graph(self, inputs: Dict, is_training: bool) -> MultiGraphWithPos:
         """Builds input graph."""
         world_pos = inputs['world_pos']
         prev_world_pos = inputs['prev|world_pos']
@@ -123,7 +126,7 @@ class FlagModel(AbstractSystemModel):
 
         return graph
 
-    def expand_graph(self, graph, step, num_steps, is_training):
+    def expand_graph(self, graph: MultiGraphWithPos, step: int, num_steps: int, is_training: bool) -> MultiGraph:
         if self._balancer:
             if step % math.ceil(num_steps / self._balance_frequency) == 0:
                 self._graph_balancer.reset_balancer()
@@ -150,7 +153,7 @@ class FlagModel(AbstractSystemModel):
         return loss
 
     @torch.no_grad()
-    def validation_step(self, graph, data_frame):
+    def validation_step(self, graph: MultiGraph, data_frame: Dict) -> Tuple[Tensor, Tensor]:
         prediction = self(graph)
         target_normalized = self.get_target(data_frame, False)
 
@@ -163,7 +166,7 @@ class FlagModel(AbstractSystemModel):
 
         return acc_loss, pos_error
 
-    def update(self, inputs, per_node_network_output):
+    def update(self, inputs: Dict, per_node_network_output: Tensor) -> Tensor:
         """Integrate model outputs."""
         acceleration = self._output_normalizer.inverse(per_node_network_output)
 
@@ -187,7 +190,7 @@ class FlagModel(AbstractSystemModel):
         return self._output_normalizer(target_acceleration, is_training).to(device)
 
     @torch.no_grad()
-    def rollout(self, trajectory, num_steps):
+    def rollout(self, trajectory: Dict[str, Tensor], num_steps: int) -> Tuple[Dict[str, Tensor], Tensor]:
         """Rolls out a model trajectory."""
         num_steps = trajectory['cells'].shape[0] if num_steps is None else num_steps
         initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
@@ -242,7 +245,7 @@ class FlagModel(AbstractSystemModel):
         return cur_pos, next_pos, trajectory
 
     @torch.no_grad()
-    def n_step_computation(self, trajectory, n_step):
+    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
         mse_losses = list()
         for step in range(len(trajectory['world_pos']) - n_step):
             # TODO: clusters/balancers are reset when computing n_step loss
@@ -251,7 +254,3 @@ class FlagModel(AbstractSystemModel):
             mse_losses.append(torch.mean(mse_loss).cpu())
 
         return torch.mean(torch.stack(mse_losses))
-
-    def evaluate(self):
-        self.eval()
-        self.learned_model.eval()
