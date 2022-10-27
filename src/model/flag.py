@@ -123,6 +123,19 @@ class FlagModel(AbstractSystemModel):
 
         return graph
 
+    def expand_graph(self, graph, step, num_steps, is_training):
+        if self._balancer:
+            if step % math.ceil(num_steps / self._balance_frequency) == 0:
+                self._graph_balancer.reset_balancer()
+            graph = self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training)
+
+        if self._rmp:
+            if step % math.ceil(num_steps / self._rmp_frequency) == 0:
+                self._remote_graph.reset_clusters()
+            graph = self._remote_graph.create_graph(graph, is_training)
+
+        return graph
+
     def forward(self, graph):
         return self.learned_model(graph)
 
@@ -188,6 +201,7 @@ class FlagModel(AbstractSystemModel):
 
         pred_trajectory = list()
         for i in range(num_steps):
+            # TODO: clusters/balancers are reset when computing n_step loss
             prev_pos, cur_pos, pred_trajectory = \
                 self._step_fn(initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
 
@@ -214,18 +228,12 @@ class FlagModel(AbstractSystemModel):
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
-        if self._balancer:
-            if step % math.ceil(399 / self._balance_frequency) == 0:
-                self.reset_balancer()
-            graph = self.balance_graph(graph, is_training=False)
 
-        if self._rmp:
-            if step % math.ceil(399 / self._rmp_frequency) == 0:
-                self.reset_remote_graph()
-            graph = self.cluster_graph(graph, is_training=False)
-            if not self._visualized:
-                self._remote_graph.visualize_cluster(coordinates)
-                self._visualized = True
+        graph = self.expand_graph(graph, step, 399, is_training=False)
+
+        if self._rmp and not self._visualized:
+            self._remote_graph.visualize_cluster(coordinates)
+            self._visualized = True
 
         prediction = self.update(input, self(graph))
         next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
@@ -237,54 +245,13 @@ class FlagModel(AbstractSystemModel):
     def n_step_computation(self, trajectory, n_step):
         mse_losses = list()
         for step in range(len(trajectory['world_pos']) - n_step):
+            # TODO: clusters/balancers are reset when computing n_step loss
             eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
             prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
             mse_losses.append(torch.mean(mse_loss).cpu())
 
         return torch.mean(torch.stack(mse_losses))
 
-    def get_output_normalizer(self):
-        return self._output_normalizer
-
     def evaluate(self):
         self.eval()
         self.learned_model.eval()
-
-    def balance_graph(self, graph, is_training):
-        if self._balancer:
-            return self._graph_balancer.create_graph(graph, self._mesh_edge_normalizer, is_training)
-        return graph
-
-    def reset_balancer(self):
-        if self._balancer:
-            self._graph_balancer.reset_balancer()
-
-    def cluster_graph(self, graph, is_training):
-        if self._rmp:
-            return self._remote_graph.create_graph(graph, is_training)
-        return graph
-
-    def reset_remote_graph(self):
-        if self._rmp:
-            self._remote_graph.reset_clusters()
-
-    def training_step_pp(self, graph, data_frame):
-        network_output = self(graph)
-        target = data_frame['target']
-        target_normalized = self._output_normalizer(target, True)
-
-        node_type = data_frame['node_type']
-        loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-        loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
-
-        return loss
-
-    def get_target_unnormalized(self, data_frame):
-        cur_position = data_frame['world_pos']
-        prev_position = data_frame['prev|world_pos']
-        target_position = data_frame['target|world_pos']
-
-        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
-        target_acceleration = target_position - 2 * cur_position + prev_position
-
-        return target_acceleration

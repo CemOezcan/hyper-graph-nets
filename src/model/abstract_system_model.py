@@ -62,6 +62,20 @@ class AbstractSystemModel(ABC, nn.Module):
         raise NotImplementedError
 
     @abstractmethod
+    def expand_graph(self, *args, **kwargs) -> Result:
+        """
+        Expands the input graph with remote connections.
+
+        Args:
+            *args:
+            **kwargs:
+
+        Returns: The system state represented by a (heterogeneous hyper-) graph
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def rollout(self, *args, **kwargs) -> Result:
         """
         Predict a sub trajectory for n time steps by making n consecutive one-step predictions recursively.

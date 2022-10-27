@@ -33,9 +33,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._trajectories = config.get('task').get('trajectories')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
 
-        self._balance_frequency = self._network_config.get('graph_balancer').get('frequency')
-        self._rmp_frequency = self._network_config.get('rmp').get('frequency')
-
         self._batch_size = config.get('task').get('batch_size')
         self._network = None
         self._optimizer = None
@@ -178,15 +175,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         graph_amt = len(trajectory)
         for i, data_frame in enumerate(trajectory):
             graph = self._network.build_graph(data_frame, is_training)
-
-            if i % math.ceil(graph_amt / self._balance_frequency) == 0:
-                self._network.reset_balancer()
-            graph = self._network.balance_graph(graph, is_training)
-
-            if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
-                self._network.reset_remote_graph()
-            graph = self._network.cluster_graph(graph, is_training)
-
+            graph = self._network.expand_graph(graph, i, graph_amt, is_training)
             graphs.append(graph)
 
         return list(zip(graphs, trajectory))
@@ -281,7 +270,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for i, trajectory in enumerate(ds_loader):
                 if i >= n_traj:
                     break
-                self._network.reset_remote_graph()
                 loss = self._network.n_step_computation(trajectory, n_steps)
                 n_step_losses.append(loss)
 

@@ -71,6 +71,7 @@ class AbstractClusteringAlgorithm(ABC):
     def visualize_cluster(self, coordinates):
         palette = [[e * 255 for e in x] for x in sns.color_palette(cc.glasbey, len(set(self._labels)))]
         coordinates = [np.concatenate([c, palette[l]]) for c, l in zip(coordinates, self._labels)]
+        # TODO: Fix wandb bug by relocating logging functions
         wandb.log({'cluster': [wandb.Object3D(np.vstack(coordinates))]})
 
     def _empty_cluster_handling(self, labels: List[int]):
