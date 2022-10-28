@@ -28,27 +28,6 @@ class AbstractTask(ABC):
                 used by cw2 for the current run
         """
         self._config = config
-
-        retrain = config.get('retrain')
-        cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
-        num_clusters = get_from_nested_dict(config, ['model', 'rmp', 'num_clusters'])
-        balancer = get_from_nested_dict(config, ['model', 'graph_balancer', 'algorithm'])
-        mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
-        model_name = f'model_{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{mp}_epoch:'
-
-        epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
-        epochs = list() if retrain else epochs
-
-        if epochs:
-            self._current_epoch = max(epochs)
-            model_path = os.path.join(OUT_DIR, f'{model_name}{self._current_epoch}.pkl')
-            with open(model_path, 'rb') as file:
-                self._algorithm = pickle.load(file)
-        else:
-            self._algorithm = get_algorithm(config)
-            self._current_epoch = 0
-
-        self._config = config
         self._raw_data = {}
 
     @abstractmethod
