@@ -2,20 +2,21 @@
 import functools
 
 from collections import OrderedDict
+from typing import List
 
-from torch import nn
+from torch import nn, Tensor
 
 from src.migration.encoder import Encoder
 from src.migration.processor import Processor
 from src.migration.decoder import Decoder
-from src.util import device
+from src.util import device, MultiGraph
 
 
 class MeshGraphNet(nn.Module):
     """Encode-Process-Decode GraphNet model."""
 
-    def __init__(self, output_size, latent_size, num_layers, message_passing_aggregator,
-                 message_passing_steps, hierarchical, edge_sets):
+    def __init__(self, output_size: int, latent_size: int, num_layers: int, message_passing_aggregator: str,
+                 message_passing_steps: int, hierarchical: bool, edge_sets: List[str]):
         super().__init__()
         self._latent_size = latent_size
         self._output_size = output_size
@@ -35,14 +36,14 @@ class MeshGraphNet(nn.Module):
         self.decoder = Decoder(make_mlp=functools.partial(self._make_mlp, layer_norm=False),
                                output_size=self._output_size)
 
-    def forward(self, graph):
+    def forward(self, graph: MultiGraph) -> Tensor:
         """Encodes and processes a multigraph, and returns node features."""
         latent_graph = self.encoder(graph)
         latent_graph = self.processor(latent_graph)
         latent_graph = latent_graph._replace(node_features=latent_graph.node_features[0])
         return self.decoder(latent_graph)
 
-    def _make_mlp(self, output_size, layer_norm=True):
+    def _make_mlp(self, output_size: int, layer_norm=True) -> nn.Module:
         """Builds an MLP."""
         widths = [self._latent_size] * self._num_layers + [output_size]
         network = LazyMLP(widths)
@@ -54,7 +55,7 @@ class MeshGraphNet(nn.Module):
 
 # TODO refactor into new file
 class LazyMLP(nn.Module):
-    def __init__(self, output_sizes):
+    def __init__(self, output_sizes: List[int]):
         super().__init__()
         num_layers = len(output_sizes)
         self._layers_ordered_dict = OrderedDict()
@@ -65,7 +66,7 @@ class LazyMLP(nn.Module):
                 self._layers_ordered_dict["relu_" + str(index)] = nn.ReLU()
         self.layers = nn.Sequential(self._layers_ordered_dict)
 
-    def forward(self, input):
+    def forward(self, input: Tensor) -> Tensor:
         input = input.to(device)
         y = self.layers(input)
         return y
