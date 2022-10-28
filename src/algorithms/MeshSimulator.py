@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 import time
+from typing import Optional, Dict
 
 import numpy as np
 
@@ -83,7 +84,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
-    def fit_iteration(self, train_dataloader: DataLoader):
+    def fit_iteration(self, train_dataloader: DataLoader) -> None:
         self._network.train()
 
         for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
@@ -181,7 +182,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         return list(zip(graphs, trajectory))
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances, task_name, logging=True):
+    def one_step_evaluator(self, ds_loader: DataLoader, instances: int, task_name: str, logging=True) -> Optional[Dict]:
         trajectory_loss = list()
         for i, trajectory in enumerate(ds_loader):
             if i >= instances:
@@ -228,7 +229,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         else:
             self.publish_csv(data_frame, f'one_step', path)
 
-    def rollout_evaluator(self, ds_loader, rollouts, task_name, logging=True):
+    def rollout_evaluator(self, ds_loader: DataLoader, rollouts: int, task_name: str, logging=True) -> Optional[Dict]:
         """Run a model rollout trajectory."""
         trajectories = []
         mse_losses = []
@@ -261,7 +262,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         else:
             self.publish_csv(data_frame, f'rollout_losses', path)
 
-    def n_step_evaluator(self, ds_loader, task_name, n_step_list=[60], n_traj=2):
+    def n_step_evaluator(self, ds_loader: DataLoader, task_name: str, n_step_list=[60], n_traj=2) -> None:
         # Take n_traj trajectories from valid set for n_step loss calculation
         means = list()
         stds = list()

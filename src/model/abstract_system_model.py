@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+import torch
 from torch import nn, Tensor
 
 from src.util import MultiGraph, MultiGraphWithPos
@@ -11,6 +12,9 @@ class AbstractSystemModel(ABC, nn.Module):
     """
     Superclass for neural system model estimators
     """
+
+    def __init__(self, config: ConfigDict) -> None:
+        pass
 
     @abstractmethod
     def training_step(self, graph: MultiGraph, data_frame: Dict[str, Tensor]) -> Tensor:
@@ -34,6 +38,7 @@ class AbstractSystemModel(ABC, nn.Module):
         raise NotImplementedError
 
     @abstractmethod
+    @torch.no_grad()
     def validation_step(self, graph: MultiGraph, data_frame: Dict[str, Tensor]) -> Tuple[Tensor, Tensor]:
         """
         Evaluate given input data and potentially auxiliary information to create a dictionary of resulting values.
@@ -127,6 +132,7 @@ class AbstractSystemModel(ABC, nn.Module):
         raise NotImplementedError
 
     @abstractmethod
+    @torch.no_grad()
     def rollout(self, trajectory: Dict[str, Tensor], num_steps: int) -> Tuple[Dict[str, Tensor], Tensor]:
         """
         Predict a sub trajectory for n time steps by making n consecutive one-step predictions recursively.
@@ -149,6 +155,7 @@ class AbstractSystemModel(ABC, nn.Module):
         raise NotImplementedError
 
     @abstractmethod
+    @torch.no_grad()
     def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
         """
         Predict the system state after n time steps. N step predictions are performed recursively within trajectories.
