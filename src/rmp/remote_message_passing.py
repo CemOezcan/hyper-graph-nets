@@ -1,3 +1,8 @@
+from typing import List
+
+from src.migration.normalizer import Normalizer
+from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
+from src.rmp.abstract_connector import AbstractConnector
 from src.util import MultiGraphWithPos, EdgeSet, MultiGraph
 
 
@@ -6,15 +11,41 @@ class RemoteMessagePassing:
     Remote message passing for graph neural networks.
     """
 
-    def __init__(self, clustering_algorithm, connector):
+    def __init__(self, clustering_algorithm: AbstractClusteringAlgorithm, connector: AbstractConnector):
         """
         Initialize the remote message passing strategy.
+
+        Parameters
+        ----------
+            clustering_algorithm : AbstractClusteringAlgorithm
+                 The clustering algorithm
+
+            connector : AbstractConnector
+                The connector
+
         """
         self._clustering_algorithm = clustering_algorithm
         self._node_connector = connector
         self._clusters = None
 
-    def initialize(self, intra, inter):
+    def initialize(self, intra: Normalizer, inter: Normalizer) -> List:
+        """
+        Initialize normalizers after fetching the subclass according to the given configuration file
+
+        Parameters
+        ----------
+        intra : Normalizer
+            Normalizer for intra cluster edges
+
+        inter : Normalizer
+            Normalizer for inter cluster edges
+
+        Returns
+        -------
+            List
+                An empty list
+
+        """
         return self._node_connector.initialize(intra, inter)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
@@ -23,11 +54,13 @@ class RemoteMessagePassing:
 
         Parameters
         ----------
-        graph : Input graph
-        is_training : Whether the input is a training instance or not
+            graph : Input graph
+            is_training : Whether the input is a training instance or not
 
-        Returns the input graph with additional edges for remote message passing.
+        Returns
         -------
+            MultiGraph
+                The input graph with additional edges for remote message passing
 
         """
         graph = graph._replace(node_features=graph.node_features[0])
@@ -49,7 +82,23 @@ class RemoteMessagePassing:
         self._clustering_algorithm.visualize_cluster(graph)
 
     @staticmethod
-    def _graph_to_device(graph, dev):
+    def _graph_to_device(graph: MultiGraphWithPos, dev):
+        """
+        Send a graph to the given device
+
+        Parameters
+        ----------
+            graph : MultiGraphWithPos
+                The graph
+            dev :
+                The device
+
+        Returns
+        -------
+            MultiGraphWithPos
+                The graph on device dev
+
+        """
         return MultiGraphWithPos(node_features=graph.node_features.to(dev),
                                  edge_sets=[
                                      EdgeSet(
@@ -57,7 +106,8 @@ class RemoteMessagePassing:
                                          features=e.features.to(dev),
                                          senders=e.senders.to(dev),
                                          receivers=e.receivers.to(dev)
-                                     ) for e in graph.edge_sets],
+                                     ) for e in graph.edge_sets
+                                 ],
                                  target_feature=graph.target_feature.to(dev),
                                  model_type=graph.model_type,
                                  node_dynamic=graph.node_dynamic.to(dev)
