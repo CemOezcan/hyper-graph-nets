@@ -28,7 +28,7 @@ compute:
   retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
 
 params:
-  retrain: True
+  retrain: False
   task:
     task: mesh
     dataset: flag_minimal
