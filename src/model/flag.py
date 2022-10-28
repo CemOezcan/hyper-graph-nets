@@ -12,15 +12,16 @@ from src.model.abstract_system_model import AbstractSystemModel
 from src.util import EdgeSet, MultiGraphWithPos, NodeType, device, MultiGraph
 from torch import nn, Tensor
 
+from util.Types import ConfigDict
+
 
 class FlagModel(AbstractSystemModel):
     """
     Model for static flag simulation.
     """
 
-    def __init__(self, params):
-        super(FlagModel, self).__init__()
-        self._params = params
+    def __init__(self, params: ConfigDict):
+        super(FlagModel, self).__init__(params)
         self.loss_fn = torch.nn.MSELoss()
 
         self._output_normalizer = Normalizer(size=3, name='output_normalizer')

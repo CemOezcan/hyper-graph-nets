@@ -13,8 +13,9 @@ class AbstractSystemModel(ABC, nn.Module):
     Superclass for neural system model estimators
     """
 
-    def __init__(self, config: ConfigDict) -> None:
-        pass
+    def __init__(self, params: ConfigDict) -> None:
+        super(AbstractSystemModel, self).__init__()
+        self._params = params
 
     @abstractmethod
     def training_step(self, graph: MultiGraph, data_frame: Dict[str, Tensor]) -> Tensor:

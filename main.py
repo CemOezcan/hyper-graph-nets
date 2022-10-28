@@ -1,5 +1,6 @@
 import re
 
+from src.tasks.get_task import get_task
 from src.util import device, read_yaml
 from src.tasks.MeshTask import MeshTask
 from src.data.data_loader import CONFIG_NAME, OUT_DIR
@@ -45,12 +46,12 @@ def main(config_name=CONFIG_NAME):
         with open(model_path, 'rb') as file:
             algorithm = pickle.load(file)
 
-        task = MeshTask(algorithm, params)
-        task.run_iteration(last_epoch)
+        task = get_task(params, algorithm)
+        task.run_iterations(last_epoch)
     else:
         algorithm = MeshSimulator(params)
-        task = MeshTask(algorithm, params)
-        task.run_iteration(0)
+        task = get_task(params, algorithm)
+        task.run_iterations(0)
 
     task.get_scalars()
     task.plot(f'{model_name}_final')

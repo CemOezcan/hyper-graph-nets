@@ -29,6 +29,7 @@ compute:
 
 params:
   task:
+    task: mesh
     dataset: flag_minimal
     rollout_split: valid
     batch_size: 1
@@ -57,8 +58,8 @@ params:
     rmp:
       num_clusters: 15
       frequency: 1
-      clustering: gmm
-      connector: hierarchical
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
@@ -79,7 +80,7 @@ params:
       random:
         edge_amount: 100
   logging:
-    wandb_mode: offline
+    wandb_mode: online
   random_seed: 0
 
 ---

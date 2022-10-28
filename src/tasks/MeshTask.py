@@ -2,10 +2,10 @@
 import math
 import os
 import pickle
+from typing import Tuple
 
-import matplotlib.animation as ani
+from matplotlib.animation import PillowWriter, FuncAnimation
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
 import torch
 import wandb
 
@@ -57,7 +57,7 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         wandb.init(reinit=False)
 
-    def run_iteration(self, current_epoch):
+    def run_iterations(self, current_epoch: int) -> None:
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
@@ -80,7 +80,7 @@ class MeshTask(AbstractTask):
                 self._algorithm.lr_scheduler_step()
 
     # TODO add trajectories from evaluate method
-    def get_scalars(self) -> ScalarDict:
+    def get_scalars(self) -> None:
         assert isinstance(self._algorithm, MeshSimulator)
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
 
@@ -88,7 +88,7 @@ class MeshTask(AbstractTask):
         self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
-    def plot(self, task_name) -> go.Figure:
+    def plot(self, task_name: str) -> Tuple[FuncAnimation, PillowWriter]:
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
@@ -126,8 +126,8 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = ani.FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
-        writergif = ani.PillowWriter(fps=10)
+        animation = FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
+        writergif = PillowWriter(fps=10)
 
         return animation, writergif
 
