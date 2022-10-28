@@ -446,7 +446,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.log_artifact(artifact)
 
     @staticmethod
-    def _log_epoch(data: Dict[str, Any]) -> None:
+    def log_epoch(data: Dict[str, Any]) -> None:
         """
         Log the metrics of an epoch.
 

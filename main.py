@@ -22,7 +22,6 @@ warnings.filterwarnings('ignore')
 
 def main(config_name=CONFIG_NAME):
     config_file = read_yaml(config_name)
-    retrain = config_file['compute']['retrain']
 
     params = config_file['params']
     print(f'Device used for this run: {device}')
@@ -31,30 +30,11 @@ def main(config_name=CONFIG_NAME):
     np.random.seed(seed=random_seed)
     torch.manual_seed(seed=random_seed)
 
-    cluster = get_from_nested_dict(params, ['model', 'rmp', 'clustering'])
-    num_clusters = get_from_nested_dict(params, ['model', 'rmp', 'num_clusters'])
-    balancer = get_from_nested_dict(params, ['model', 'graph_balancer', 'algorithm'])
-    mp = get_from_nested_dict(params, ['model', 'message_passing_steps'])
-    model_name = f'model_{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{mp}_epoch:'
-
-    epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
-    epochs = list() if retrain else epochs
-
-    if epochs:
-        last_epoch = max(epochs)
-        model_path = os.path.join(OUT_DIR, f'{model_name}{last_epoch}.pkl')
-        with open(model_path, 'rb') as file:
-            algorithm = pickle.load(file)
-
-        task = get_task(params, algorithm)
-        task.run_iterations(last_epoch)
-    else:
-        algorithm = MeshSimulator(params)
-        task = get_task(params, algorithm)
-        task.run_iterations(0)
+    task = get_task(params)
+    task.run_iterations()
 
     task.get_scalars()
-    task.plot(f'{model_name}_final')
+    # TODO: fix --> task.plot(f'{model_name}_final')
 
 
 if __name__ == '__main__':
