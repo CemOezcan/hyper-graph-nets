@@ -32,8 +32,8 @@ class MeshTask(AbstractTask):
             config : ConfigDict
                 A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
                 used by cw2 for the current run.
-        """
 
+        """
         super().__init__(algorithm=algorithm, config=config)
         self._config = config
         self._epochs = config.get('task').get('epochs')
@@ -87,13 +87,13 @@ class MeshTask(AbstractTask):
             rollout = self._algorithm.rollout_evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot(task_name)
-            dir = self.save_plot(a, w, task_name)
+            dir = self._save_plot(a, w, task_name)
 
             animation = {"video": wandb.Video(dir, fps=5, format="gif")}
             data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
-            self._algorithm.log_epoch(data)
+            self._algorithm._log_epoch(data)
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
@@ -172,7 +172,25 @@ class MeshTask(AbstractTask):
         return animation, writergif
 
     @staticmethod
-    def save_plot(animation, writervideo, task_name):
+    def _save_plot(animation: FuncAnimation, writervideo: PillowWriter, task_name: str) -> str:
+        """
+        Saves a simulation as a .gif file.
+
+        Parameters
+        ----------
+            animation : FuncAnimation
+                The animation
+            writervideo : PillowWriter
+                The writer
+            task_name : str
+                The task name
+
+        Returns
+        -------
+            str
+                The path to the .gif file
+
+        """
         dir = os.path.join(OUT_DIR, f'{task_name}_animation.gif')
         animation.save(dir, writer=writervideo)
         plt.show(block=True)
