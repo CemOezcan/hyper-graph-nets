@@ -54,10 +54,11 @@ class MeshTask(AbstractTask):
         self._valid_loader = get_data(config=config, split='valid')
 
         cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
+        connector = get_from_nested_dict(config, ['model', 'rmp', 'connector'])
         num_clusters = get_from_nested_dict(config, ['model', 'rmp', 'num_clusters'])
         balancer = get_from_nested_dict(config, ['model', 'graph_balancer', 'algorithm'])
         self._mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
-        self._task_name = f'{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{self._mp}_epoch:'
+        self._task_name = f'{num_clusters}_cluster:{cluster}_connector:{connector}_balancer:{balancer}_mp:{self._mp}_epoch:'
 
         retrain = config.get('retrain')
         epochs = list() if retrain else [
