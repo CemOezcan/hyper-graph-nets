@@ -22,12 +22,18 @@ class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
     def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
         """
-        Initializes all necessary data for a classification task.
+        Initializes all necessary data for a mesh simulation task.
 
-        Args:
-            config: A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
+        Parameters
+        ----------
+            algorithm : AbstractIterativeAlgorithm
+                # TODO: Remove and initialize here
+
+            config : ConfigDict
+                A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
                 used by cw2 for the current run.
         """
+
         super().__init__(algorithm=algorithm, config=config)
         self._config = config
         self._epochs = config.get('task').get('epochs')
@@ -58,6 +64,19 @@ class MeshTask(AbstractTask):
         wandb.init(reinit=False)
 
     def run_iterations(self, current_epoch: int) -> None:
+        """
+        Run all training epochs of the mesh simulator.
+        Continues the training after the given epoch, if necessary.
+
+        Parameters
+        ----------
+            current_epoch : int
+                Continues training at this epoch
+
+        Returns
+        -------
+
+        """
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
@@ -79,8 +98,14 @@ class MeshTask(AbstractTask):
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
 
-    # TODO add trajectories from evaluate method
     def get_scalars(self) -> None:
+        """
+        Estimate and document the one-step, rollout and n-step losses of the mesh simulator.
+
+        Returns
+        -------
+
+        """
         assert isinstance(self._algorithm, MeshSimulator)
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
 
@@ -89,6 +114,21 @@ class MeshTask(AbstractTask):
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
     def plot(self, task_name: str) -> Tuple[FuncAnimation, PillowWriter]:
+        """
+        Simulates and visualizes predicted trajectories as well as their respective ground truth trajectories.
+        The predicted trajectories are produced by the current state of the mesh simulator.
+
+        Parameters
+        ----------
+            task_name : str
+                The name of the task
+
+        Returns
+        -------
+            Tuple[FuncAnimation, PillowWriter]
+                The simulations
+
+        """
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
@@ -138,6 +178,3 @@ class MeshTask(AbstractTask):
         plt.show(block=True)
         return dir
 
-    def preprocess(self):
-        self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
-        self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)

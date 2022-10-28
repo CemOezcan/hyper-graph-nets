@@ -68,6 +68,8 @@ class AbstractTask(ABC):
 
         Returns
         -------
+            Tuple[FuncAnimation, PillowWriter]
+                The simulations
 
         """
 
