@@ -20,21 +20,18 @@ from util.Functions import get_from_nested_dict
 
 class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
-    def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
+    def __init__(self, config: ConfigDict):
         """
         Initializes all necessary data for a mesh simulation task.
 
         Parameters
         ----------
-            algorithm : AbstractIterativeAlgorithm
-                # TODO: Remove and initialize here
-
             config : ConfigDict
                 A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
                 used by cw2 for the current run.
 
         """
-        super().__init__(algorithm=algorithm, config=config)
+        super().__init__(config=config)
         self._config = config
         self._epochs = config.get('task').get('epochs')
         self._trajectories = config.get('task').get('trajectories')
@@ -48,11 +45,8 @@ class MeshTask(AbstractTask):
         self._n_steps = config.get('task').get('test').get('n_steps')
 
         self.train_loader = get_data(config=config)
-
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
         self._valid_loader = get_data(config=config, split='valid')
-
-        self.mask = None
 
         cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
         num_clusters = get_from_nested_dict(config, ['model', 'rmp', 'num_clusters'])
@@ -63,23 +57,14 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         wandb.init(reinit=False)
 
-    def run_iterations(self, current_epoch: int) -> None:
+    def run_iterations(self) -> None:
         """
         Run all training epochs of the mesh simulator.
         Continues the training after the given epoch, if necessary.
-
-        Parameters
-        ----------
-            current_epoch : int
-                Continues training at this epoch
-
-        Returns
-        -------
-
         """
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
-
-        for e in trange(current_epoch, self._epochs, desc='Epochs'):
+        start_epoch = self._current_epoch
+        for e in trange(start_epoch, self._epochs, desc='Epochs'):
             task_name = f'{self._task_name}_mp:{self._mp}_epoch:{e + 1}'
 
             self._algorithm.fit_iteration(train_dataloader=self.train_loader)
@@ -93,7 +78,8 @@ class MeshTask(AbstractTask):
             data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
-            self._algorithm._log_epoch(data)
+            self._algorithm.log_epoch(data)
+            self._current_epoch = e + 1
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()

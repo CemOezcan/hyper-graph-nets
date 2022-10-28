@@ -28,12 +28,13 @@ compute:
   retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
 
 params:
+  retrain: True
   task:
     task: mesh
     dataset: flag_minimal
     rollout_split: valid
     batch_size: 1
-    epochs: 1
+    epochs: 5
     trajectories: 1
     mode: all
     prefetch_factor: 1

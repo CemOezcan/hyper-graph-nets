@@ -1,14 +1,21 @@
+import os
+import pickle
+import re
 from abc import ABC, abstractmethod
 from typing import Tuple
 
 from matplotlib.animation import PillowWriter, FuncAnimation
 
+from src.algorithms.MeshSimulator import MeshSimulator
+from src.algorithms.get_algorithm import get_algorithm
+from src.data.data_loader import OUT_DIR
+from util.Functions import get_from_nested_dict
 from util.Types import *
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 
 
 class AbstractTask(ABC):
-    def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
+    def __init__(self, config: ConfigDict):
         """
         Initializes the current task. Depending on the application, this can be something like a classification task
         for supervised learning (in which case this method would be used to load in the data and labels), or a gym
@@ -16,31 +23,38 @@ class AbstractTask(ABC):
 
         Parameters
         ----------
-            algorithm : AbstractIterativeAlgorithm
-                The algorithm to train on this task
-
             config : ConfigDict
                 A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
                 used by cw2 for the current run
         """
+        self._config = config
 
-        self._algorithm = algorithm
+        retrain = config.get('retrain')
+        cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
+        num_clusters = get_from_nested_dict(config, ['model', 'rmp', 'num_clusters'])
+        balancer = get_from_nested_dict(config, ['model', 'graph_balancer', 'algorithm'])
+        mp = get_from_nested_dict(config, ['model', 'message_passing_steps'])
+        model_name = f'model_{num_clusters}_cluster:{cluster}_balancer:{balancer}_mp:{mp}_epoch:'
+
+        epochs = [int(file.split('_epoch:')[1][:-4]) for file in os.listdir(OUT_DIR) if re.match(rf'{model_name}[0-9]+\.pkl', file)]
+        epochs = list() if retrain else epochs
+
+        if epochs:
+            self._current_epoch = max(epochs)
+            model_path = os.path.join(OUT_DIR, f'{model_name}{self._current_epoch}.pkl')
+            with open(model_path, 'rb') as file:
+                self._algorithm = pickle.load(file)
+        else:
+            self._algorithm = get_algorithm(config)
+            self._current_epoch = 0
+
         self._config = config
         self._raw_data = {}
 
     @abstractmethod
-    def run_iterations(self, current_epoch: int) -> None:
+    def run_iterations(self) -> None:
         """
         Runs all iteration of its iterative algorithm.
-
-        Parameters
-        ----------
-            current_epoch : int
-                Continues training at this epoch
-
-        Returns
-        -------
-
         """
         raise NotImplementedError
 
