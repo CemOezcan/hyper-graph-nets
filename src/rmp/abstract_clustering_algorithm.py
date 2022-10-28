@@ -28,7 +28,7 @@ class AbstractClusteringAlgorithm(ABC):
         # TODO: Change graph input to initialize in order to preprocess the graph
 
     @abstractmethod
-    def _initialize(self):
+    def _initialize(self) -> None:
         """
         Special initialization function if parameterized preprocessing is necessary.
 
@@ -40,9 +40,20 @@ class AbstractClusteringAlgorithm(ABC):
 
     @abstractmethod
     def _cluster(self, graph: MultiGraphWithPos) -> List[int]:
-        '''
+        """
         Run clustering algorithm given a multigraph or point cloud.
-        '''
+
+        Parameters
+        ----------
+            graph : MultiGraphWithPos
+                The graph to be clustered
+
+        Returns
+        -------
+            List[int]
+                The cluster affiliations of all nodes
+        """
+
         raise NotImplementedError
 
     def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
@@ -51,10 +62,13 @@ class AbstractClusteringAlgorithm(ABC):
 
         Parameters
         ----------
-        graph :  Input data for the algorithm, represented by a multigraph or a point cloud.
+            graph : MultiGraphWithPos
+                Input data for the algorithm, represented by a multigraph or a point cloud.
 
-        Returns clustering as a list.
+        Returns
         -------
+            List[Tensor]
+                Clustering as a list
 
         """
         labels = self._empty_cluster_handling(list(self._cluster(graph)))
@@ -71,6 +85,7 @@ class AbstractClusteringAlgorithm(ABC):
     def visualize_cluster(self, coordinates):
         palette = [[e * 255 for e in x] for x in sns.color_palette(cc.glasbey, len(set(self._labels)))]
         coordinates = [np.concatenate([c, palette[l]]) for c, l in zip(coordinates, self._labels)]
+        # TODO: Fix wandb bug by relocating logging functions
         wandb.log({'cluster': [wandb.Object3D(np.vstack(coordinates))]})
 
     def _empty_cluster_handling(self, labels: List[int]):

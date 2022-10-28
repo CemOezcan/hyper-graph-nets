@@ -4,6 +4,7 @@ from typing import List, Tuple
 from torch import Tensor
 import torch
 
+from src.migration.normalizer import Normalizer
 from src.util import MultiGraphWithPos, MultiGraph
 
 
@@ -20,17 +21,22 @@ class AbstractConnector(ABC):
         self._intra_normalizer = None
         self._inter_normalizer = None
 
-    def initialize(self, intra, inter):
+    def initialize(self, intra: Normalizer, inter: Normalizer) -> List:
         """
         Initialize normalizers after fetching the subclass according to the given configuration file
 
         Parameters
         ----------
-        intra : Normalizer for intra cluster edges
-        inter : Normalizer for inter cluster edges
+        intra : Normalizer
+            Normalizer for intra cluster edges
+
+        inter : Normalizer
+            Normalizer for inter cluster edges
 
         Returns
         -------
+            List
+                An empty list
 
         """
         self._intra_normalizer = intra
@@ -38,18 +44,25 @@ class AbstractConnector(ABC):
         return list()
 
     @abstractmethod
-    def run(self, graph: MultiGraph, clusters: List[List], is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraph, clusters: List[List[int]], is_training: bool) -> MultiGraphWithPos:
         """
         Adds remote edges to the input graph.
 
         Parameters
         ----------
-        graph : Input graph
-        clusters : Clustering of the graph
-        is_training: Training or test sample
+            graph : MultiGraph
+                Input graph
 
-        Returns the input graph including remote edges.
+            clusters : List[List[int]]
+                Clustering of the graph
+
+            is_training: bool
+                Training or test sample
+
+        Returns
         -------
+            MultiGraphWithPos
+                The input graph including remote edges.
 
         """
         raise NotImplementedError

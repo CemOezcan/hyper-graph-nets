@@ -1,20 +1,19 @@
+from typing import Callable, List
 
 from torch import nn
 
 from src.migration.graphnet import GraphNet
 from src.migration.hypergraphnet import HyperGraphNet
+from src.util import MultiGraph
 
 
 class Processor(nn.Module):
     """
-    This class takes the nodes with the most influential feature (sum of square)
-    The the chosen numbers of nodes in each ripple will establish connection(features and distances) with the most influential nodes and this connection will be learned
-    Then the result is add to output latent graph of encoder and the modified latent graph will be feed into original processor
-
-    Option: choose whether to normalize the high rank node connection
+    The Graph Neural Network that transforms the input graph.
     """
 
-    def __init__(self, make_mlp, output_size, message_passing_steps, message_passing_aggregator, edge_sets, hierarchical=True):
+    def __init__(self, make_mlp: Callable, output_size: int, message_passing_steps: int,
+                 message_passing_aggregator: str, edge_sets: List[str], hierarchical=True):
         super().__init__()
         graphnet_block = HyperGraphNet if hierarchical else GraphNet
         blocks = []
@@ -26,5 +25,5 @@ class Processor(nn.Module):
             )
         self.graphnet_blocks = nn.Sequential(*blocks)
 
-    def forward(self, latent_graph):
+    def forward(self, latent_graph: MultiGraph) -> MultiGraph:
         return self.graphnet_blocks(latent_graph)

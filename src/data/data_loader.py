@@ -11,11 +11,11 @@ from os.path import dirname as up
 
 ROOT_DIR = up(up(up(os.path.join(os.path.abspath(__file__)))))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-TASK_DIR = os.path.join(DATA_DIR, read_yaml('flag')[
-                        'params']['task']['dataset'])
+TASK_DIR = os.path.join(DATA_DIR, read_yaml('flag')['params']['task']['dataset'])
 OUT_DIR = os.path.join(TASK_DIR, 'output')
 IN_DIR = os.path.join(TASK_DIR, 'input')
 CONFIG_NAME = 'flag'
+
 
 def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):
     dataset_name = get_from_nested_dict(config, list_of_keys=["task", "dataset"], raise_error=True)

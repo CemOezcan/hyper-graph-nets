@@ -1,16 +1,17 @@
+from typing import Callable, List
 
 import torch
 
-from torch import nn
+from torch import nn, Tensor
 
 from src import util
-from src.util import device, MultiGraph
+from src.util import device, MultiGraph, EdgeSet
 
 
 class GraphNet(nn.Module):
     """Multi-Edge Interaction Network with residual connections."""
 
-    def __init__(self, model_fn, output_size, message_passing_aggregator, edge_sets):
+    def __init__(self, model_fn: Callable, output_size: int, message_passing_aggregator: str, edge_sets: List[str]):
         super().__init__()
 
         self.node_model_cross = model_fn(output_size)
@@ -18,7 +19,7 @@ class GraphNet(nn.Module):
 
         self.message_passing_aggregator = message_passing_aggregator
 
-    def _update_edge_features(self, node_features, edge_set):
+    def _update_edge_features(self, node_features: List[Tensor], edge_set: EdgeSet) -> Tensor:
         """Aggregrates node features, and applies edge function."""
         node_features = torch.cat(tuple(node_features), dim=0)
         senders = edge_set.senders.to(device)
@@ -32,7 +33,7 @@ class GraphNet(nn.Module):
 
         return self.edge_models[edge_set.name](features)
 
-    def _update_node_features(self, node_features, edge_sets):
+    def _update_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
         """Aggregrates edge features, and applies node function."""
         hyper_node_offset = len(node_features[0])
         node_features = torch.cat(tuple(node_features), dim=0)
@@ -48,7 +49,7 @@ class GraphNet(nn.Module):
 
         return [updated_nodes_cross, node_features[hyper_node_offset:]]
 
-    def aggregation(self, edge_sets, features, num_nodes):
+    def aggregation(self, edge_sets: List[EdgeSet], features: List[Tensor], num_nodes: int) -> Tensor:
         for edge_set in edge_sets:
             if self.message_passing_aggregator == 'pna':
                 features.append(
@@ -70,7 +71,7 @@ class GraphNet(nn.Module):
 
         return torch.cat(features, dim=-1)
 
-    def forward(self, graph, mask=None):
+    def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
         """Applies GraphNetBlock and returns updated MultiGraph."""
         # apply edge functions
         new_edge_sets = []
@@ -90,7 +91,7 @@ class GraphNet(nn.Module):
         return MultiGraph(new_node_features, new_edge_sets)
 
     @staticmethod
-    def _mask_operation(mask, new_node_features, graph):
+    def _mask_operation(mask: Tensor, new_node_features: Tensor, graph: MultiGraph):
         mask = mask.repeat(new_node_features.shape[-1])
         mask = mask.view(new_node_features.shape[0], new_node_features.shape[1])
         return torch.where(mask, new_node_features, graph.node_features)

@@ -1,3 +1,5 @@
+from typing import Callable, List
+
 import torch
 from torch import nn
 
@@ -7,7 +9,7 @@ from src.util import MultiGraph
 class Encoder(nn.Module):
     """Encodes node and edge features into latent features."""
 
-    def __init__(self, make_mlp, latent_size, edge_sets, hierarchical=True):
+    def __init__(self, make_mlp: Callable, latent_size: int, edge_sets: List[str], hierarchical=True):
         super().__init__()
         self._make_mlp = make_mlp
         self._latent_size = latent_size
@@ -18,7 +20,7 @@ class Encoder(nn.Module):
         if hierarchical:
             self.hyper_node_model = self._make_mlp(latent_size)
 
-    def forward(self, graph):
+    def forward(self, graph: MultiGraph) -> MultiGraph:
         node_latents = [self.node_model(graph.node_features[0])]
         try:
             node_latents.append(self.hyper_node_model(graph.node_features[1]))

@@ -1,7 +1,9 @@
-import abc
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import Tuple
+
+from matplotlib.animation import PillowWriter, FuncAnimation
+
 from util.Types import *
-import plotly.graph_objects as go
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 
 
@@ -12,31 +14,66 @@ class AbstractTask(ABC):
         for supervised learning (in which case this method would be used to load in the data and labels), or a gym
         environment for a Reinforcement Learning task.
 
-        Args:
-            algorithm: The algorithm to train on this task.
-            config: A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
-                used by cw2 for the current run.
+        Parameters
+        ----------
+            algorithm : AbstractIterativeAlgorithm
+                The algorithm to train on this task
+
+            config : ConfigDict
+                A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
+                used by cw2 for the current run
         """
+
         self._algorithm = algorithm
         self._config = config
         self._raw_data = {}
 
-    @abc.abstractmethod
-    def run_iteration(self):
-        raise NotImplementedError("AbstractTask does not implemented run_iteration()")
+    @abstractmethod
+    def run_iterations(self, current_epoch: int) -> None:
+        """
+        Runs all iteration of its iterative algorithm.
 
-    @abc.abstractmethod
-    def get_scalars(self) -> ScalarDict:
-        raise NotImplementedError("AbstractTask does not implemented get_scalars()")
+        Parameters
+        ----------
+            current_epoch : int
+                Continues training at this epoch
 
-    @abc.abstractmethod
-    def plot(self) -> go.Figure:
+        Returns
+        -------
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_scalars(self) -> None:
+        """
+        Evaluates the final model after all training epochs.
+
+        Returns
+        -------
+
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def plot(self, task_name: str) -> Tuple[FuncAnimation, PillowWriter]:
         """
         Create a plot for the current state of the task and its algorithm
-        Returns:
+
+        Parameters
+        ----------
+            task_name : str
+                The name of the task
+
+        Returns
+        -------
+            Tuple[FuncAnimation, PillowWriter]
+                The simulations
 
         """
-        raise NotImplementedError("AbstractTask does not implemented plot()")
+
+        raise NotImplementedError
 
     @property
     def raw_data(self):

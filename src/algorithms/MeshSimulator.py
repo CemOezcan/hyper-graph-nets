@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 import time
+from typing import Optional, Dict, List, Tuple, Any
 
 import numpy as np
 
@@ -11,18 +12,36 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import wandb
+from pandas import DataFrame
+from torch import Tensor
 from tqdm import tqdm
 
 from src.data.data_loader import OUT_DIR, IN_DIR
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
+from src.model.abstract_system_model import AbstractSystemModel
 from src.model.flag import FlagModel
+from src.model.get_model import get_model
 from src.util import detach, EdgeSet, MultiGraph
 from torch.utils.data import DataLoader
 from util.Types import ConfigDict, ScalarDict, Union
 
 
 class MeshSimulator(AbstractIterativeAlgorithm):
+    """
+    Class for training and evaluating a graph neural network for mesh based physics simulations.
+    """
+
     def __init__(self, config: ConfigDict) -> None:
+        """
+        Initializes the mesh simulator.
+
+        Parameters
+        ----------
+            config : ConfigDict
+                A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
+                used by cw2 for the current run.
+
+        """
         super().__init__(config=config)
         self._dataset_dir = IN_DIR
         self._network_config = config.get('model')
@@ -31,9 +50,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self._trajectories = config.get('task').get('trajectories')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
-
-        self._balance_frequency = self._network_config.get('graph_balancer').get('frequency')
-        self._rmp_frequency = self._network_config.get('rmp').get('frequency')
 
         self._batch_size = config.get('task').get('batch_size')
         self._network = None
@@ -48,6 +64,16 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._gamma = self._network_config.get('gamma')
 
     def initialize(self, task_information: ConfigDict) -> None:
+        """
+        Initialize wandb and attributes, that should not be reinitialized once the model has been trained
+        to allow training to be continued.
+
+        Parameters
+        ----------
+            task_information : ConfigDict
+                A dictionary containing information on how to execute the algorithm on the current task
+
+        """
         self._wandb_run = None
         self._wandb_mode = task_information.get('logging').get('wandb_mode')
         wandb.init(project='rmp', config=task_information, mode=self._wandb_mode)
@@ -59,7 +85,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         wandb.define_metric('rollout_loss', step_metric='epoch')
         wandb.define_metric('video', step_metric='epoch')
 
-        if self._wandb_url is not None:
+        if self._wandb_url is not None and self._wandb_mode == 'online':
             api = wandb.Api()
             run = api.run(self._wandb_url)
             this_run = api.run(wandb.run.path)
@@ -80,12 +106,27 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         if not self._initialized:
             self._batch_size = task_information.get('task').get('batch_size')
-            self._network = FlagModel(self._network_config)
+            self._network = get_model(task_information)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
             self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
-    def fit_iteration(self, train_dataloader: DataLoader):
+    def fit_iteration(self, train_dataloader: DataLoader) -> None:
+        """
+        Perform a training epoch, followed by a validation iteration to assess the model performance.
+        Document relevant metrics with wandb.
+
+        Parameters
+        ----------
+            train_dataloader : DataLoader
+                A data loader containing the training data
+
+        Returns
+        -------
+            May return an optional dictionary of values produced during the fit. These may e.g., be statistics
+            of the fit such as a training loss.
+
+        """
         self._network.train()
 
         for i, trajectory in enumerate(tqdm(train_dataloader, desc='Trajectories', leave=False, total=self._trajectories)):
@@ -94,7 +135,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             start_trajectory = time.time()
             batches = self.fetch_data(trajectory, True)
-            batches = self.get_batched(batches, self._batch_size)
+            batches = self._get_batched(batches, self._batch_size)
             random.shuffle(batches)
 
             for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
@@ -113,7 +154,26 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
 
-    def get_batched(self, data, batch_size):
+    @staticmethod
+    def _get_batched(data: List[Tuple[MultiGraph, Dict[str, Tensor]]], batch_size: int) -> List[Tuple[MultiGraph, Dict[str, Tensor]]]:
+        """
+        Minibatching within the trajectory. The graph representations of multiple instances within the given
+        trajectory are combined into a single graph for efficient processing by the graph neural network.
+
+        Parameters
+        ----------
+        data : List[Tuple[MultiGraph, Dict[str, Tensor]]]
+            System states and their respective graph representations of a trajectory
+
+        batch_size : int
+            The batch size, must be divisible by the length of the given trajectory
+
+        Returns
+        -------
+            List[Tuple[MultiGraph, Dict[str, Tensor]]]
+                The batched graphs
+
+        """
         graph_amt = len(data)
         assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
         batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
@@ -172,26 +232,56 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return batched_data
 
-    def fetch_data(self, trajectory, is_training):
+    def fetch_data(self, trajectory: List[Dict[str, Tensor]], is_training: bool) -> List[Tuple[MultiGraph, Dict[str, Tensor]]]:
+        """
+        Transform an entire trajectory of system states into a trajectory of graphs.
+
+        Parameters
+        ----------
+            trajectory : List[Dict[str, Tensor]]
+                A trajectory of system states
+            is_training : bool
+                Whether this is a training or a test/validation trajectory
+
+        Returns
+        -------
+            List[Tuple[MultiGraph, Dict[str, Tensor]]]
+                The instances of the trajectory and their respective graph representations
+        """
         graphs = []
         graph_amt = len(trajectory)
         for i, data_frame in enumerate(trajectory):
             graph = self._network.build_graph(data_frame, is_training)
-
-            if i % math.ceil(graph_amt / self._balance_frequency) == 0:
-                self._network.reset_balancer()
-            graph = self._network.balance_graph(graph, is_training)
-
-            if i % math.ceil(graph_amt / self._rmp_frequency) == 0:
-                self._network.reset_remote_graph()
-            graph = self._network.cluster_graph(graph, is_training)
-
+            graph = self._network.expand_graph(graph, i, graph_amt, is_training)
             graphs.append(graph)
 
         return list(zip(graphs, trajectory))
 
     @torch.no_grad()
-    def one_step_evaluator(self, ds_loader, instances, task_name, logging=True):
+    def one_step_evaluator(self, ds_loader: DataLoader, instances: int, task_name: str, logging=True) -> Optional[Dict]:
+        """
+        Predict the system state for the next time step and evaluate the predictions over the test data.
+
+        Parameters
+        ----------
+            ds_loader : DataLoader
+                A data loader containing test/validation instances
+
+            instances : int
+                Number of trajectories used to estimate the one-step loss
+
+            task_name : str
+                Name of the task
+
+            logging : bool
+                Whether to log the results to wandb
+
+        Returns
+        -------
+            Optional[Dict]
+                Estimates of loss statistics over the input trajectories
+
+        """
         trajectory_loss = list()
         for i, trajectory in enumerate(ds_loader):
             if i >= instances:
@@ -236,10 +326,33 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             }
             return log_dict
         else:
-            self.publish_csv(data_frame, f'one_step', path)
+            self._publish_csv(data_frame, f'one_step', path)
 
-    def rollout_evaluator(self, ds_loader, rollouts, task_name, logging=True):
-        """Run a model rollout trajectory."""
+    def rollout_evaluator(self, ds_loader: DataLoader, rollouts: int, task_name: str, logging=True) -> Optional[Dict]:
+        """
+        Recursive prediction of the system state at the end of trajectories.
+        Evaluate the predictions over the test data.
+
+        Parameters
+        ----------
+            ds_loader : DataLoader
+                A data loader containing test/validation instances
+
+            rollouts : int
+                Number of trajectories used to estimate the rollout loss
+
+            task_name : str
+                Name of the task
+
+            logging : bool
+                Whether to log the results to wandb
+
+        Returns
+        -------
+            Optional[Dict]
+                Estimates of loss statistics over the input trajectories
+
+        """
         trajectories = []
         mse_losses = []
         num_steps = None
@@ -269,9 +382,28 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             table = wandb.Table(dataframe=data_frame)
             return {'rollout_loss': rollout_losses['mse_loss'][-1], f'{task_name}_rollout_losses': table}
         else:
-            self.publish_csv(data_frame, f'rollout_losses', path)
+            self._publish_csv(data_frame, f'rollout_losses', path)
 
-    def n_step_evaluator(self, ds_loader, task_name, n_step_list=[60], n_traj=2):
+    def n_step_evaluator(self, ds_loader: DataLoader, task_name: str, n_step_list=[60], n_traj=2) -> None:
+        """
+        Predict the system state after n time steps. N step predictions are performed recursively within trajectories.
+        Evaluate the predictions over the test data.
+
+        Parameters
+        ----------
+            ds_loader : DataLoader
+                A data loader containing test/validation instances
+
+            task_name : str
+                Name of the task
+
+            n_step_list : List[int]
+                Different values for n, with which to estimate the n-step loss
+
+            n_traj : int
+                Number of trajectories used to estimate the n-step loss
+
+        """
         # Take n_traj trajectories from valid set for n_step loss calculation
         means = list()
         stds = list()
@@ -280,7 +412,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             for i, trajectory in enumerate(ds_loader):
                 if i >= n_traj:
                     break
-                self._network.reset_remote_graph()
                 loss = self._network.n_step_computation(trajectory, n_steps)
                 n_step_losses.append(loss)
 
@@ -291,9 +422,22 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         n_step_stats = {'n_step': n_step_list, 'mean': means, 'std': stds}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(path)
-        self.publish_csv(data_frame, f'n_step_losses', path)
+        self._publish_csv(data_frame, f'n_step_losses', path)
 
-    def publish_csv(self, data_frame, name, path):
+    @staticmethod
+    def _publish_csv(data_frame: DataFrame, name: str, path: str) -> None:
+        """
+        Publish a table using wandb.
+
+        Parameters
+        ----------
+            data_frame : DataFrame
+                The table
+            name : str
+                The table name
+            path : str
+                The path of the table
+        """
         table = wandb.Table(dataframe=data_frame)
         wandb.log({name: table})
         artifact = wandb.Artifact(f"{name}_artifact", type="dataset")
@@ -301,21 +445,61 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         artifact.add_file(path)
         wandb.log_artifact(artifact)
 
-    def log_epoch(self, data):
+    @staticmethod
+    def _log_epoch(data: Dict[str, Any]) -> None:
+        """
+        Log the metrics of an epoch.
+
+        Parameters
+        ----------
+            data : Dict[str, Any]
+                The data to log
+
+        """
         wandb.log(data)
 
     @property
-    def network(self):
+    def network(self) -> AbstractSystemModel:
+        """
+
+        Returns
+        -------
+            AbstractSystemModel
+                The graph neural network
+        """
         return self._network
 
-    def save(self, name):
+    def save(self, name: str) -> None:
+        """
+        Save itself as a .pkl file.
+
+        Parameters
+        ----------
+            name : str
+                The name under which to store this mesh simulator
+        """
         with open(os.path.join(OUT_DIR, f'model_{name}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
-    def save_rollouts(self, rollouts, task_name):
+    @staticmethod
+    def save_rollouts(rollouts: Dict[str, Tensor], task_name: str) -> None:
+        """
+        Save predicted and ground truth trajectories.
+
+        Parameters
+        ----------
+            rollouts : Dict[str, Tensor]
+                The rollout data
+
+            task_name : str
+                The task name
+        """
         rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
         with open(os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
 
-    def lr_scheduler_step(self):
+    def lr_scheduler_step(self) -> None:
+        """
+        Make a learning rate scheduler step.
+        """
         self._scheduler.step()

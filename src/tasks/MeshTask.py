@@ -2,10 +2,10 @@
 import math
 import os
 import pickle
+from typing import Tuple
 
-import matplotlib.animation as ani
+from matplotlib.animation import PillowWriter, FuncAnimation
 import matplotlib.pyplot as plt
-import plotly.graph_objects as go
 import torch
 import wandb
 
@@ -22,11 +22,17 @@ class MeshTask(AbstractTask):
     # TODO comments and discussion about nested functions
     def __init__(self, algorithm: AbstractIterativeAlgorithm, config: ConfigDict):
         """
-        Initializes all necessary data for a classification task.
+        Initializes all necessary data for a mesh simulation task.
 
-        Args:
-            config: A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
+        Parameters
+        ----------
+            algorithm : AbstractIterativeAlgorithm
+                # TODO: Remove and initialize here
+
+            config : ConfigDict
+                A (potentially nested) dictionary containing the "params" section of the section in the .yaml file
                 used by cw2 for the current run.
+
         """
         super().__init__(algorithm=algorithm, config=config)
         self._config = config
@@ -57,7 +63,20 @@ class MeshTask(AbstractTask):
         self._dataset_name = config.get('task').get('dataset')
         wandb.init(reinit=False)
 
-    def run_iteration(self, current_epoch):
+    def run_iterations(self, current_epoch: int) -> None:
+        """
+        Run all training epochs of the mesh simulator.
+        Continues the training after the given epoch, if necessary.
+
+        Parameters
+        ----------
+            current_epoch : int
+                Continues training at this epoch
+
+        Returns
+        -------
+
+        """
         assert isinstance(self._algorithm, MeshSimulator), 'Need a classifier to train on a classification task'
 
         for e in trange(current_epoch, self._epochs, desc='Epochs'):
@@ -68,19 +87,25 @@ class MeshTask(AbstractTask):
             rollout = self._algorithm.rollout_evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
             a, w = self.plot(task_name)
-            dir = self.save_plot(a, w, task_name)
+            dir = self._save_plot(a, w, task_name)
 
             animation = {"video": wandb.Video(dir, fps=5, format="gif")}
             data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
-            self._algorithm.log_epoch(data)
+            self._algorithm._log_epoch(data)
 
             if e >= self._config.get('model').get('scheduler_epoch'):
                 self._algorithm.lr_scheduler_step()
 
-    # TODO add trajectories from evaluate method
-    def get_scalars(self) -> ScalarDict:
+    def get_scalars(self) -> None:
+        """
+        Estimate and document the one-step, rollout and n-step losses of the mesh simulator.
+
+        Returns
+        -------
+
+        """
         assert isinstance(self._algorithm, MeshSimulator)
         task_name = f'{self._task_name}_mp:{self._mp}_epoch:final'
 
@@ -88,7 +113,22 @@ class MeshTask(AbstractTask):
         self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
-    def plot(self, task_name) -> go.Figure:
+    def plot(self, task_name: str) -> Tuple[FuncAnimation, PillowWriter]:
+        """
+        Simulates and visualizes predicted trajectories as well as their respective ground truth trajectories.
+        The predicted trajectories are produced by the current state of the mesh simulator.
+
+        Parameters
+        ----------
+            task_name : str
+                The name of the task
+
+        Returns
+        -------
+            Tuple[FuncAnimation, PillowWriter]
+                The simulations
+
+        """
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
@@ -126,18 +166,33 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = ani.FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
-        writergif = ani.PillowWriter(fps=10)
+        animation = FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
+        writergif = PillowWriter(fps=10)
 
         return animation, writergif
 
     @staticmethod
-    def save_plot(animation, writervideo, task_name):
+    def _save_plot(animation: FuncAnimation, writervideo: PillowWriter, task_name: str) -> str:
+        """
+        Saves a simulation as a .gif file.
+
+        Parameters
+        ----------
+            animation : FuncAnimation
+                The animation
+            writervideo : PillowWriter
+                The writer
+            task_name : str
+                The task name
+
+        Returns
+        -------
+            str
+                The path to the .gif file
+
+        """
         dir = os.path.join(OUT_DIR, f'{task_name}_animation.gif')
         animation.save(dir, writer=writervideo)
         plt.show(block=True)
         return dir
 
-    def preprocess(self):
-        self._algorithm.preprocess(self.train_loader, 'train', self._task_name)
-        self._algorithm.preprocess(self._valid_loader, 'valid', self._task_name)
