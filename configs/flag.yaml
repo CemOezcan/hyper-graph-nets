@@ -31,10 +31,10 @@ params:
   retrain: False
   task:
     task: mesh
-    dataset: flag_minimal
+    dataset: deforming_plate
     rollout_split: valid
     batch_size: 1
-    epochs: 5
+    epochs: 1
     trajectories: 1
     mode: all
     prefetch_factor: 1
@@ -81,7 +81,7 @@ params:
       random:
         edge_amount: 100
   logging:
-    wandb_mode: online
+    wandb_mode: offline
   random_seed: 0
 
 ---

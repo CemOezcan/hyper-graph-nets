@@ -25,5 +25,11 @@ def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_t
         index_path = os.path.join(IN_DIR, split + ".idx")
         tf_dataset = TFRecordDataset(tfrecord_path, index_path, None, transform=pp.preprocess)
         return GraphDataLoader(tf_dataset)
+    elif dataset_name == 'deforming_plate':
+        pp = Preprocessing(config, split, split_and_preprocess, add_targets, in_dir=IN_DIR)
+        tfrecord_path = os.path.join(IN_DIR, split + ".tfrecord")
+        index_path = os.path.join(IN_DIR, split + ".idx")
+        tf_dataset = TFRecordDataset(tfrecord_path, index_path, None, transform=pp.preprocess)
+        return GraphDataLoader(tf_dataset)
     else:
         raise NotImplementedError("Implement your data loading here!")
