@@ -175,7 +175,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         """
         graph_amt = len(data)
-        assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
+        # assert graph_amt % batch_size == 0, f'Graph amount {graph_amt} must be divisible by batch size {batch_size}.'
         batches = [data[i: i + batch_size] for i in range(0, len(data), batch_size)]
         graph = batches[0][0][0]
         trajectory_attributes = batches[0][0][1].keys()
