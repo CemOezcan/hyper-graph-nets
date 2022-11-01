@@ -98,7 +98,7 @@ class PlateModel(AbstractSystemModel):
         world_connection_matrix[:, non_normal_nodes] = torch.tensor(False, dtype=torch.bool, device=device)
 
         # TODO: Only select the closest sender?
-        world_senders, world_receivers = torch.nonzero(world_connection_matrix, as_tuple=True)
+        world_senders, world_receivers = torch.nonzero(world_connection_matrix, as_tuple=True, device=device)
 
         relative_world_pos = (
                 torch.index_select(input=world_pos, dim=0, index=world_senders) -
@@ -166,7 +166,7 @@ class PlateModel(AbstractSystemModel):
         # Append velocities to kinematic nodes
         # TODO: Correct?
         num_nodes = node_type.shape[0]
-        velocities = torch.zeros(num_nodes, 3)
+        velocities = torch.zeros(num_nodes, 3).to(device)
         velocities[world_senders] = (
                 torch.index_select(input=target_world_pos, dim=0, index=world_senders) -
                 torch.index_select(input=world_pos, dim=0, index=world_senders)
