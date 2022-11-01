@@ -81,7 +81,7 @@ params:
       random:
         edge_amount: 100
   logging:
-    wandb_mode: offline
+    wandb_mode: online
   random_seed: 0
 
 ---

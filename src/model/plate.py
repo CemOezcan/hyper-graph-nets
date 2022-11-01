@@ -225,12 +225,13 @@ class PlateModel(AbstractSystemModel):
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
         loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
-        # TODO: Differentiate between velocity and stress loss
+        # TODO: Differentiate between velocity and stress loss?
 
         return loss
 
     @torch.no_grad()
     def validation_step(self, graph: MultiGraph, data_frame: Dict) -> Tuple[Tensor, Tensor]:
+        # TODO: Split vel_los and stress_loss?
         prediction = self(graph)
         target_normalized = self.get_target(data_frame, False)
 
@@ -238,27 +239,27 @@ class PlateModel(AbstractSystemModel):
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
         vel_loss = self.loss_fn(target_normalized[loss_mask], prediction[loss_mask]).item()
 
-        predicted_position = self.update(data_frame, prediction)
+        predicted_position, cur_position, velocity, stress = self.update(data_frame, prediction)
         pos_error = self.loss_fn(data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
 
         return vel_loss, pos_error
 
     def update(self, inputs: Dict, per_node_network_output: Tensor) -> Tensor:
         """Integrate model outputs."""
-        velocity_stress = self._output_normalizer.inverse(per_node_network_output)
+        velocity, stress = torch.split(self._output_normalizer.inverse(per_node_network_output), 3, dim=-1)
 
         # integrate forward
         cur_position = inputs['world_pos']
 
         # vel. = cur_pos - prev_pos
-        position = cur_position + velocity_stress[:3]
+        position = cur_position + velocity
 
-        return (position, cur_position, velocity_stress[:3], velocity_stress[3])# torch.cat((position, velocity_stress[3]), dim=-1)
+        return (position, cur_position, velocity, stress)# torch.cat((position, velocity_stress[3]), dim=-1)
 
     def get_target(self, data_frame, is_training=True):
         cur_position = data_frame['world_pos']
         target_position = data_frame['target|world_pos']
-        target_stress = data_frame['target|stress']
+        target_stress = data_frame['stress']
         target_velocity = target_position - cur_position
 
         return self._output_normalizer(torch.cat((target_velocity, target_stress), dim=-1), is_training).to(device)
@@ -322,7 +323,7 @@ class PlateModel(AbstractSystemModel):
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
 
-        graph = self.expand_graph(graph, step, 399, is_training=False)
+        graph = self.expand_graph(graph, step, 398, is_training=False)
 
         if self._rmp and not self._visualized:
             self._remote_graph.visualize_cluster(coordinates)

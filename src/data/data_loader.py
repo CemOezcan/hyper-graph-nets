@@ -11,7 +11,7 @@ from os.path import dirname as up
 
 ROOT_DIR = up(up(up(os.path.join(os.path.abspath(__file__)))))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-TASK_DIR = os.path.join(DATA_DIR, read_yaml('flag')['params']['task']['dataset'])
+TASK_DIR = os.path.join(DATA_DIR, read_yaml('plate')['params']['task']['dataset']) # TODO: Modularity
 OUT_DIR = os.path.join(TASK_DIR, 'output')
 IN_DIR = os.path.join(TASK_DIR, 'input')
 CONFIG_NAME = 'plate' #'flag'
