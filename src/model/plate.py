@@ -246,7 +246,7 @@ class PlateModel(AbstractSystemModel):
 
     def update(self, inputs: Dict, per_node_network_output: Tensor) -> Tensor:
         """Integrate model outputs."""
-        velocity, stress = torch.split(self._output_normalizer.inverse(per_node_network_output), 3, dim=-1)
+        velocity, stress = torch.split(self._output_normalizer.inverse(per_node_network_output), 3, dim=1)
 
         # integrate forward
         cur_position = inputs['world_pos']
@@ -254,7 +254,7 @@ class PlateModel(AbstractSystemModel):
         # vel. = cur_pos - prev_pos
         position = cur_position + velocity
 
-        return (position, cur_position, velocity, stress)# torch.cat((position, velocity_stress[3]), dim=-1)
+        return (position, cur_position, velocity, stress)# torch.cat((position, velocity_stress[3]), dim=1)
 
     def get_target(self, data_frame, is_training=True):
         cur_position = data_frame['world_pos']
@@ -262,7 +262,7 @@ class PlateModel(AbstractSystemModel):
         target_stress = data_frame['stress']
         target_velocity = target_position - cur_position
 
-        return self._output_normalizer(torch.cat((target_velocity, target_stress), dim=-1), is_training).to(device)
+        return self._output_normalizer(torch.cat((target_velocity, target_stress), dim=1), is_training).to(device)
 
     @torch.no_grad()
     def rollout(self, trajectory: Dict[str, Tensor], num_steps: int) -> Tuple[Dict[str, Tensor], Tensor]:
