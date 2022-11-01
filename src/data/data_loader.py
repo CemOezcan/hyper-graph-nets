@@ -9,12 +9,12 @@ from util.Types import ConfigDict
 from util.Functions import get_from_nested_dict
 from os.path import dirname as up
 
+CONFIG_NAME = 'plate' # 'flag' or 'plate'
 ROOT_DIR = up(up(up(os.path.join(os.path.abspath(__file__)))))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
-TASK_DIR = os.path.join(DATA_DIR, read_yaml('plate')['params']['task']['dataset']) # TODO: Modularity
+TASK_DIR = os.path.join(DATA_DIR, read_yaml(CONFIG_NAME)['params']['task']['dataset'])
 OUT_DIR = os.path.join(TASK_DIR, 'output')
 IN_DIR = os.path.join(TASK_DIR, 'input')
-CONFIG_NAME = 'plate' #'flag'
 
 
 def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_targets=True):

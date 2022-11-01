@@ -124,16 +124,11 @@ class MeshTask(AbstractTask):
         self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
-        if 'flag' in self._dataset_name:
-            a, w = self.plot(task_name)
-            dir = self._save_plot(a, w, task_name)
+        a, w = self.plot(task_name)
+        self._save_plot(a, w, task_name)
 
-        if 'plate' in self._dataset_name:
-            a, w = self.plot_2()
-            dir = self._save_plot(a, w, task_name)
-
-    def plot_2(self):
-        rollouts = os.path.join(OUT_DIR, f'{self._task_name}final_rollouts.pkl')
+    def plot_2(self, task_name):
+        rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
         # TODO: Vizualize stress levels similarly to cfd
 
         with open(rollouts, 'rb') as fp:
@@ -208,6 +203,10 @@ class MeshTask(AbstractTask):
                 The simulations
 
         """
+        # TODO: Generalization
+        if 'plate' in self._dataset_name:
+            return self.plot_2(task_name)
+
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
