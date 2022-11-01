@@ -10,6 +10,7 @@ class Decoder(nn.Module):
 
     def __init__(self, make_mlp: Callable, output_size: int):
         super().__init__()
+        print(output_size)
         self.model = make_mlp(output_size)
 
     def forward(self, graph: MultiGraph) -> Tensor:
