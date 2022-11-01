@@ -39,14 +39,14 @@ class Normalizer(nn.Module):
         self._acc_sum = torch.zeros(size, dtype=torch.float32, requires_grad=False).to(device)
         self._acc_sum_squared = torch.zeros(size, dtype=torch.float32, requires_grad=False).to(device)
 
-    def forward(self, batched_data: Tensor, node_num=None, accumulate=True) -> None:
+    def forward(self, batched_data: Tensor, node_num=None, accumulate=True) -> Tensor:
         """Normalizes input data and accumulates statistics."""
         if accumulate and self._num_accumulations < self._max_accumulations:
             # stop accumulating after a million updates, to prevent accuracy issues
             self._accumulate(batched_data)
         return (batched_data - self._mean()) / self._std_with_epsilon()
 
-    def inverse(self, normalized_batch_data: Tensor) -> None:
+    def inverse(self, normalized_batch_data: Tensor) -> Tensor:
         """Inverse transformation of the normalizer."""
         return normalized_batch_data * self._std_with_epsilon() + self._mean()
 

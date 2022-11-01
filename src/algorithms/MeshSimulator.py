@@ -482,7 +482,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             pickle.dump(self, file)
 
     @staticmethod
-    def save_rollouts(rollouts: Dict[str, Tensor], task_name: str) -> None:
+    def save_rollouts(rollouts: List[Dict[str, Tensor]], task_name: str) -> None:
         """
         Save predicted and ground truth trajectories.
 

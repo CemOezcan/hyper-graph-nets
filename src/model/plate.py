@@ -23,7 +23,7 @@ class PlateModel(AbstractSystemModel):
         super(PlateModel, self).__init__(params)
         self.loss_fn = torch.nn.MSELoss()
 
-        self._output_normalizer = Normalizer(size=3, name='output_normalizer')
+        self._output_normalizer = Normalizer(size=4, name='output_normalizer')
         # TODO: Kinematic nodes have a different number of dimensions (Solution: paddingg)
         self._node_normalizer = Normalizer(size=6, name='node_normalizer')
         self._node_dynamic_normalizer = Normalizer(size=1, name='node_dynamic_normalizer')
@@ -225,6 +225,7 @@ class PlateModel(AbstractSystemModel):
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
         loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
+        # TODO: Differentiate between velocity and stress loss
 
         return loss
 
@@ -235,35 +236,32 @@ class PlateModel(AbstractSystemModel):
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
-        acc_loss = self.loss_fn(target_normalized[loss_mask], prediction[loss_mask]).item()
+        vel_loss = self.loss_fn(target_normalized[loss_mask], prediction[loss_mask]).item()
 
         predicted_position = self.update(data_frame, prediction)
         pos_error = self.loss_fn(data_frame['target|world_pos'][loss_mask], predicted_position[loss_mask]).item()
 
-        return acc_loss, pos_error
+        return vel_loss, pos_error
 
     def update(self, inputs: Dict, per_node_network_output: Tensor) -> Tensor:
         """Integrate model outputs."""
-        acceleration = self._output_normalizer.inverse(per_node_network_output)
+        velocity_stress = self._output_normalizer.inverse(per_node_network_output)
 
         # integrate forward
         cur_position = inputs['world_pos']
-        prev_position = inputs['prev|world_pos']
 
         # vel. = cur_pos - prev_pos
-        position = 2 * cur_position + acceleration - prev_position
+        position = cur_position + velocity_stress[:3]
 
-        return position
+        return (position, cur_position, velocity_stress[:3], velocity_stress[3])# torch.cat((position, velocity_stress[3]), dim=-1)
 
     def get_target(self, data_frame, is_training=True):
         cur_position = data_frame['world_pos']
-        prev_position = data_frame['prev|world_pos']
         target_position = data_frame['target|world_pos']
+        target_stress = data_frame['target|stress']
+        target_velocity = target_position - cur_position
 
-        # next_pos = cur_pos + acc + vel <=> acc = next_pos - cur_pos - vel | vel = cur_pos - prev_pos
-        target_acceleration = target_position - 2 * cur_position + prev_position
-
-        return self._output_normalizer(target_acceleration, is_training).to(device)
+        return self._output_normalizer(torch.cat((target_velocity, target_stress), dim=-1), is_training).to(device)
 
     @torch.no_grad()
     def rollout(self, trajectory: Dict[str, Tensor], num_steps: int) -> Tuple[Dict[str, Tensor], Tensor]:
@@ -275,35 +273,51 @@ class PlateModel(AbstractSystemModel):
         mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
         mask = torch.stack((mask, mask, mask), dim=1)
 
-        prev_pos = torch.squeeze(initial_state['prev|world_pos'], 0)
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
+        target_pos = trajectory['target|world_pos']
+        pred_trajectory = []
+        stress_trajectory = []
+        cur_positions = []
+        cur_velocities = []
+        for step in range(num_steps):
+            cur_pos, pred_trajectory, stress_trajectory, cur_positions, cur_velocities = \
+                self._step_fn(initial_state, cur_pos, pred_trajectory, stress_trajectory, cur_positions, cur_velocities, target_pos[step], step, mask)
 
-        pred_trajectory = list()
-        for i in range(num_steps):
-            # TODO: clusters/balancers are reset when computing n_step loss
-            prev_pos, cur_pos, pred_trajectory = \
-                self._step_fn(initial_state, prev_pos, cur_pos, pred_trajectory, mask, i)
+        prediction, cur_positions, cur_velocities, stress = \
+            (torch.stack(pred_trajectory), torch.stack(cur_positions), torch.stack(cur_velocities), torch.stack(stress_trajectory))
 
-        self._visualized = False
-        predictions = torch.stack(pred_trajectory)
+        # temp solution for visualization
+        faces = trajectory['cells']
+        faces_result = []
+        for faces_step in faces:
+            later = torch.cat((faces_step[:, 2:4], torch.unsqueeze(faces_step[:, 0], 1)), -1)
+            faces_step = torch.cat((faces_step[:, 0:3], later), 0)
+            faces_result.append(faces_step)
+
+        faces_result = torch.stack(faces_result, 0)
+        # trajectory_polygons = to_polygons(trajectory['cells'], trajectory['world_pos'])
 
         traj_ops = {
-            'faces': trajectory['cells'],
+            # 'faces': trajectory['cells'],
+            'faces': faces_result,
             'mesh_pos': trajectory['mesh_pos'],
+            # 'gt_pos': trajectory_polygons,
             'gt_pos': trajectory['world_pos'],
-            'pred_pos': predictions
+            'pred_pos': prediction,
+            'cur_positions': cur_positions,
+            'cur_velocities': cur_velocities,
+            'stress': stress
         }
 
         mse_loss_fn = torch.nn.MSELoss(reduction='none')
-        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], predictions)
+        mse_loss = mse_loss_fn(trajectory['world_pos'][:num_steps], prediction)
         mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
 
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, prev_pos, cur_pos, trajectory, mask, step):
-        input = {**initial_state, 'prev|world_pos': prev_pos, 'world_pos': cur_pos}
-
+    def _step_fn(self, initial_state, cur_pos, trajectory, stress_trajectory, cur_positions, cur_velocities, target_world_pos, step, mask):
+        input = {**initial_state, 'world_pos': cur_pos, 'target|world_pos': target_world_pos}
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
@@ -314,11 +328,14 @@ class PlateModel(AbstractSystemModel):
             self._remote_graph.visualize_cluster(coordinates)
             self._visualized = True
 
-        prediction = self.update(input, self(graph))
-        next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(cur_pos))
-        trajectory.append(cur_pos)
+        prediction, cur_position, cur_velocity, stress = self.update(input, self(graph))
+        next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(target_world_pos))
 
-        return cur_pos, next_pos, trajectory
+        trajectory.append(next_pos)
+        stress_trajectory.append(stress)
+        cur_positions.append(cur_position)
+        cur_velocities.append(cur_velocity)
+        return next_pos, trajectory, stress_trajectory, cur_positions, cur_velocities
 
     @torch.no_grad()
     def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
