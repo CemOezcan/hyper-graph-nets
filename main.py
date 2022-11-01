@@ -34,7 +34,6 @@ def main(config_name=CONFIG_NAME):
     task.run_iterations()
 
     task.get_scalars()
-    # TODO: fix --> task.plot(f'{model_name}_final')
 
 
 if __name__ == '__main__':

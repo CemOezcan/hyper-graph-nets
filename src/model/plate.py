@@ -302,7 +302,7 @@ class PlateModel(AbstractSystemModel):
             # 'faces': trajectory['cells'],
             'faces': faces_result,
             'mesh_pos': trajectory['mesh_pos'],
-            # 'gt_pos': trajectory_polygons,
+            'mask': torch.eq(node_type[:, 0], torch.tensor([NodeType.OBSTACLE.value], device=device).int()),
             'gt_pos': trajectory['world_pos'],
             'pred_pos': prediction,
             'cur_positions': cur_positions,
