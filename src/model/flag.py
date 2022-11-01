@@ -1,4 +1,3 @@
-"""Model for FlagSimple."""
 import math
 from typing import Dict, Tuple
 

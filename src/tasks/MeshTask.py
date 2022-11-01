@@ -16,6 +16,8 @@ from src.algorithms.get_algorithm import get_algorithm
 from src.data.data_loader import OUT_DIR, get_data
 from src.tasks.AbstractTask import AbstractTask
 from tqdm import trange
+
+from src.util import device
 from util.Types import ConfigDict, ScalarDict
 from util.Functions import get_from_nested_dict
 
@@ -122,6 +124,69 @@ class MeshTask(AbstractTask):
         self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
+        a, w = self.plot(task_name)
+        self._save_plot(a, w, task_name)
+
+    def plot_2(self, task_name):
+        rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
+        # TODO: Vizualize stress levels similarly to cfd
+
+        with open(rollouts, 'rb') as fp:
+            rollout_data = pickle.load(fp)
+
+        fig = plt.figure(figsize=(19.2, 10.8))
+        ax_origin = fig.add_subplot(121, projection='3d')
+        ax_pred = fig.add_subplot(122, projection='3d')
+        skip = 10
+        num_steps = rollout_data[0]['pred_pos'].shape[0]
+        num_frames = math.floor(num_steps / skip)
+
+        # compute bounds
+        bounds = []
+        for trajectory in rollout_data:
+            bb_min = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().min(axis=(0, 1))
+            bb_max = torch.squeeze(trajectory['gt_pos'], dim=0).cpu().numpy().max(axis=(0, 1))
+            bounds.append((bb_min, bb_max))
+
+        def animate(frame):
+            step = (frame * skip) % num_steps
+            traj = (frame * skip) // num_steps
+
+            ax_origin.cla()
+            ax_pred.cla()
+            bound = bounds[traj]
+
+            ax_origin.set_xlim([bound[0][0], bound[1][0]])
+            ax_origin.set_ylim([bound[0][1], bound[1][1]])
+            ax_origin.set_zlim([bound[0][2], bound[1][2]])
+
+            ax_pred.set_xlim([bound[0][0], bound[1][0]])
+            ax_pred.set_ylim([bound[0][1], bound[1][1]])
+            ax_pred.set_zlim([bound[0][2], bound[1][2]])
+
+            mask = rollout_data[traj]['mask']
+            pos = torch.squeeze(rollout_data[traj]['pred_pos'], dim=0)[step].to('cpu')
+            original_pos = torch.squeeze(rollout_data[traj]['gt_pos'], dim=0)[step].to('cpu')
+            faces = torch.squeeze(rollout_data[traj]['faces'], dim=0)[step].to('cpu')
+
+            og, og_faces = self.obstacle(original_pos, faces, mask, True)
+            pred, pred_faces = self.obstacle(pos, faces, mask, True)
+            obst, obst_faces = self.obstacle(original_pos, faces, mask, False)
+
+            ax_origin.plot_trisurf(obst[:, 0], obst[:, 1], obst_faces, obst[:, 2], shade=True)
+            ax_origin.plot_trisurf(og[:, 0], og[:, 1], og_faces, og[:, 2], shade=True, alpha=0.3)
+
+            ax_pred.plot_trisurf(obst[:, 0], obst[:, 1], obst_faces, obst[:, 2], shade=True)
+            ax_pred.plot_trisurf(pred[:, 0], pred[:, 1], pred_faces, pred[:, 2], shade=True, alpha=0.3)
+
+            ax_origin.set_title('ORIGIN Trajectory %d Step %d' % (traj, step))
+            ax_pred.set_title('PRED Trajectory %d Step %d' % (traj, step))
+            return fig,
+
+        anima = FuncAnimation(fig, animate, frames=num_frames * len(rollout_data), interval=100)
+        writergif = PillowWriter(fps=10)
+        return anima, writergif
+
     def plot(self, task_name: str) -> Tuple[FuncAnimation, PillowWriter]:
         """
         Simulates and visualizes predicted trajectories as well as their respective ground truth trajectories.
@@ -138,6 +203,10 @@ class MeshTask(AbstractTask):
                 The simulations
 
         """
+        # TODO: Generalization
+        if 'plate' in self._dataset_name:
+            return self.plot_2(task_name)
+
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
@@ -145,7 +214,7 @@ class MeshTask(AbstractTask):
 
         fig = plt.figure(figsize=(19.2, 10.8))
         ax = fig.add_subplot(111, projection='3d')
-        skip = 4
+        skip = 10
         num_steps = rollout_data[0]['pred_pos'].shape[0]
         num_frames = math.floor(num_steps / skip)
 
@@ -175,10 +244,40 @@ class MeshTask(AbstractTask):
             ax.set_title('Trajectory %d Step %d' % (traj, step))
             return fig,
 
-        animation = FuncAnimation(fig, animate, frames=num_frames * len(rollout_data))
+        animation = FuncAnimation(fig, animate, frames=num_frames * len(rollout_data), interval=100)
         writergif = PillowWriter(fps=10)
 
         return animation, writergif
+
+    def obstacle(self, positions, faces, mask, keep):
+        if keep:
+            mask_2 = torch.logical_not(mask)
+        else:
+            mask_2 = mask
+
+        obst = positions[mask_2]
+
+        ctr = 0
+        index_map = {}
+        for i in range(len(positions)):
+            if mask_2[i]:
+                index_map[i] = ctr
+                ctr += 1
+
+        obst_faces = torch.tensor(
+            [
+                [
+                    index_map[int(x[0])],
+                    index_map[int(x[1])],
+                    index_map[int(x[2])]
+                ]
+                for x in faces
+                if mask_2[x[0]] and mask_2[x[1]] and mask_2[x[2]]]
+        )
+
+        return obst, obst_faces
+
+
 
     @staticmethod
     def _save_plot(animation: FuncAnimation, writervideo: PillowWriter, task_name: str) -> str:
