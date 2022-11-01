@@ -220,10 +220,13 @@ class PlateModel(AbstractSystemModel):
 
     def training_step(self, graph, data_frame):
         network_output = self(graph)
+        print('network_output', network_output.shape)
         target_normalized = self.get_target(data_frame)
 
         node_type = data_frame['node_type']
         loss_mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device).int())
+        print('MTN', target_normalized[loss_mask])
+        print('MNO', network_output[loss_mask])
         loss = self.loss_fn(target_normalized[loss_mask], network_output[loss_mask])
         # TODO: Differentiate between velocity and stress loss?
 
@@ -261,6 +264,8 @@ class PlateModel(AbstractSystemModel):
         target_position = data_frame['target|world_pos']
         target_stress = data_frame['stress']
         target_velocity = target_position - cur_position
+
+        print('get target', self._output_normalizer(torch.cat((target_velocity, target_stress), dim=1), is_training).to(device).shape)
 
         return self._output_normalizer(torch.cat((target_velocity, target_stress), dim=1), is_training).to(device)
 
