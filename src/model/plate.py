@@ -98,7 +98,7 @@ class PlateModel(AbstractSystemModel):
         world_connection_matrix[:, non_normal_nodes] = torch.tensor(False, dtype=torch.bool, device=device)
 
         # TODO: Only select the closest sender?
-        world_senders, world_receivers = torch.nonzero(world_connection_matrix, as_tuple=True, device=device)
+        world_senders, world_receivers = torch.nonzero(world_connection_matrix, as_tuple=True)
 
         relative_world_pos = (
                 torch.index_select(input=world_pos, dim=0, index=world_senders) -
