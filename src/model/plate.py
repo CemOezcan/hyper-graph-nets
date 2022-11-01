@@ -52,7 +52,7 @@ class PlateModel(AbstractSystemModel):
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(
                 self._intra_edge_normalizer, self._inter_edge_normalizer)
-        print(params.get('size'))
+
         self.learned_model = MeshGraphNet(
             output_size=params.get('size'),
             latent_size=128,
