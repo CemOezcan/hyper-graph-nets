@@ -9,7 +9,7 @@ from util.Types import ConfigDict
 from util.Functions import get_from_nested_dict
 from os.path import dirname as up
 
-CONFIG_NAME = 'plate' # 'flag' or 'plate'
+CONFIG_NAME = 'cylinder' # 'flag' or 'plate' or 'cylinder'
 ROOT_DIR = up(up(up(os.path.join(os.path.abspath(__file__)))))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
 TASK_DIR = os.path.join(DATA_DIR, read_yaml(CONFIG_NAME)['params']['task']['dataset'])
@@ -26,6 +26,13 @@ def get_data(config: ConfigDict, split='train', split_and_preprocess=True, add_t
         tf_dataset = TFRecordDataset(tfrecord_path, index_path, None, transform=pp.preprocess)
         return GraphDataLoader(tf_dataset)
     elif dataset_name == 'deforming_plate':
+        pp = Preprocessing(config, split, split_and_preprocess, add_targets, in_dir=IN_DIR)
+        tfrecord_path = os.path.join(IN_DIR, split + ".tfrecord")
+        index_path = os.path.join(IN_DIR, split + ".idx")
+        tf_dataset = TFRecordDataset(tfrecord_path, index_path, None, transform=pp.preprocess)
+        return GraphDataLoader(tf_dataset)
+    elif dataset_name == 'cylinder_flow':
+        # TODO: modify the preprocessing
         pp = Preprocessing(config, split, split_and_preprocess, add_targets, in_dir=IN_DIR)
         tfrecord_path = os.path.join(IN_DIR, split + ".tfrecord")
         index_path = os.path.join(IN_DIR, split + ".idx")

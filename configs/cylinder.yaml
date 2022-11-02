@@ -31,7 +31,7 @@ params:
   retrain: False
   task:
     task: mesh
-    dataset: cylinder
+    dataset: cylinder_flow
     rollout_split: valid
     batch_size: 1
     epochs: 1
@@ -47,7 +47,7 @@ params:
       trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
-    field: world_pos
+    field: velocity
     history: True
     size: 4
     noise: 0.02
