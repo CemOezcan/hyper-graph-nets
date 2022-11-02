@@ -300,7 +300,6 @@ class PlateModel(AbstractSystemModel):
         # trajectory_polygons = to_polygons(trajectory['cells'], trajectory['world_pos'])
 
         traj_ops = {
-            # 'faces': trajectory['cells'],
             'faces': faces_result,
             'mesh_pos': trajectory['mesh_pos'],
             'mask': torch.eq(node_type[:, 0], torch.tensor([NodeType.OBSTACLE.value], device=device).int()),
@@ -308,7 +307,8 @@ class PlateModel(AbstractSystemModel):
             'pred_pos': prediction,
             'cur_positions': cur_positions,
             'cur_velocities': cur_velocities,
-            'stress': stress
+            'pred_stress': stress,
+            'gt_stress': trajectory['stress']
         }
 
         mse_loss_fn = torch.nn.MSELoss(reduction='none')
