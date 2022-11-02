@@ -49,7 +49,7 @@ params:
   model:
     field: velocity
     history: True
-    size: 4
+    size: 3
     noise: 0.02
     gamma: 0.9
     scheduler_epoch: 10
