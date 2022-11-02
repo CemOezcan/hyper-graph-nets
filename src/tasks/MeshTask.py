@@ -148,7 +148,7 @@ class MeshTask(AbstractTask):
             dir_2 = self._save_plot(a, w, f'{task_name}_stress')
             return {'': dir_1, 'stress': dir_2}
 
-    def plot_3(self, task_name, field_name, figsize=(24 * 2, 8 * 2), dpi=None):
+    def plot_3(self, task_name, field_name, figsize=(12 * 2, 8 * 2), dpi=None):
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
         # TODO: Vizualize pressure levels similarly to cfd
         # TODO: Mask out obstacle nodes and edges
@@ -157,8 +157,13 @@ class MeshTask(AbstractTask):
             rollout_data = pickle.load(fp)
 
         fig = plt.figure(figsize=figsize, dpi=dpi)
-        ax_origin = fig.add_subplot(121)
-        ax_pred = fig.add_subplot(122)
+        if 'plate' in self._dataset_name:
+            ax_origin = fig.add_subplot(121)
+            ax_pred = fig.add_subplot(122)
+        else:
+            ax_origin = fig.add_subplot(211)
+            ax_pred = fig.add_subplot(212)
+
         skip = 10
         num_steps = rollout_data[0][f'gt_{field_name}'].shape[0]
         num_frames = len(rollout_data) * num_steps // skip
@@ -186,6 +191,13 @@ class MeshTask(AbstractTask):
             faces = rollout_data[traj]['faces'][step]
             pred_velocity = rollout_data[traj][f'pred_{field_name}'][step]
             gt_velocity = rollout_data[traj][f'gt_{field_name}'][step]
+
+            if 'plate' in self._dataset_name:
+                mask = rollout_data[traj]['mask']
+                gt_velocity, _ = self.obstacle(gt_velocity, faces, mask, True)
+                pred_velocity, _ = self.obstacle(pred_velocity, faces, mask, True)
+                pos, faces = self.obstacle(pos, faces, mask, True)
+
             triang = tri.Triangulation(pos[:, 0], pos[:, 1], faces)
 
             ax_origin.tripcolor(triang, gt_velocity[:, 0], vmin=vmin[0], vmax=vmax[0])
