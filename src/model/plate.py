@@ -272,6 +272,7 @@ class PlateModel(AbstractSystemModel):
 
         node_type = initial_state['node_type']
         mask = torch.eq(node_type[:, 0], torch.tensor([NodeType.NORMAL.value], device=device))
+        # TODO: Correct with 4d output?
         mask = torch.stack((mask, mask, mask), dim=1)
 
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)

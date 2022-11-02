@@ -25,60 +25,63 @@ optuna:
 
 compute:
   preprocessing: False
-  retrain: True # Start training a new model if True. Continue training the most recent version of the model if False.
+  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
 
 params:
+  retrain: False
   task:
-    dataset: flag_simple
+    task: mesh
+    dataset: cylinder_flow
     rollout_split: valid
-    batch_size: 21
-    epochs: 15
-    trajectories: 1000
+    batch_size: 1
+    epochs: 1
+    trajectories: 1
     mode: all
-    prefetch_factor: 5
+    prefetch_factor: 1
     test:
-      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
-      rollouts: 10 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during evaluation
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
       n_steps: 60
     validation:
-      trajectories: 20 # Number of trajectories that are going to be used to compute the validation loss during training
-      rollouts: 3 # Number of trajectories that are going to be used to compute the rollout loss during training
+      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
-    field: world_pos
+    field: velocity
     history: True
     size: 3
-    noise: 0.007
+    noise: 0.02
     gamma: 0.9
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 5.0e-5
-    message_passing_steps: 5
+    learning_rate: 1.0e-4
+    message_passing_steps: 1
     rmp:
       num_clusters: 15
-      frequency: 57
-      clustering: gmm
-      connector: hierarchical
+      frequency: 1
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
         alpha: 0.1
         spotter_threshold: 0
       hdbscan:
-        max_cluster_size: 200
-        min_cluster_size: 15
-        min_samples: 2
+        max_cluster_size: 50
+        min_cluster_size: 20
+        min_samples: 1
         spotter_threshold: 0.9
     graph_balancer:
       algorithm: none
       frequency: 1
+      remove_edges: True
       ricci:
         loops: 150
         tau: 150
       random:
         edge_amount: 100
   logging:
-    wandb_mode: run
+    wandb_mode: online
   random_seed: 0
 
 ---
