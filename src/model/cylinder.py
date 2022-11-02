@@ -229,6 +229,13 @@ class CylinderModel(AbstractSystemModel):
         return next_velocity, trajectory, pressure_trajectory
 
     def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
-        pass
+        mse_losses = list()
+        for step in range(len(trajectory['velocity']) - n_step):
+            # TODO: clusters/balancers are reset when computing n_step loss
+            eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
+            prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
+            mse_losses.append(torch.mean(mse_loss).cpu())
+
+        return torch.mean(torch.stack(mse_losses))
 
 
