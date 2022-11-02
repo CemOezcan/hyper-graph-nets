@@ -19,12 +19,6 @@ class CylinderModel(AbstractSystemModel):
     Model for computational fluid dynamics simulation.
     """
 
-    def rollout(self, trajectory: Dict[str, Tensor], num_steps: int) -> Tuple[Dict[str, Tensor], Tensor]:
-        pass
-
-    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
-        pass
-
     def __init__(self, params: ConfigDict):
         super(CylinderModel, self).__init__(params)
         self.loss_fn = torch.nn.MSELoss()
@@ -176,4 +170,65 @@ class CylinderModel(AbstractSystemModel):
         target_velocity_change = target_velocity - cur_velocity
 
         return self._output_normalizer(torch.cat((target_velocity_change, target_pressure), dim=1), is_training).to(device)
+
+    def rollout(self, trajectory: Dict[str, Tensor], num_steps: int) -> Tuple[Dict[str, Tensor], Tensor]:
+        """Rolls out a model trajectory."""
+        initial_state = {k: torch.squeeze(v, 0)[0] for k, v in trajectory.items()}
+        num_steps = trajectory['cells'].shape[0]
+
+        # rollout
+        node_type = initial_state['node_type']
+        mask = torch.logical_or(torch.eq(node_type[:, 0], torch.tensor([util.NodeType.NORMAL.value], device=device)),
+                                torch.eq(node_type[:, 0], torch.tensor([util.NodeType.OUTFLOW.value], device=device)))
+        mask = torch.stack((mask, mask), dim=1)
+
+        velocity = torch.squeeze(initial_state['velocity'], 0)
+        pred_trajectory = []
+        pred_pressure = list()
+        for step in range(num_steps):
+            velocity, pred_trajectory, pred_pressure = self._step_fn(initial_state, velocity, pred_trajectory, pred_pressure, step, mask)
+
+        prediction = torch.stack(pred_trajectory)
+        pressure = torch.stack(pred_pressure)
+
+        traj_ops = {
+            'faces': trajectory['cells'],
+            'mesh_pos': trajectory['mesh_pos'],
+            'gt_velocity': trajectory['velocity'],
+            'gt_pressure': trajectory['pressure'],
+            'pred_pressure': pressure,
+            'pred_velocity': prediction
+        }
+
+        mse_loss_fn = torch.nn.MSELoss(reduction='none')
+        mse_loss = mse_loss_fn(trajectory['velocity'][:num_steps], prediction)
+        mse_loss = torch.mean(torch.mean(mse_loss, dim=-1), dim=-1).detach()
+
+        return traj_ops, mse_loss
+
+    @torch.no_grad()
+    def _step_fn(self, initial_state, velocity, trajectory, pressure_trajectory, step, mask):
+        input = {**initial_state, 'velocity': velocity}
+        graph = self.build_graph(input, is_training=False)
+        if not self._visualized:
+            coordinates = graph.target_feature.cpu().detach().numpy()
+
+        graph = self.expand_graph(graph, step, 598, is_training=False)
+
+        if self._rmp and not self._visualized:
+            self._remote_graph.visualize_cluster(coordinates)
+            self._visualized = True
+
+        prediction, pred_pressure = self.update(input, self(graph))
+
+        # don't update boundary nodes
+        next_velocity = torch.where(mask, torch.squeeze(prediction), torch.squeeze(velocity))
+        trajectory.append(next_velocity)
+        pressure_trajectory.append(pred_pressure)
+
+        return next_velocity, trajectory, pressure_trajectory
+
+    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
+        pass
+
 
