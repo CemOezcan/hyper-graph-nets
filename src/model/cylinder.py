@@ -41,7 +41,7 @@ class CylinderModel(AbstractSystemModel):
         self._rmp_frequency = params.get('rmp').get('frequency')
         self._visualized = False
 
-        self._edge_sets = ['mesh_edges', 'world_edges']
+        self._edge_sets = ['mesh_edges']
         if self._balancer:
             import src.graph_balancer.get_graph_balancer as graph_balancer
             self._graph_balancer = graph_balancer.get_balancer(params)
