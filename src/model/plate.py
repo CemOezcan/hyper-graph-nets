@@ -276,14 +276,15 @@ class PlateModel(AbstractSystemModel):
         mask = torch.stack((mask, mask, mask), dim=1)
 
         cur_pos = torch.squeeze(initial_state['world_pos'], 0)
+        stress = torch.squeeze(initial_state['stress'], 0)
         target_pos = trajectory['target|world_pos']
         pred_trajectory = []
         stress_trajectory = []
         cur_positions = []
         cur_velocities = []
         for step in range(num_steps):
-            cur_pos, pred_trajectory, stress_trajectory, cur_positions, cur_velocities = \
-                self._step_fn(initial_state, cur_pos, pred_trajectory, stress_trajectory, cur_positions, cur_velocities, target_pos[step], step, mask)
+            cur_pos, stress, pred_trajectory, stress_trajectory, cur_positions, cur_velocities = \
+                self._step_fn(initial_state, cur_pos, stress, pred_trajectory, stress_trajectory, cur_positions, cur_velocities, target_pos[step], step, mask)
 
         prediction, cur_positions, cur_velocities, stress = \
             (torch.stack(pred_trajectory), torch.stack(cur_positions), torch.stack(cur_velocities), torch.stack(stress_trajectory))
@@ -300,7 +301,6 @@ class PlateModel(AbstractSystemModel):
         # trajectory_polygons = to_polygons(trajectory['cells'], trajectory['world_pos'])
 
         traj_ops = {
-            # 'faces': trajectory['cells'],
             'faces': faces_result,
             'mesh_pos': trajectory['mesh_pos'],
             'mask': torch.eq(node_type[:, 0], torch.tensor([NodeType.OBSTACLE.value], device=device).int()),
@@ -308,7 +308,8 @@ class PlateModel(AbstractSystemModel):
             'pred_pos': prediction,
             'cur_positions': cur_positions,
             'cur_velocities': cur_velocities,
-            'stress': stress
+            'pred_stress': stress,
+            'gt_stress': trajectory['stress']
         }
 
         mse_loss_fn = torch.nn.MSELoss(reduction='none')
@@ -318,8 +319,8 @@ class PlateModel(AbstractSystemModel):
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, cur_pos, trajectory, stress_trajectory, cur_positions, cur_velocities, target_world_pos, step, mask):
-        input = {**initial_state, 'world_pos': cur_pos, 'target|world_pos': target_world_pos}
+    def _step_fn(self, initial_state, cur_pos, stress, trajectory, stress_trajectory, cur_positions, cur_velocities, target_world_pos, step, mask):
+        input = {**initial_state, 'world_pos': cur_pos, 'target|world_pos': target_world_pos, 'stress': stress}
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
@@ -330,14 +331,14 @@ class PlateModel(AbstractSystemModel):
             self._remote_graph.visualize_cluster(coordinates)
             self._visualized = True
 
-        prediction, cur_position, cur_velocity, stress = self.update(input, self(graph))
+        prediction, cur_position, cur_velocity, pred_stress = self.update(input, self(graph))
         next_pos = torch.where(mask, torch.squeeze(prediction), torch.squeeze(target_world_pos))
 
         trajectory.append(next_pos)
-        stress_trajectory.append(stress)
+        stress_trajectory.append(pred_stress)
         cur_positions.append(cur_position)
         cur_velocities.append(cur_velocity)
-        return next_pos, trajectory, stress_trajectory, cur_positions, cur_velocities
+        return next_pos, pred_stress, trajectory, stress_trajectory, cur_positions, cur_velocities
 
     @torch.no_grad()
     def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:

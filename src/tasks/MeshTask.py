@@ -97,10 +97,9 @@ class MeshTask(AbstractTask):
             one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.rollout_evaluator(self._test_loader, self._num_val_rollouts, task_name)
 
-            a, w = self.plot(task_name)
-            dir = self._save_plot(a, w, task_name)
+            dir_dict = self.select_plotting(task_name)
 
-            animation = {"video": wandb.Video(dir, fps=5, format="gif")}
+            animation = {f"video_{key}": wandb.Video(value, fps=5, format="gif") for key, value in dir_dict.items()}
             data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
@@ -125,28 +124,55 @@ class MeshTask(AbstractTask):
         self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
         self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
 
-        a, w = self.plot(task_name)
-        self._save_plot(a, w, task_name)
+        self.select_plotting(task_name)
 
-    def plot_3(self, task_name):
+    def select_plotting(self, task_name):
+        if 'flag' in self._dataset_name:
+            a, w = self.plot(task_name)
+            dir = self._save_plot(a, w, task_name)
+            return {'': dir}
+
+        elif 'cylinder' in self._dataset_name:
+            a, w = self.plot_3(task_name, 'velocity', dpi=100)
+            dir_1 = self._save_plot(a, w, task_name)
+
+            a, w = self.plot_3(task_name, 'pressure', dpi=100)
+            dir_2 = self._save_plot(a, w, f'{task_name}_pressure')
+            return {'': dir_1, 'pressure': dir_2}
+
+        elif 'plate' in self._dataset_name:
+            a, w = self.plot_2(task_name)
+            dir_1 = self._save_plot(a, w, task_name)
+
+            a, w = self.plot_3(task_name, 'stress', figsize=(19.2, 10.8))
+            dir_2 = self._save_plot(a, w, f'{task_name}_stress')
+            return {'': dir_1, 'stress': dir_2}
+
+    def plot_3(self, task_name, field_name, figsize=(12 * 2, 8 * 2), dpi=None):
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
         # TODO: Vizualize pressure levels similarly to cfd
+        # TODO: Mask out obstacle nodes and edges
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
 
-        fig = plt.figure(figsize=(24 * 2, 8 * 2), dpi=100)
-        ax_origin = fig.add_subplot(121)
-        ax_pred = fig.add_subplot(122)
+        fig = plt.figure(figsize=figsize, dpi=dpi)
+        if 'plate' in self._dataset_name:
+            ax_origin = fig.add_subplot(121)
+            ax_pred = fig.add_subplot(122)
+        else:
+            ax_origin = fig.add_subplot(211)
+            ax_pred = fig.add_subplot(212)
+
         skip = 10
-        num_steps = rollout_data[0]['gt_velocity'].shape[0]
+        num_steps = rollout_data[0][f'gt_{field_name}'].shape[0]
         num_frames = len(rollout_data) * num_steps // skip
 
         # compute bounds
         bounds = []
         for trajectory in rollout_data:
-            bb_min = torch.squeeze(trajectory['gt_velocity'], dim=0).cpu().numpy().min(axis=(0, 1))
-            bb_max = torch.squeeze(trajectory['gt_velocity'], dim=0).cpu().numpy().max(axis=(0, 1))
+            bb_min = torch.squeeze(trajectory[f'gt_{field_name}'], dim=0).cpu().numpy().min(axis=(0, 1))
+            bb_max = torch.squeeze(trajectory[f'gt_{field_name}'], dim=0).cpu().numpy().max(axis=(0, 1))
             bounds.append((bb_min, bb_max))
 
         def animate(num):
@@ -163,8 +189,15 @@ class MeshTask(AbstractTask):
             vmin, vmax = bounds[traj]
             pos = rollout_data[traj]['mesh_pos'][step]
             faces = rollout_data[traj]['faces'][step]
-            pred_velocity = rollout_data[traj]['pred_velocity'][step]
-            gt_velocity = rollout_data[traj]['gt_velocity'][step]
+            pred_velocity = rollout_data[traj][f'pred_{field_name}'][step]
+            gt_velocity = rollout_data[traj][f'gt_{field_name}'][step]
+
+            if 'plate' in self._dataset_name:
+                mask = rollout_data[traj]['mask']
+                gt_velocity, _ = self.obstacle(gt_velocity, faces, mask, True)
+                pred_velocity, _ = self.obstacle(pred_velocity, faces, mask, True)
+                pos, faces = self.obstacle(pos, faces, mask, True)
+
             triang = tri.Triangulation(pos[:, 0], pos[:, 1], faces)
 
             ax_origin.tripcolor(triang, gt_velocity[:, 0], vmin=vmin[0], vmax=vmax[0])
@@ -258,12 +291,6 @@ class MeshTask(AbstractTask):
                 The simulations
 
         """
-        # TODO: Generalization
-        if 'plate' in self._dataset_name:
-            return self.plot_2(task_name)
-        elif 'cylinder' in self._dataset_name:
-            return self.plot_3(task_name)
-
         rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:

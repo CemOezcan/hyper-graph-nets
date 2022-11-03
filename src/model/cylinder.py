@@ -41,7 +41,7 @@ class CylinderModel(AbstractSystemModel):
         self._rmp_frequency = params.get('rmp').get('frequency')
         self._visualized = False
 
-        self._edge_sets = ['mesh_edges', 'world_edges']
+        self._edge_sets = ['mesh_edges']
         if self._balancer:
             import src.graph_balancer.get_graph_balancer as graph_balancer
             self._graph_balancer = graph_balancer.get_balancer(params)
@@ -183,10 +183,11 @@ class CylinderModel(AbstractSystemModel):
         mask = torch.stack((mask, mask), dim=1)
 
         velocity = torch.squeeze(initial_state['velocity'], 0)
+        pressure = torch.squeeze(initial_state['pressure'], 0)
         pred_trajectory = []
         pred_pressure = list()
         for step in range(num_steps):
-            velocity, pred_trajectory, pred_pressure = self._step_fn(initial_state, velocity, pred_trajectory, pred_pressure, step, mask)
+            velocity, pressure, pred_trajectory, pred_pressure = self._step_fn(initial_state, velocity, pressure, pred_trajectory, pred_pressure, step, mask)
 
         prediction = torch.stack(pred_trajectory)
         pressure = torch.stack(pred_pressure)
@@ -207,8 +208,8 @@ class CylinderModel(AbstractSystemModel):
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, velocity, trajectory, pressure_trajectory, step, mask):
-        input = {**initial_state, 'velocity': velocity}
+    def _step_fn(self, initial_state, velocity, pressure, trajectory, pressure_trajectory, step, mask):
+        input = {**initial_state, 'velocity': velocity, 'pressure': pressure}
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
@@ -226,7 +227,7 @@ class CylinderModel(AbstractSystemModel):
         trajectory.append(next_velocity)
         pressure_trajectory.append(pred_pressure)
 
-        return next_velocity, trajectory, pressure_trajectory
+        return next_velocity, pred_pressure, trajectory, pressure_trajectory
 
     def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
         mse_losses = list()
