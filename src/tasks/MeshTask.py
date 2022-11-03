@@ -165,8 +165,8 @@ class MeshTask(AbstractTask):
             ax_pred = fig.add_subplot(212)
 
         skip = 10
-        num_steps = rollout_data[0][f'gt_{field_name}'].shape[0]
-        num_frames = len(rollout_data) * num_steps // skip
+        num_steps = rollout_data[0][f'pred_{field_name}'].shape[0]
+        num_frames = math.floor(num_steps / skip)
 
         # compute bounds
         bounds = []
