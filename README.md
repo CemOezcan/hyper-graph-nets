@@ -3,13 +3,13 @@ Implementation of different graph neural network architectures for estimating
 mesh-based pyhsics simulators.
 
 ## Setting up the environment
-This project uses PyPI (https://pypi.org/) for handling packages
+This project uses [PyPI](https://pypi.org/) for handling packages
 and dependencies. To get started, we recommend creating a new virtual environment and installing the required 
 dependencies using `pip install -r \Path\to\requirements.txt`. 
 
 ##  Recording
 We provide logging of metrics and visualizations to [W&B](https://wandb.ai). 
-This requires logging in to W&B via `wandb login` 
+This requires logging in to [W&B](https://wandb.ai) via `wandb login` 
 (For more information, read the [quickstart guide of W&B](https://docs.wandb.ai/quickstart)).
 
 ## Downloading datasets
