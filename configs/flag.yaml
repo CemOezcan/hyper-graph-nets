@@ -1,37 +1,11 @@
-name: "SLURM"   # MUST BE "SLURM"
-
-# Required
-partition: "single"
-job-name: "ALRProject"    # this will be the experiments name in slurm
-
-# Required - Cluster Specific
-num_parallel_jobs: 99
-ntasks: 1
-cpus-per-task: 16
-mem-per-cpu: 8000
-time: 1440  # in minutes
-
-sbatch_args: # Dictionary of SBATCH keywords and arguments
-  distribution: cyclic  # To have repetitions of the same exp be distributed to different nodes
-
-slurm_log: "/home/kit/anthropomatik/ca9551/irl_eim/I2RL/experiments/slurmlog" # optional. dir in which slurm output and error logs will be saved.
----
-
 name: "DEFAULT"   # MUST BE DEFAULT
 import_path: "default.yaml"
 
-optuna:
-    loss_key: "test_accuracy"
-
-compute:
-  preprocessing: False
-  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
-
 params:
-  retrain: False
+  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
   task:
     task: mesh
-    dataset: deforming_plate
+    dataset: flag_minimal
     rollout_split: valid
     batch_size: 1
     epochs: 1
@@ -81,30 +55,5 @@ params:
       random:
         edge_amount: 100
   logging:
-    wandb_mode: offline
+    wandb_mode: online
   random_seed: 0
-
----
-name: optuna_exp
-repetitions: 500
-params:
-  recording:
-    plot_frequency: 100  # record every 100th iteration
-
-optuna_hps:  # we automatically switch to optuna experiments when "optuna_hps" is provided for the experiment
-  # again two entries, first specifies which "suggest" function to call, second the arguments for that function
-  algorithm:
-    network:
-      feedforward:
-        num_layers: ["int", [2, 4]]
-        log_max_neurons: ["int", [4,6]]
-        network_shape: ["categorical", [["=","<", ">", "<>", "><"]]]
-
----
-name: local_exp
-repetitions: 1
-iterations: 11
-params:
-  recording:
-    wandb: false
-    plot_frequency: 10
