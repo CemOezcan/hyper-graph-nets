@@ -1,5 +1,5 @@
 # HyperGraphNet
-Implementation of different remote message passing strategies in graph neural networks for estimating 
+Implementation of different graph neural network architectures for estimating 
 mesh-based pyhsics simulators.
 
 ## Setting up the environment
