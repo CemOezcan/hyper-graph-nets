@@ -14,7 +14,7 @@ from matplotlib import tri
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from src.algorithms.MeshSimulator import MeshSimulator
 from src.algorithms.get_algorithm import get_algorithm
-from src.data.data_loader import OUT_DIR, get_data
+from src.data.data_loader import get_directories, get_data
 from src.tasks.AbstractTask import AbstractTask
 from tqdm import trange
 
@@ -43,6 +43,8 @@ class MeshTask(AbstractTask):
         self._config = config
         self._epochs = config.get('task').get('epochs')
         self._trajectories = config.get('task').get('trajectories')
+        self._dataset_name = config.get('task').get('dataset')
+        _, self._out_dir = get_directories(self._dataset_name)
 
         self._num_val_trajectories = config.get('task').get('validation').get('trajectories')
         self._num_val_rollouts = self._config.get('task').get('validation').get('rollouts')
@@ -66,13 +68,13 @@ class MeshTask(AbstractTask):
         retrain = config.get('retrain')
         epochs = list() if retrain else [
             int(file.split('_epoch:')[1][:-4])
-            for file in os.listdir(OUT_DIR)
+            for file in os.listdir(self._out_dir)
             if re.match(rf'model_{self._task_name}[0-9]+\.pkl', file)
         ]
 
         if epochs:
             self._current_epoch = max(epochs)
-            model_path = os.path.join(OUT_DIR, f'model_{self._task_name}{self._current_epoch}.pkl')
+            model_path = os.path.join(self._out_dir, f'model_{self._task_name}{self._current_epoch}.pkl')
             with open(model_path, 'rb') as file:
                 self._algorithm = pickle.load(file)
         else:
@@ -80,7 +82,6 @@ class MeshTask(AbstractTask):
             self._current_epoch = 0
 
         self._algorithm.initialize(task_information=config)
-        self._dataset_name = config.get('task').get('dataset')
         wandb.init(reinit=False)
 
     def run_iterations(self) -> None:
@@ -149,7 +150,7 @@ class MeshTask(AbstractTask):
             return {'': dir_1, 'stress': dir_2}
 
     def plot_3(self, task_name, field_name, figsize=(12 * 2, 8 * 2), dpi=None):
-        rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
+        rollouts = os.path.join(self._out_dir, f'{task_name}_rollouts.pkl')
         # TODO: Vizualize pressure levels similarly to cfd
         # TODO: Mask out obstacle nodes and edges
 
@@ -216,7 +217,7 @@ class MeshTask(AbstractTask):
         return anima, writergif
 
     def plot_2(self, task_name):
-        rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
+        rollouts = os.path.join(self._out_dir, f'{task_name}_rollouts.pkl')
         # TODO: Vizualize stress levels similarly to cfd
 
         with open(rollouts, 'rb') as fp:
@@ -291,7 +292,7 @@ class MeshTask(AbstractTask):
                 The simulations
 
         """
-        rollouts = os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl')
+        rollouts = os.path.join(self._out_dir, f'{task_name}_rollouts.pkl')
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
@@ -361,10 +362,7 @@ class MeshTask(AbstractTask):
 
         return obst, obst_faces
 
-
-
-    @staticmethod
-    def _save_plot(animation: FuncAnimation, writervideo: PillowWriter, task_name: str) -> str:
+    def _save_plot(self, animation: FuncAnimation, writervideo: PillowWriter, task_name: str) -> str:
         """
         Saves a simulation as a .gif file.
 
@@ -383,7 +381,7 @@ class MeshTask(AbstractTask):
                 The path to the .gif file
 
         """
-        dir = os.path.join(OUT_DIR, f'{task_name}_animation.gif')
+        dir = os.path.join(self._out_dir, f'{task_name}_animation.gif')
         animation.save(dir, writer=writervideo)
         plt.show(block=True)
         return dir

@@ -31,7 +31,7 @@ params:
   retrain: False
   task:
     task: mesh
-    dataset: deforming_plate
+    dataset: flag_minimal
     rollout_split: valid
     batch_size: 1
     epochs: 1

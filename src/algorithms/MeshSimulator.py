@@ -16,7 +16,7 @@ from pandas import DataFrame
 from torch import Tensor
 from tqdm import tqdm
 
-from src.data.data_loader import OUT_DIR, IN_DIR
+from src.data.data_loader import get_directories
 from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 from src.model.abstract_system_model import AbstractSystemModel
 from src.model.flag import FlagModel
@@ -43,9 +43,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         """
         super().__init__(config=config)
-        self._dataset_dir = IN_DIR
         self._network_config = config.get('model')
         self._dataset_name = config.get('task').get('dataset')
+        _, self._out_dir = get_directories(self._dataset_name)
         self._wandb_mode = config.get('logging').get('wandb_mode')
 
         self._trajectories = config.get('task').get('trajectories')
@@ -298,7 +298,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         mean = np.mean(trajectory_loss, axis=0)
         std = np.std(trajectory_loss, axis=0)
 
-        path = os.path.join(OUT_DIR, f'{task_name}_one_step.csv')
+        path = os.path.join(self._out_dir, f'{task_name}_one_step.csv')
         data_frame = pd.DataFrame.from_dict(
             {'mean_loss': [x[0] for x in mean], 'std_loss': [x[0] for x in std],
              'mean_pos_error': [x[1] for x in mean], 'std_pos_error': [x[1] for x in std]
@@ -374,7 +374,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         self.save_rollouts(trajectories, task_name)
 
-        path = os.path.join(OUT_DIR, f'{task_name}_rollout_losses.csv')
+        path = os.path.join(self._out_dir, f'{task_name}_rollout_losses.csv')
         data_frame = pd.DataFrame.from_dict(rollout_losses)
         data_frame.to_csv(path)
 
@@ -418,7 +418,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             means.append(torch.mean(torch.stack(n_step_losses)).item())
             stds.append(torch.std(torch.stack(n_step_losses)).item())
 
-        path = os.path.join(OUT_DIR, f'{task_name}_n_step_losses.csv')
+        path = os.path.join(self._out_dir, f'{task_name}_n_step_losses.csv')
         n_step_stats = {'n_step': n_step_list, 'mean': means, 'std': stds}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(path)
@@ -478,11 +478,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             name : str
                 The name under which to store this mesh simulator
         """
-        with open(os.path.join(OUT_DIR, f'model_{name}.pkl'), 'wb') as file:
+        with open(os.path.join(self._out_dir, f'model_{name}.pkl'), 'wb') as file:
             pickle.dump(self, file)
 
-    @staticmethod
-    def save_rollouts(rollouts: List[Dict[str, Tensor]], task_name: str) -> None:
+    def save_rollouts(self, rollouts: List[Dict[str, Tensor]], task_name: str) -> None:
         """
         Save predicted and ground truth trajectories.
 
@@ -495,7 +494,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 The task name
         """
         rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
-        with open(os.path.join(OUT_DIR, f'{task_name}_rollouts.pkl'), 'wb') as file:
+        with open(os.path.join(self._out_dir, f'{task_name}_rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
 
     def lr_scheduler_step(self) -> None:

@@ -6,12 +6,7 @@ from typing import Tuple
 
 from matplotlib.animation import PillowWriter, FuncAnimation
 
-from src.algorithms.MeshSimulator import MeshSimulator
-from src.algorithms.get_algorithm import get_algorithm
-from src.data.data_loader import OUT_DIR
-from util.Functions import get_from_nested_dict
 from util.Types import *
-from src.algorithms.AbstractIterativeAlgorithm import AbstractIterativeAlgorithm
 
 
 class AbstractTask(ABC):
