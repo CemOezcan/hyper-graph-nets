@@ -4,7 +4,7 @@ import torch
 from torch import Tensor
 
 from src.migration.graphnet import GraphNet
-from src.util import EdgeSet
+from src.util import EdgeSet, MultiGraph
 
 
 class HyperGraphNet(GraphNet):
@@ -16,6 +16,19 @@ class HyperGraphNet(GraphNet):
         self.hyper_node_model_up = model_fn(output_size)
         self.hyper_node_model_cross = model_fn(output_size)
         self.node_model_down = model_fn(output_size)
+
+    def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
+        # TODO: mesh_node updates at the beginning, end or both?
+        # update_edges(mesh, world)
+        # update_nodes(mesh_nodes, mesh, world)
+        # update_edges(up)
+        # update_nodes(hyper_nodes, up)
+        # update_edges(hyper)
+        # update_nodes(hyper_nodes, hyper)
+        # update_edges(down)
+        # update_nodes(mesh_nodes, down) TODO: mesh, world ?
+
+        return
 
     def _update_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
         """Aggregrates edge features, and applies node function."""

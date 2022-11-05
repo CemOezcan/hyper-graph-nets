@@ -10,6 +10,7 @@ from util.Types import *
 
 
 class AbstractTask(ABC):
+
     def __init__(self, config: ConfigDict):
         """
         Initializes the current task. Depending on the application, this can be something like a classification task
