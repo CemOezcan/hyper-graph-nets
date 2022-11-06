@@ -72,7 +72,7 @@ class HyperGraphNet(GraphNet):
         for es in graph.edge_sets:
             name = es.name
             for new_es in new_edge_sets:
-                if new_es == name:
+                if new_es.name == name:
                     edge_set_tuples.append((es, new_es))
 
         new_edge_sets = [es._replace(features=es.features + old_es.features)
