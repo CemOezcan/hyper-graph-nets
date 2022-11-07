@@ -29,12 +29,12 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 1.0e-4
-    message_passing_steps: 5
+    message_passing_steps: 1
     rmp:
       num_clusters: 15
       frequency: 1
-      clustering: none
-      connector: none
+      clustering: spectral
+      connector: hierarchical
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
