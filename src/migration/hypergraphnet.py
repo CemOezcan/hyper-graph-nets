@@ -21,13 +21,13 @@ class HyperGraphNet(GraphNet):
         # TODO: mesh_node updates at the beginning, end or both?
         # TODO: world_edges
         # TODO: ResNet
-        new_edge_sets = list()
+        new_edge_sets = dict()
 
         # update_edges(mesh, world)
         mesh_edges = list(filter(lambda x: x.name == 'mesh_edges', graph.edge_sets))[0]
         updates_mesh_features = self._update_edge_features(graph.node_features, mesh_edges)
         mesh_edges = mesh_edges._replace(features=updates_mesh_features)
-        new_edge_sets.append(mesh_edges)
+        new_edge_sets['mesh_edges'] = mesh_edges
 
         # update_nodes(mesh_nodes, mesh, world)
         # TODO: mask operation?
@@ -39,7 +39,7 @@ class HyperGraphNet(GraphNet):
         up_edges = list(filter(lambda x: x.name == 'intra_cluster_to_cluster', graph.edge_sets))[0]
         updates_up_features = self._update_edge_features(graph.node_features, up_edges)
         up_edges = up_edges._replace(features=updates_up_features)
-        new_edge_sets.append(up_edges)
+        new_edge_sets['intra_cluster_to_cluster'] = up_edges
 
         # update_nodes(hyper_nodes, up)
         new_hyper_node_features = self._update_hyper_node_features(graph.node_features, [up_edges], self.hyper_node_model_up)
@@ -50,7 +50,7 @@ class HyperGraphNet(GraphNet):
         inter_edges = list(filter(lambda x: x.name == 'inter_cluster', graph.edge_sets))[0]
         updates_inter_features = self._update_edge_features(graph.node_features, inter_edges)
         inter_edges = inter_edges._replace(features=updates_inter_features)
-        new_edge_sets.append(inter_edges)
+        new_edge_sets['inter_cluster'] = inter_edges
 
         # update_nodes(hyper_nodes, hyper)
         new_hyper_node_features = self._update_hyper_node_features(graph.node_features, [inter_edges], self.hyper_node_model_cross)
@@ -61,7 +61,7 @@ class HyperGraphNet(GraphNet):
         down_edges = list(filter(lambda x: x.name == 'intra_cluster_to_mesh', graph.edge_sets))[0]
         updates_down_features = self._update_edge_features(graph.node_features, down_edges)
         down_edges = down_edges._replace(features=updates_down_features)
-        new_edge_sets.append(down_edges)
+        new_edge_sets['intra_cluster_to_mesh'] = down_edges
 
         # update_nodes(mesh_nodes, down) TODO: mesh, world ?
         new_node_features = self.update(graph.node_features, [down_edges])
@@ -70,10 +70,7 @@ class HyperGraphNet(GraphNet):
 
         edge_set_tuples = list()
         for es in graph.edge_sets:
-            name = es.name
-            for new_es in new_edge_sets:
-                if new_es.name == name:
-                    edge_set_tuples.append((es, new_es))
+            edge_set_tuples.append((new_edge_sets[es.name], es))
 
         new_edge_sets = [es._replace(features=es.features + old_es.features)
                          for es, old_es in edge_set_tuples]

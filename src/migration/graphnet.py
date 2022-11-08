@@ -73,6 +73,7 @@ class GraphNet(nn.Module):
 
     def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
         """Applies GraphNetBlock and returns updated MultiGraph."""
+        # TODO: world_edges
         # apply edge functions
         new_edge_sets = []
         for edge_set in graph.edge_sets:

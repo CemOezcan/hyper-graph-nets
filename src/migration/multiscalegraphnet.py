@@ -20,6 +20,7 @@ class MultiScaleGraphNet(GraphNet):
     def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
         # TODO: Decide if 5 or 3 mp-steps
         # TODO: Modularize
+        # TODO: world_edges
         new_edge_sets = dict()
 
         # 1
@@ -95,7 +96,6 @@ class MultiScaleGraphNet(GraphNet):
         graph.node_features[0] = new_node_features
 
         edge_set_tuples = list()
-
         for es in graph.edge_sets:
             edge_set_tuples.append((new_edge_sets[es.name], es))
 
