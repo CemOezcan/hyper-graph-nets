@@ -29,8 +29,17 @@ class MultiScaleGraphNet(GraphNet):
         updates_mesh_features = self._update_edge_features(graph.node_features, mesh_edges)
         mesh_edges = mesh_edges._replace(features=updates_mesh_features)
         new_edge_sets['mesh_edges'] = mesh_edges
+        temp_edge_sets = [mesh_edges]
+
+        if list(filter(lambda x: x.name == 'world_edges', graph.edge_sets)):
+            world_edges = list(filter(lambda x: x.name == 'world_edges', graph.edge_sets))[0]
+            updates_world_features = self._update_edge_features(graph.node_features, world_edges)
+            world_edges = world_edges._replace(features=updates_world_features)
+            new_edge_sets['world_edges'] = world_edges
+            temp_edge_sets.append(world_edges)
+
         # update_nodes(mesh_nodes, mesh, world)
-        new_node_features = super()._update_node_features(graph.node_features, [mesh_edges])
+        new_node_features = super()._update_node_features(graph.node_features, temp_edge_sets)
         new_node_features = torch.add(new_node_features[0], graph.node_features[0])
         graph.node_features[0] = new_node_features
 
@@ -90,8 +99,17 @@ class MultiScaleGraphNet(GraphNet):
         updates_mesh_features = self._update_edge_features(graph.node_features, mesh_edges)
         mesh_edges = mesh_edges._replace(features=updates_mesh_features)
         new_edge_sets['mesh_edges'] = mesh_edges
+        temp_edge_sets = [mesh_edges]
+
+        if list(filter(lambda x: x.name == 'world_edges', graph.edge_sets)):
+            world_edges = list(filter(lambda x: x.name == 'world_edges', graph.edge_sets))[0]
+            updates_world_features = self._update_edge_features(graph.node_features, world_edges)
+            world_edges = world_edges._replace(features=updates_world_features)
+            new_edge_sets['world_edges'] = world_edges
+            temp_edge_sets.append(world_edges)
+
         # update_nodes(mesh, mesh, world)
-        new_node_features = super()._update_node_features(graph.node_features, [mesh_edges])
+        new_node_features = super()._update_node_features(graph.node_features, temp_edge_sets)
         new_node_features = torch.add(new_node_features[0], graph.node_features[0])
         graph.node_features[0] = new_node_features
 
