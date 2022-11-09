@@ -2,11 +2,16 @@
 import functools
 
 from collections import OrderedDict
-from typing import List
+from typing import List, Type, Tuple
 
 from torch import nn, Tensor
 
 from src.migration.encoder import Encoder
+from src.migration.graphnet import GraphNet
+from src.migration.heterographnet import HeteroGraphNet
+from src.migration.hypergraphnet import HyperGraphNet
+from src.migration.multigraphnet import MultiGraphNet
+from src.migration.multiscalegraphnet import MultiScaleGraphNet
 from src.migration.processor import Processor
 from src.migration.decoder import Decoder
 from src.util import device, MultiGraph
@@ -16,13 +21,14 @@ class MeshGraphNet(nn.Module):
     """Encode-Process-Decode GraphNet model."""
 
     def __init__(self, output_size: int, latent_size: int, num_layers: int, message_passing_aggregator: str,
-                 message_passing_steps: int, hierarchical: bool, edge_sets: List[str]):
+                 message_passing_steps: int, architecture: str, edge_sets: List[str]):
         super().__init__()
         self._latent_size = latent_size
         self._output_size = output_size
         self._num_layers = num_layers
         self._message_passing_steps = message_passing_steps
         self._message_passing_aggregator = message_passing_aggregator
+        graphnet_block, hierarchical = self.get_architecture(architecture)
 
         self.encoder = Encoder(make_mlp=self._make_mlp,
                                latent_size=self._latent_size,
@@ -32,7 +38,7 @@ class MeshGraphNet(nn.Module):
                                    message_passing_steps=self._message_passing_steps,
                                    message_passing_aggregator=self._message_passing_aggregator,
                                    edge_sets=edge_sets,
-                                   hierarchical=hierarchical)
+                                   graphnet_block=graphnet_block)
         self.decoder = Decoder(make_mlp=functools.partial(self._make_mlp, layer_norm=False),
                                output_size=self._output_size)
 
@@ -51,6 +57,33 @@ class MeshGraphNet(nn.Module):
             network = nn.Sequential(
                 network, nn.LayerNorm(normalized_shape=widths[-1]))
         return network
+
+    @staticmethod
+    def get_architecture(architecture: str) -> Tuple[Type[GraphNet], bool]:
+        """
+        Returns the specified GNN architecture.
+
+        Parameters
+        ----------
+            architecture : str
+                The name of the architecture
+
+        Returns
+        -------
+            Tuple[Type[GraphNet], bool]
+                The GraphNet block and whether it is hierarchical or not
+
+        """
+        if architecture == 'hyper':
+            return HyperGraphNet, True
+        elif architecture == 'multiscale':
+            return MultiScaleGraphNet, True
+        elif architecture == 'hetero':
+            return HeteroGraphNet, True
+        elif architecture == 'multi':
+            return MultiGraphNet, False
+        else:
+            return GraphNet, False
 
 
 # TODO refactor into new file

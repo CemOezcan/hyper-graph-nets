@@ -12,9 +12,23 @@ class HeteroGraphNet(GraphNet):
 
     def __init__(self, model_fn: Callable, output_size: int, message_passing_aggregator: str, edge_sets: List[str]):
         super().__init__(model_fn, output_size, message_passing_aggregator, edge_sets)
+        self.hyper_node_model_cross = model_fn(output_size)
 
-    def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
-        # update_edges(mesh, world, inter, intra_up, intra_down)
-        # update_nodes(mesh, hyper)
+    def _update_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
+        """Aggregrates edge features, and applies node function."""
+        hyper_node_offset = len(node_features[0])
+        node_features = torch.cat(tuple(node_features), dim=0)
+        num_nodes = node_features.shape[0]
+        features = [node_features]
 
-        return
+        features = self.aggregation(
+            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
+            features,
+            num_nodes
+        )
+        updated_nodes = self.node_model_cross(features[:hyper_node_offset])
+        updated_hyper_nodes = self.hyper_node_model_cross(features[hyper_node_offset:])
+
+        return [updated_nodes, updated_hyper_nodes]
+
+

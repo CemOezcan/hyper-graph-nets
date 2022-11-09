@@ -11,8 +11,9 @@ class MultigraphConnector(AbstractConnector):
     Naive remote message passing with fully connected clusters.
     """
 
-    def __init__(self):
+    def __init__(self, fully_connect):
         super().__init__()
+        self._fully_connect = fully_connect
 
     def initialize(self, intra, inter):
         super().initialize(intra, inter)
