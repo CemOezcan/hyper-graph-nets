@@ -34,7 +34,7 @@ params:
       num_clusters: 16
       frequency: 1
       clustering: spectral
-      connector: hierarchical
+      connector: hyper
       fully_connect: False
       intra_cluster_sampling:
         enabled: False

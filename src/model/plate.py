@@ -34,7 +34,7 @@ class PlateModel(AbstractSystemModel):
 
         self._model_type = 'plate'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
-        self._hierarchical = params.get('rmp').get('connector') == 'hierarchical' and self._rmp
+        self._architecture = params.get('rmp').get('connector') if self._rmp else 'none'
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
         self._balancer = params.get('graph_balancer').get('algorithm') != 'none'
         self.message_passing_steps = params.get('message_passing_steps')
@@ -59,7 +59,7 @@ class PlateModel(AbstractSystemModel):
             num_layers=2,
             message_passing_steps=self.message_passing_steps,
             message_passing_aggregator=self.message_passing_aggregator,
-            hierarchical=self._hierarchical,
+            architecture=self._architecture,
             edge_sets=self._edge_sets
         ).to(device)
 

@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, List, Type
 
 from torch import nn
 
@@ -13,9 +13,8 @@ class Processor(nn.Module):
     """
 
     def __init__(self, make_mlp: Callable, output_size: int, message_passing_steps: int,
-                 message_passing_aggregator: str, edge_sets: List[str], hierarchical=True):
+                 message_passing_aggregator: str, edge_sets: List[str], graphnet_block: Type[GraphNet]):
         super().__init__()
-        graphnet_block = HyperGraphNet if hierarchical else GraphNet
         blocks = []
         for _ in range(message_passing_steps):
             blocks.append(
