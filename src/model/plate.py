@@ -90,8 +90,8 @@ class PlateModel(AbstractSystemModel):
 
         # Only obstacle nodes as senders and normal nodes as receivers
         # Remove all edges from non-obstacle nodes
-        non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
-        world_connection_matrix[non_obstacle_nodes, :] = torch.tensor(False, dtype=torch.bool, device=device)
+        # non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
+        # world_connection_matrix[non_obstacle_nodes, :] = torch.tensor(False, dtype=torch.bool, device=device)
 
         # Remove all edges to non-normal nodes
         non_normal_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.NORMAL.value], device=device))
@@ -165,11 +165,14 @@ class PlateModel(AbstractSystemModel):
 
         # Append velocities to kinematic nodes
         # TODO: Correct?
+        obstacle_nodes = torch.eq(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
+        obstacle_indices = obstacle_nodes.nonzero().squeeze()
+
         num_nodes = node_type.shape[0]
         velocities = torch.zeros(num_nodes, 3).to(device)
-        velocities[world_senders] = (
-                torch.index_select(input=target_world_pos, dim=0, index=world_senders) -
-                torch.index_select(input=world_pos, dim=0, index=world_senders)
+        velocities[obstacle_nodes] = (
+                torch.index_select(input=target_world_pos, dim=0, index=obstacle_indices) -
+                torch.index_select(input=world_pos, dim=0, index=obstacle_indices)
         )
         node_features = torch.cat((one_hot_node_type, velocities), dim=-1)
 
