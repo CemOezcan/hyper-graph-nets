@@ -23,7 +23,7 @@ params:
   model:
     field: world_pos
     history: True
-    size: 4
+    size: 3
     noise: 0.003
     gamma: 0.9
     scheduler_epoch: 10

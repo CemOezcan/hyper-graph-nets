@@ -145,9 +145,7 @@ class MeshTask(AbstractTask):
             a, w = self.plot_2(task_name)
             dir_1 = self._save_plot(a, w, task_name)
 
-            a, w = self.plot_3(task_name, 'stress', figsize=(19.2, 10.8))
-            dir_2 = self._save_plot(a, w, f'{task_name}_stress')
-            return {'': dir_1, 'stress': dir_2}
+            return {'': dir_1}
 
     def plot_3(self, task_name, field_name, figsize=(12 * 2, 8 * 2), dpi=None):
         rollouts = os.path.join(self._out_dir, f'{task_name}_rollouts.pkl')
