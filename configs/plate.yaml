@@ -7,7 +7,7 @@ params:
     task: mesh
     dataset: deforming_plate
     rollout_split: valid
-    batch_size: 21
+    batch_size: 2
     epochs: 15
     trajectories: 1000
     mode: all
