@@ -29,8 +29,8 @@ class PlateModel(AbstractSystemModel):
         self._node_dynamic_normalizer = Normalizer(size=1, name='node_dynamic_normalizer')
         self._mesh_edge_normalizer = Normalizer(size=8, name='mesh_edge_normalizer')
         self._world_edge_normalizer = Normalizer(size=4, name='world_edge_normalizer')
-        self._intra_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
-        self._inter_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
+        self._intra_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
+        self._inter_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
 
         self._model_type = 'plate'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
@@ -90,6 +90,7 @@ class PlateModel(AbstractSystemModel):
 
         # Only obstacle nodes as senders and normal nodes as receivers
         # Remove all edges from non-obstacle nodes
+        # TODO: Change radius?
         # non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
         # world_connection_matrix[non_obstacle_nodes, :] = torch.tensor(False, dtype=torch.bool, device=device)
 
