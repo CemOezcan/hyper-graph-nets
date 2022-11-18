@@ -1,3 +1,4 @@
+import time
 from typing import Callable, List
 
 import torch
@@ -21,132 +22,33 @@ class HyperGraphNet(GraphNet):
         # TODO: mesh_node updates at the beginning, end or both?
         # TODO: world_edges
         # TODO: ResNet
+        # TODO: Replace lambda by dict (Graph repr)
         new_edge_sets = dict()
 
         # update_edges(mesh, world)
-        mesh_edges = list(filter(lambda x: x.name == 'mesh_edges', graph.edge_sets))[0]
-        updates_mesh_features = self._update_edge_features(graph.node_features, mesh_edges)
-        mesh_edges = mesh_edges._replace(features=updates_mesh_features)
-        new_edge_sets['mesh_edges'] = mesh_edges
-        temp_edge_sets = [mesh_edges]
-
-        if list(filter(lambda x: x.name == 'world_edges', graph.edge_sets)):
-            world_edges = list(filter(lambda x: x.name == 'world_edges', graph.edge_sets))[0]
-            updates_world_features = self._update_edge_features(graph.node_features, world_edges)
-            world_edges = world_edges._replace(features=updates_world_features)
-            new_edge_sets['world_edges'] = world_edges
-            temp_edge_sets.append(world_edges)
+        self.perform_edge_updates(graph, 'mesh_edges', new_edge_sets)
+        self.perform_edge_updates(graph, 'world_edges', new_edge_sets)
+        temp_edge_sets = {'mesh_edges', 'world_edges'}.intersection(self.edge_models.keys())
 
         # update_nodes(mesh_nodes, mesh, world)
-        # TODO: mask operation?
-        new_node_features = super()._update_node_features(graph.node_features, temp_edge_sets)
-        new_node_features = torch.add(new_node_features[0], graph.node_features[0])
-        graph.node_features[0] = new_node_features
+        self._update_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets])
 
         # update_edges(up)
-        up_edges = list(filter(lambda x: x.name == 'intra_cluster_to_cluster', graph.edge_sets))[0]
-        updates_up_features = self._update_edge_features(graph.node_features, up_edges)
-        up_edges = up_edges._replace(features=updates_up_features)
-        new_edge_sets['intra_cluster_to_cluster'] = up_edges
-
+        self.perform_edge_updates(graph, 'intra_cluster_to_cluster', new_edge_sets)
         # update_nodes(hyper_nodes, up)
-        new_hyper_node_features = self._update_hyper_node_features(graph.node_features, [up_edges], self.hyper_node_model_up)
-        new_hyper_node_features = torch.add(new_hyper_node_features[1], graph.node_features[1])
-        graph.node_features[1] = new_hyper_node_features
+        self._update_hyper_node_features(graph, [new_edge_sets['intra_cluster_to_cluster']], self.hyper_node_model_up)
 
         # update_edges(hyper)
-        inter_edges = list(filter(lambda x: x.name == 'inter_cluster', graph.edge_sets))[0]
-        updates_inter_features = self._update_edge_features(graph.node_features, inter_edges)
-        inter_edges = inter_edges._replace(features=updates_inter_features)
-        new_edge_sets['inter_cluster'] = inter_edges
+        self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
+        self.perform_edge_updates(graph, 'inter_cluster_world', new_edge_sets)
+        temp_edge_sets = {'inter_cluster', 'inter_cluster_world'}.intersection(self.edge_models.keys())
 
         # update_nodes(hyper_nodes, hyper)
-        new_hyper_node_features = self._update_hyper_node_features(graph.node_features, [inter_edges], self.hyper_node_model_cross)
-        new_hyper_node_features = torch.add(new_hyper_node_features[1], graph.node_features[1])
-        graph.node_features[1] = new_hyper_node_features
+        self._update_hyper_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets], self.hyper_node_model_cross)
 
         # update_edges(down)
-        down_edges = list(filter(lambda x: x.name == 'intra_cluster_to_mesh', graph.edge_sets))[0]
-        updates_down_features = self._update_edge_features(graph.node_features, down_edges)
-        down_edges = down_edges._replace(features=updates_down_features)
-        new_edge_sets['intra_cluster_to_mesh'] = down_edges
+        self.perform_edge_updates(graph, 'intra_cluster_to_mesh', new_edge_sets)
+        # update_nodes(mesh_nodes, down)
+        self._update_down(graph, [new_edge_sets['intra_cluster_to_mesh']])
 
-        # update_nodes(mesh_nodes, down) TODO: mesh, world ?
-        new_node_features = self.update(graph.node_features, [down_edges])
-        new_node_features = torch.add(new_node_features[0], graph.node_features[0])
-        graph.node_features[0] = new_node_features
-
-        edge_set_tuples = list()
-        for es in graph.edge_sets:
-            edge_set_tuples.append((new_edge_sets[es.name], es))
-
-        new_edge_sets = [es._replace(features=es.features + old_es.features)
-                         for es, old_es in edge_set_tuples]
-
-        return MultiGraph(graph.node_features, new_edge_sets)
-
-    def _update_hyper_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet], model) -> List[Tensor]:
-        """Aggregrates edge features, and applies node function."""
-        hyper_node_offset = len(node_features[0])
-        node_features = torch.cat(tuple(node_features), dim=0)
-        num_nodes = node_features.shape[0]
-        features = [node_features]
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
-            features,
-            num_nodes
-        )
-        updated_nodes = model(features[hyper_node_offset:])
-
-        return [node_features[:hyper_node_offset], updated_nodes]
-
-    def update(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
-        """Aggregrates edge features, and applies node function."""
-        hyper_node_offset = len(node_features[0])
-        node_features = torch.cat(tuple(node_features), dim=0)
-        num_nodes = node_features.shape[0]
-        features = [node_features]
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
-            features,
-            num_nodes
-        )
-        updated_nodes_cross = self.node_model_down(features[:hyper_node_offset])
-
-        return [updated_nodes_cross, node_features[hyper_node_offset:]]
-
-    def _update_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
-        """Aggregrates edge features, and applies node function."""
-        hyper_node_offset = len(node_features[0])
-        num_nodes = torch.cat(tuple(node_features), dim=0).shape[0]
-
-        nf = super()._update_node_features(node_features, edge_sets)
-        updated_nodes_cross, hyper_node_features = nf[0], nf[1]
-        node_features_2 = torch.cat((updated_nodes_cross, hyper_node_features), dim=0)
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name == 'intra_cluster_to_cluster', edge_sets)),
-            [node_features_2],
-            num_nodes
-        )
-        updated_hyper_nodes_up = self.hyper_node_model_up(features[hyper_node_offset:])
-        node_features_3 = torch.cat((node_features_2[:hyper_node_offset], updated_hyper_nodes_up), dim=0)
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name == 'inter_cluster', edge_sets)),
-            [node_features_3],
-            num_nodes
-        )
-        updated_hyper_nodes_cross = self.hyper_node_model_cross(features[hyper_node_offset:])
-        node_features_4 = torch.cat((node_features_3[:hyper_node_offset], updated_hyper_nodes_cross), dim=0)
-
-        features = self.aggregation(
-            list(filter(lambda x: x.name == 'intra_cluster_to_mesh', edge_sets)),
-            [node_features_4],
-            num_nodes
-        )
-        updated_nodes_down = self.node_model_down(features[:hyper_node_offset])
-
-        return [updated_nodes_down, node_features_4[hyper_node_offset:]]
+        return MultiGraph(graph.node_features, new_edge_sets.values())

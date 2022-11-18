@@ -27,14 +27,13 @@ class GraphNet(nn.Module):
 
         sender_features = torch.index_select(input=node_features, dim=0, index=senders)
         receiver_features = torch.index_select(input=node_features, dim=0, index=receivers)
+        features = torch.cat([sender_features, receiver_features, edge_set.features], dim=-1)
 
-        features = [sender_features, receiver_features, edge_set.features]
-        features = torch.cat(features, dim=-1)
+        return torch.add(edge_set.features, self.edge_models[edge_set.name](features))
 
-        return self.edge_models[edge_set.name](features)
-
-    def _update_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
+    def _update_node_features(self, graph: MultiGraph, edge_sets: List[EdgeSet]):
         """Aggregrates edge features, and applies node function."""
+        node_features = graph.node_features
         hyper_node_offset = len(node_features[0])
         node_features = torch.cat(tuple(node_features), dim=0)
         num_nodes = node_features.shape[0]
@@ -46,8 +45,7 @@ class GraphNet(nn.Module):
             num_nodes
         )
         updated_nodes_cross = self.node_model_cross(features[:hyper_node_offset])
-
-        return [updated_nodes_cross, node_features[hyper_node_offset:]]
+        graph.node_features[0] = torch.add(updated_nodes_cross, graph.node_features[0])
 
     def aggregation(self, edge_sets: List[EdgeSet], features: List[Tensor], num_nodes: int) -> Tensor:
         for edge_set in edge_sets:
@@ -80,18 +78,47 @@ class GraphNet(nn.Module):
             new_edge_sets.append(edge_set._replace(features=updated_features))
 
         # apply node function
-        new_node_features = self._update_node_features(graph.node_features, new_edge_sets)
+        graph = graph._replace(edge_sets=new_edge_sets)
+        self._update_node_features(graph, new_edge_sets)
 
-        # add residual connections
-        new_node_features = list(map(sum, zip(new_node_features, graph.node_features)))
-        if mask is not None:
-            new_node_features = self._mask_operation(mask, new_node_features, graph)
-        new_edge_sets = [es._replace(features=es.features + old_es.features)
-                         for es, old_es in zip(new_edge_sets, graph.edge_sets)]
-        return MultiGraph(new_node_features, new_edge_sets)
+        return graph
 
-    @staticmethod
-    def _mask_operation(mask: Tensor, new_node_features: Tensor, graph: MultiGraph):
-        mask = mask.repeat(new_node_features.shape[-1])
-        mask = mask.view(new_node_features.shape[0], new_node_features.shape[1])
-        return torch.where(mask, new_node_features, graph.node_features)
+    def perform_edge_updates(self, graph, edge_set_name, new_edge_sets):
+        if edge_set_name not in self.edge_models.keys():
+            return
+
+        edge_set = list(filter(lambda x: x.name == edge_set_name, graph.edge_sets))[0]
+        updates_mesh_features = self._update_edge_features(graph.node_features, edge_set)
+        new_edge_sets[edge_set_name] = edge_set._replace(features=updates_mesh_features)
+
+    def _update_hyper_node_features(self, graph: MultiGraph, edge_sets: List[EdgeSet], model: nn.Module):
+        """Aggregrates edge features, and applies node function."""
+        node_features = graph.node_features
+        hyper_node_offset = len(node_features[0])
+        node_features = torch.cat(tuple(node_features), dim=0)
+        num_nodes = node_features.shape[0]
+        features = [node_features]
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
+            features,
+            num_nodes
+        )
+        updated_nodes = model(features[hyper_node_offset:])
+        graph.node_features[1] = torch.add(updated_nodes, graph.node_features[1])
+
+    def _update_down(self, graph: MultiGraph, edge_sets: List[EdgeSet]):
+        """Aggregrates edge features, and applies node function."""
+        node_features = graph.node_features
+        hyper_node_offset = len(node_features[0])
+        node_features = torch.cat(tuple(node_features), dim=0)
+        num_nodes = node_features.shape[0]
+        features = [node_features]
+
+        features = self.aggregation(
+            list(filter(lambda x: x.name in self.edge_models.keys(), edge_sets)),
+            features,
+            num_nodes
+        )
+        updated_nodes_cross = self.node_model_down(features[:hyper_node_offset])
+        graph.node_features[0] = torch.add(updated_nodes_cross, graph.node_features[0])

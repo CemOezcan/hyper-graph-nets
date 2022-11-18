@@ -75,7 +75,7 @@ class AbstractConnector(ABC):
         receivers = torch.cat((receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
 
         # TODO: Make model independent
-        if model_type == 'flag' or model_type == 'deform_model':
+        if model_type == 'flag' or model_type == 'plate':
             relative_target_feature = (torch.index_select(input=target_feature, dim=0, index=senders) -
                                        torch.index_select(input=target_feature, dim=0, index=receivers))
             world, mesh = torch.split(relative_target_feature, 3, dim=1)

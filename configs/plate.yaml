@@ -23,15 +23,15 @@ params:
   model:
     field: world_pos
     history: True
-    size: 4
+    size: 3
     noise: 0.003
     gamma: 0.9
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 1.0e-4
-    message_passing_steps: 10
+    message_passing_steps: 5
     rmp:
-      num_clusters: 15
+      num_clusters: 10
       frequency: 1
       clustering: none
       connector: none
