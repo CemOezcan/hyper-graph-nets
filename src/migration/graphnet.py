@@ -27,11 +27,9 @@ class GraphNet(nn.Module):
 
         sender_features = torch.index_select(input=node_features, dim=0, index=senders)
         receiver_features = torch.index_select(input=node_features, dim=0, index=receivers)
+        features = torch.cat([sender_features, receiver_features, edge_set.features], dim=-1)
 
-        features = [sender_features, receiver_features, edge_set.features]
-        features = torch.cat(features, dim=-1)
-
-        return self.edge_models[edge_set.name](features)
+        return torch.add(edge_set.features, self.edge_models[edge_set.name](features))
 
     def _update_node_features(self, graph: MultiGraph, edge_sets: List[EdgeSet]):
         """Aggregrates edge features, and applies node function."""
@@ -80,18 +78,10 @@ class GraphNet(nn.Module):
             new_edge_sets.append(edge_set._replace(features=updated_features))
 
         # apply node function
+        graph = graph._replace(edge_sets=new_edge_sets)
         self._update_node_features(graph, new_edge_sets)
 
-        # add residual connections
-        new_edge_sets = [es._replace(features=es.features + old_es.features) for es, old_es in zip(new_edge_sets, graph.edge_sets)]
-
-        return MultiGraph(graph.node_features, new_edge_sets)
-
-    @staticmethod
-    def _mask_operation(mask: Tensor, new_node_features: Tensor, graph: MultiGraph):
-        mask = mask.repeat(new_node_features.shape[-1])
-        mask = mask.view(new_node_features.shape[0], new_node_features.shape[1])
-        return torch.where(mask, new_node_features, graph.node_features)
+        return graph
 
     def perform_edge_updates(self, graph, edge_set_name, new_edge_sets):
         if edge_set_name not in self.edge_models.keys():
@@ -101,7 +91,7 @@ class GraphNet(nn.Module):
         updates_mesh_features = self._update_edge_features(graph.node_features, edge_set)
         new_edge_sets[edge_set_name] = edge_set._replace(features=updates_mesh_features)
 
-    def _update_hyper_node_features(self, graph: MultiGraph, edge_sets: List[EdgeSet], model):
+    def _update_hyper_node_features(self, graph: MultiGraph, edge_sets: List[EdgeSet], model: nn.Module):
         """Aggregrates edge features, and applies node function."""
         node_features = graph.node_features
         hyper_node_offset = len(node_features[0])

@@ -29,7 +29,7 @@ class MultiScaleGraphNet(GraphNet):
         self.perform_edge_updates(graph, 'world_edges', new_edge_sets)
         temp_edge_sets = {'mesh_edges', 'world_edges'}.intersection(self.edge_models.keys())
         # update_nodes(mesh_nodes, mesh, world)
-        super()._update_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets])
+        self._update_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets])
 
         # update_edges(up)
         self.perform_edge_updates(graph, 'intra_cluster_to_cluster', new_edge_sets)
@@ -67,9 +67,6 @@ class MultiScaleGraphNet(GraphNet):
         temp_edge_sets = {'mesh_edges', 'world_edges'}.intersection(self.edge_models.keys())
 
         # update_nodes(mesh, mesh, world)
-        super()._update_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets])
+        self._update_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets])
 
-        edge_set_tuples = [(new_edge_sets[es.name], es) for es in graph.edge_sets]
-        new_edge_sets = [es._replace(features=es.features + old_es.features) for es, old_es in edge_set_tuples]
-
-        return MultiGraph(graph.node_features, new_edge_sets)
+        return MultiGraph(graph.node_features, new_edge_sets.values())
