@@ -19,7 +19,7 @@ from util.Functions import get_from_nested_dict
 warnings.filterwarnings('ignore')
 
 
-def main(config_name='flag'):
+def main(config_name='plate'):
     config_file = read_yaml(config_name)
 
     params = config_file['params']

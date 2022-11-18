@@ -1,5 +1,6 @@
 from typing import List
 
+import numpy as np
 import scipy.spatial as ss
 import torch
 from torch import Tensor
@@ -19,7 +20,7 @@ class HierarchicalConnector(AbstractConnector):
 
     def initialize(self, intra, inter):
         super().initialize(intra, inter)
-        return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']
+        return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster', 'inter_cluster_world']
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
@@ -81,9 +82,23 @@ class HierarchicalConnector(AbstractConnector):
 
         hyper_edges.append(world_edges_to_cluster)
 
+        # New
+        index = torch.argmax(
+            torch.sum(
+                torch.abs(
+                    graph.node_features[1][:, 3:]
+                ),
+                dim=1)
+        ) + num_nodes
+
         snd_to_mesh = torch.cat(snd_to_mesh, dim=0)
         rcv_to_mesh = torch.cat(rcv_to_mesh, dim=0)
         edges_to_mesh = self._intra_normalizer(torch.cat(edges_to_mesh, dim=0).to(device), is_training)
+        # New
+        snd_to_mesh, rcv_to_mesh, edges_to_mesh = zip(*filter(lambda x: index != x[0], zip(snd_to_mesh, rcv_to_mesh, edges_to_mesh)))
+        snd_to_mesh = torch.stack(snd_to_mesh, dim=0)
+        rcv_to_mesh = torch.stack(rcv_to_mesh, dim=0)
+        edges_to_mesh = self._intra_normalizer(torch.stack(edges_to_mesh, dim=0).to(device), is_training)
 
         world_edges_to_mesh = EdgeSet(
             name='intra_cluster_to_mesh',
@@ -98,13 +113,54 @@ class HierarchicalConnector(AbstractConnector):
             senders, receivers, edge_features = self._fully_connected(clustering_features, hyper_nodes, model_type)
         else:
             senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
+        # New
+        senders, receivers, edge_features = zip(*filter(lambda x: index not in x[:2], zip(senders, receivers, edge_features)))
+        edge_features = torch.stack(edge_features, dim=0)
+        senders = torch.stack(senders, dim=0)
+        receivers = torch.stack(receivers, dim=0)
 
         world_edges = EdgeSet(
             name='inter_cluster',
             features=self._inter_normalizer(edge_features.to(device), is_training),
             senders=senders,
             receivers=receivers)
+        ############################################## New:
+        hyper_edges.append(world_edges)
 
+        world_edge_rec = list(filter(lambda x: x.name == 'world_edges', graph.edge_sets))[0].receivers
+        colliding_hyper_nodes = list()
+        for h, c in zip(hyper_nodes, clusters):
+            if set(c.tolist()).intersection(set(world_edge_rec.tolist())):
+                colliding_hyper_nodes.append(h)
+
+        if not colliding_hyper_nodes:
+            dist = list()
+            for i in range(len(clustering_means)):
+                if i != index - num_nodes:
+                    dist.append(torch.dist(clustering_means[i][:3], clustering_means[index - num_nodes][:3]))
+                else:
+                    dist.append(torch.inf)
+            colliding_hyper_nodes.append(num_nodes + np.argmin(dist))
+
+        senders, receivers, edge_features = self._get_subgraph(
+            model_type,
+            clustering_features,
+            torch.tensor([index] * len(colliding_hyper_nodes)).to(device_0),
+            torch.tensor(colliding_hyper_nodes)
+
+        )
+        senders, receivers, edge_features = zip(*filter(lambda x: index == x[0], zip(senders, receivers, edge_features)))
+        edge_features = torch.stack(edge_features, dim=0)
+        senders = torch.stack(senders, dim=0)
+        receivers = torch.stack(receivers, dim=0)
+
+        world_edges = EdgeSet(
+            name='inter_cluster_world',
+            features=self._inter_normalizer(edge_features.to(device), is_training)[:, :4],
+            senders=senders,
+            receivers=receivers
+        )
+        ######################################################
         hyper_edges.append(world_edges)
 
         # Expansion

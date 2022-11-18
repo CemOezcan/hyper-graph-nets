@@ -40,8 +40,11 @@ class HyperGraphNet(GraphNet):
 
         # update_edges(hyper)
         self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
+        self.perform_edge_updates(graph, 'inter_cluster_world', new_edge_sets)
+        temp_edge_sets = {'inter_cluster', 'inter_cluster_world'}.intersection(self.edge_models.keys())
+
         # update_nodes(hyper_nodes, hyper)
-        self._update_hyper_node_features(graph, [new_edge_sets['inter_cluster']], self.hyper_node_model_cross)
+        self._update_hyper_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets], self.hyper_node_model_cross)
 
         # update_edges(down)
         self.perform_edge_updates(graph, 'intra_cluster_to_mesh', new_edge_sets)
