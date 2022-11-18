@@ -82,7 +82,7 @@ class HierarchicalConnector(AbstractConnector):
 
         hyper_edges.append(world_edges_to_cluster)
 
-        # New
+        # Index of the obstacle cluster
         index = torch.argmax(
             torch.sum(
                 torch.abs(
@@ -94,11 +94,12 @@ class HierarchicalConnector(AbstractConnector):
         snd_to_mesh = torch.cat(snd_to_mesh, dim=0)
         rcv_to_mesh = torch.cat(rcv_to_mesh, dim=0)
         edges_to_mesh = self._intra_normalizer(torch.cat(edges_to_mesh, dim=0).to(device), is_training)
-        # New
-        snd_to_mesh, rcv_to_mesh, edges_to_mesh = zip(*filter(lambda x: index != x[0], zip(snd_to_mesh, rcv_to_mesh, edges_to_mesh)))
-        snd_to_mesh = torch.stack(snd_to_mesh, dim=0)
-        rcv_to_mesh = torch.stack(rcv_to_mesh, dim=0)
-        edges_to_mesh = self._intra_normalizer(torch.stack(edges_to_mesh, dim=0).to(device), is_training)
+
+        # remove intra cluster edges from hypernodes to obstacles
+        indices_mask = (snd_to_mesh != index).nonzero()
+        snd_to_mesh = snd_to_mesh[indices_mask].squeeze()
+        rcv_to_mesh = rcv_to_mesh[indices_mask].squeeze()
+        edges_to_mesh = edges_to_mesh[indices_mask].squeeze()
 
         world_edges_to_mesh = EdgeSet(
             name='intra_cluster_to_mesh',
@@ -113,18 +114,21 @@ class HierarchicalConnector(AbstractConnector):
             senders, receivers, edge_features = self._fully_connected(clustering_features, hyper_nodes, model_type)
         else:
             senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
-        # New
-        senders, receivers, edge_features = zip(*filter(lambda x: index not in x[:2], zip(senders, receivers, edge_features)))
-        edge_features = torch.stack(edge_features, dim=0)
-        senders = torch.stack(senders, dim=0)
-        receivers = torch.stack(receivers, dim=0)
+
+        # Remove inter cluster edges from and to the obstacle cluster
+        bool_mask = torch.logical_and(senders.ne(index), receivers.ne(index))
+        senders = senders[bool_mask].squeeze()
+        receivers = receivers[bool_mask].squeeze()
+        edge_features = edge_features[bool_mask].squeeze()
 
         world_edges = EdgeSet(
             name='inter_cluster',
             features=self._inter_normalizer(edge_features.to(device), is_training),
             senders=senders,
             receivers=receivers)
-        ############################################## New:
+
+        # Start:
+        # Add inter cluster edges only if world edges to the receiving cluster exist
         hyper_edges.append(world_edges)
 
         world_edge_rec = list(filter(lambda x: x.name == 'world_edges', graph.edge_sets))[0].receivers
@@ -149,10 +153,12 @@ class HierarchicalConnector(AbstractConnector):
             torch.tensor(colliding_hyper_nodes)
 
         )
-        senders, receivers, edge_features = zip(*filter(lambda x: index == x[0], zip(senders, receivers, edge_features)))
-        edge_features = torch.stack(edge_features, dim=0)
-        senders = torch.stack(senders, dim=0)
-        receivers = torch.stack(receivers, dim=0)
+
+        # Remove the obstacle cluster as the receiver of inter cluster edges
+        indices_mask = (senders == index).nonzero()
+        senders = senders[indices_mask].squeeze()
+        receivers = receivers[indices_mask].squeeze()
+        edge_features = edge_features[indices_mask].squeeze()
 
         world_edges = EdgeSet(
             name='inter_cluster_world',
@@ -160,7 +166,7 @@ class HierarchicalConnector(AbstractConnector):
             senders=senders,
             receivers=receivers
         )
-        ######################################################
+        # End
         hyper_edges.append(world_edges)
 
         # Expansion
