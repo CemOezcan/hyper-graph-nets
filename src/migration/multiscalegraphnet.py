@@ -36,23 +36,14 @@ class MultiScaleGraphNet(GraphNet):
         # update_nodes(hyper_nodes, up)
         self._update_hyper_node_features(graph, [new_edge_sets['intra_cluster_to_cluster']], self.hyper_node_model_up)
 
-        # 2
-        # update_edges(inter)
-        self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
-        # update_nodes(hyper, inter)
-        self._update_hyper_node_features(graph, [new_edge_sets['inter_cluster']], self.hyper_node_model_cross)
-
-        # 3
-        # update_edges(inter)
-        self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
-        # update_nodes(hyper, inter)
-        self._update_hyper_node_features(graph, [new_edge_sets['inter_cluster']], self.hyper_node_model_cross)
-
-        # 4
-        # update_edges(inter)
-        self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
-        # update_nodes(hyper, inter)
-        self._update_hyper_node_features(graph, [new_edge_sets['inter_cluster']], self.hyper_node_model_cross)
+        # 2, 3, 4
+        for _ in range(3):
+            # update_edges(hyper)
+            self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
+            self.perform_edge_updates(graph, 'inter_cluster_world', new_edge_sets)
+            temp_edge_sets = {'inter_cluster', 'inter_cluster_world'}.intersection(self.edge_models.keys())
+            # update_nodes(hyper_nodes, hyper)
+            self._update_hyper_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets], self.hyper_node_model_cross)
 
         # update_edges(down)
         # TODO: Only geometric features for hypernodes?
