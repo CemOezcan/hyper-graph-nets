@@ -32,7 +32,7 @@ params:
     learning_rate: 1.0e-4
     message_passing_steps: 3
     rmp:
-      num_clusters: 10
+      num_clusters: 15
       frequency: 1
       clustering: none
       connector: none
