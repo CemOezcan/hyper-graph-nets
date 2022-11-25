@@ -7,7 +7,7 @@ params:
     task: mesh
     dataset: deforming_plate
     rollout_split: valid
-    batch_size: 1
+    batch_size: 32
     epochs: 15
     trajectories: 1000
     mode: all
@@ -21,6 +21,7 @@ params:
       trajectories: 20 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 5 # Number of trajectories that are going to be used to compute the rollout loss during training
   model:
+    n_timesteps: 320
     field: world_pos
     history: True
     size: 3
@@ -29,7 +30,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 1.0e-4
-    message_passing_steps: 5
+    message_passing_steps: 3
     rmp:
       num_clusters: 10
       frequency: 1

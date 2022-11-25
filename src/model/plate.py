@@ -33,6 +33,7 @@ class PlateModel(AbstractSystemModel):
         self._inter_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
 
         self._model_type = 'plate'
+        self.traj_length = params.get('n_timesteps')
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
         self._architecture = params.get('rmp').get('connector') if self._rmp else 'none'
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
@@ -327,7 +328,7 @@ class PlateModel(AbstractSystemModel):
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
 
-        graph = self.expand_graph(graph, step, 398, is_training=False)
+        graph = self.expand_graph(graph, step, self.traj_length, is_training=False)
 
         if self._rmp and not self._visualized:
             self._remote_graph.visualize_cluster(coordinates)

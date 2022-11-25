@@ -14,6 +14,7 @@ class Preprocessing():
         self._add_targets_b = add_targets
         self._add_noise_b = split == 'train'
         self._network_config = config.get("model")
+        self._config = config
         self._dataset_dir = in_dir
 
     def preprocess(self, raw_trajectory):
@@ -27,7 +28,10 @@ class Preprocessing():
             shapes = {}
             dtypes = {}
             types = {}
-            steps = meta['trajectory_length'] - 2
+            if self._config.get('task').get('dataset') == 'deforming_plate':
+                steps = self._config.get('model').get('n_timesteps')
+            else:
+                steps = meta['trajectory_length'] - 2
             for key, field in meta['features'].items():
                 shapes[key] = field['shape']
                 dtypes[key] = field['dtype']
