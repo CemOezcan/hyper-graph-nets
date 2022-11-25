@@ -91,8 +91,11 @@ class PlateModel(AbstractSystemModel):
         # Only obstacle nodes as senders and normal nodes as receivers
         # Remove all edges from non-obstacle nodes
         # TODO: Change radius?
-        # non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
-        # world_connection_matrix[non_obstacle_nodes, :] = torch.tensor(False, dtype=torch.bool, device=device)
+        non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
+        mesh_connection_matrix = torch.where(world_distance_matrix < 0.006, True, False)
+        mesh_connection_matrix = mesh_connection_matrix.fill_diagonal_(False)
+        mesh_connection_matrix[senders, receivers] = torch.tensor(False, dtype=torch.bool, device=device)
+        world_connection_matrix[non_obstacle_nodes, :] = mesh_connection_matrix[non_obstacle_nodes, :]
 
         # Remove all edges to non-normal nodes
         non_normal_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.NORMAL.value], device=device))

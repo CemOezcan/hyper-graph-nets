@@ -33,8 +33,8 @@ params:
     rmp:
       num_clusters: 10
       frequency: 1
-      clustering: spectral
-      connector: hyper
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
