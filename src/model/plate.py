@@ -204,7 +204,7 @@ class PlateModel(AbstractSystemModel):
                                      receivers=receivers,
                                      senders=senders
                                  ),
-                                 node_dynamic=node_dynamic)
+                                 node_dynamic=obstacle_nodes)
 
     def expand_graph(self, graph: MultiGraphWithPos, step: int, num_steps: int, is_training: bool) -> MultiGraph:
         if self._balancer:

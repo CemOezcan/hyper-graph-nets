@@ -7,7 +7,7 @@ params:
     task: mesh
     dataset: deforming_plate
     rollout_split: valid
-    batch_size: 2
+    batch_size: 1
     epochs: 15
     trajectories: 1000
     mode: all
@@ -33,8 +33,8 @@ params:
     rmp:
       num_clusters: 10
       frequency: 1
-      clustering: none
-      connector: none
+      clustering: spectral
+      connector: hyper
       fully_connect: False
       intra_cluster_sampling:
         enabled: False

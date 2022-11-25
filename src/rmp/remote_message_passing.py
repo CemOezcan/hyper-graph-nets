@@ -1,5 +1,7 @@
 from typing import List
 
+import torch
+
 from src.migration.normalizer import Normalizer
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.rmp.abstract_connector import AbstractConnector
@@ -64,9 +66,68 @@ class RemoteMessagePassing:
 
         """
         graph = graph._replace(node_features=graph.node_features[0])
-        self._clusters = self._clustering_algorithm.run(graph) if self._clusters is None else self._clusters
+
+        if self._clusters is None:
+            if graph.node_dynamic is not None:
+                self.remove_obstacles(graph)
+            else:
+                self._clusters = self._clustering_algorithm.run(graph)
+
         new_graph = self._node_connector.run(graph, self._clusters, is_training)
         return new_graph
+
+    def remove_obstacles(self, graph):
+        indices = graph.node_dynamic.nonzero().squeeze()
+        fst = indices[0]
+        lst = indices[-1]
+
+        if fst == 0:
+            # include [lst + 1, -1]
+            new_nodes = graph.node_features[lst + 1:]
+            edges = graph.unnormalized_edges
+            s, r, f = edges.senders, edges.receivers, edges.features
+            s_mask = torch.gt(s, lst)
+            r_mask = torch.gt(r, lst)
+            mask = torch.logical_and(s_mask, r_mask)
+
+            new_s = torch.tensor([sender - lst - 1 for sender in s[mask]])
+            new_r = torch.tensor([receiver - lst - 1 for receiver in r[mask]])
+
+            new_edges = EdgeSet(name='mesh_edges',
+                                features=f[mask],
+                                receivers=new_r,
+                                senders=new_s)
+
+            new_graph = graph._replace(node_features=new_nodes, unnormalized_edges=new_edges)
+            offset = lst + 1
+            b4 = True
+
+        else:
+            # include [0, fst - 1]
+            new_nodes = graph.node_features[:fst]
+            edges = graph.unnormalized_edges
+            s, r, f = edges.senders, edges.receivers, edges.features
+            s_mask = torch.lt(s, fst)
+            r_mask = torch.lt(r, fst)
+            mask = torch.logical_and(s_mask, r_mask)
+
+            new_edges = EdgeSet(name='mesh_edges',
+                                features=f[mask],
+                                receivers=r[mask],
+                                senders=s[mask])
+
+            new_graph = graph._replace(node_features=new_nodes, unnormalized_edges=new_edges)
+
+            offset = lst - fst + 1
+            b4 = False
+
+        self._clusters = self._clustering_algorithm.run(new_graph, offset,
+                                                        b4) if self._clusters is None else self._clusters
+
+        if fst == 0:
+            for i in range(len(self._clusters)):
+                for j in range(len(self._clusters[i])):
+                    self._clusters[i][j] += lst + 1
 
     def reset_clusters(self):
         """
