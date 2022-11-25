@@ -5,7 +5,7 @@ import torch
 from src.migration.normalizer import Normalizer
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.rmp.abstract_connector import AbstractConnector
-from src.util import MultiGraphWithPos, EdgeSet, MultiGraph
+from src.util import MultiGraphWithPos, EdgeSet, MultiGraph, device
 
 
 class RemoteMessagePassing:
@@ -126,8 +126,7 @@ class RemoteMessagePassing:
 
         if fst == 0:
             for i in range(len(self._clusters)):
-                for j in range(len(self._clusters[i])):
-                    self._clusters[i][j] += lst + 1
+                self._clusters[i] = torch.add(torch.tensor([lst + 1] * len(self._clusters[i])).to(device), self._clusters[i])
 
     def reset_clusters(self):
         """
