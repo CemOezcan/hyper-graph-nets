@@ -126,7 +126,9 @@ class RemoteMessagePassing:
 
         if fst == 0:
             for i in range(len(self._clusters)):
-                self._clusters[i] = torch.add(torch.tensor([lst + 1] * len(self._clusters[i])).to(device), self._clusters[i])
+                print(self._clusters[i].get_device())
+                tensor = torch.tensor([lst + 1] * len(self._clusters[i])).to(device)
+                self._clusters[i] = torch.add(tensor, self._clusters[i])
 
     def reset_clusters(self):
         """
