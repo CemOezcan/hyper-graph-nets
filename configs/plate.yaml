@@ -30,7 +30,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 1.0e-4
-    message_passing_steps: 3
+    message_passing_steps: 5
     rmp:
       num_clusters: 15
       frequency: 1
