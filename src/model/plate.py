@@ -33,7 +33,6 @@ class PlateModel(AbstractSystemModel):
         self._inter_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
 
         self._model_type = 'plate'
-        self.traj_length = params.get('n_timesteps')
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
         self._architecture = params.get('rmp').get('connector') if self._rmp else 'none'
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
@@ -289,7 +288,8 @@ class PlateModel(AbstractSystemModel):
         cur_velocities = []
         for step in range(num_steps):
             cur_pos,  pred_trajectory, cur_positions, cur_velocities = \
-                self._step_fn(initial_state, cur_pos, pred_trajectory, cur_positions, cur_velocities, target_pos[step], step, mask)
+                self._step_fn(initial_state, cur_pos, pred_trajectory, cur_positions,
+                              cur_velocities, target_pos[step], step, mask, num_steps)
 
         prediction, cur_positions, cur_velocities = \
             (torch.stack(pred_trajectory), torch.stack(cur_positions), torch.stack(cur_velocities))
@@ -322,13 +322,13 @@ class PlateModel(AbstractSystemModel):
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, cur_pos, trajectory, cur_positions, cur_velocities, target_world_pos, step, mask):
+    def _step_fn(self, initial_state, cur_pos, trajectory, cur_positions, cur_velocities, target_world_pos, step, mask, num_steps):
         input = {**initial_state, 'world_pos': cur_pos, 'target|world_pos': target_world_pos}
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
 
-        graph = self.expand_graph(graph, step, self.traj_length, is_training=False)
+        graph = self.expand_graph(graph, step, num_steps, is_training=False)
 
         if self._rmp and not self._visualized:
             self._remote_graph.visualize_cluster(coordinates)

@@ -252,12 +252,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 The instances of the trajectory and their respective graph representations
         """
         graphs = []
-        graph_amt = len(trajectory)
         for i, data_frame in enumerate(trajectory):
             if i >= self._time_steps:
                 break
             graph = self._network.build_graph(data_frame, is_training)
-            graph = self._network.expand_graph(graph, i, graph_amt, is_training)
+            graph = self._network.expand_graph(graph, i, self._time_steps, is_training)
             graphs.append(graph)
 
         return list(zip(graphs, trajectory))
@@ -361,12 +360,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         """
         trajectories = []
         mse_losses = []
-        num_steps = self._time_steps
-
         for i, trajectory in enumerate(ds_loader):
             if i >= rollouts:
                 break
-            prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=num_steps)
+            prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=self._time_steps)
             trajectories.append(prediction_trajectory)
             mse_losses.append(mse_loss.cpu())
 
