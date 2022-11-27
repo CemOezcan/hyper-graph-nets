@@ -151,7 +151,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
                 end_instance = time.time()
                 wandb.log({'loss': loss.detach(), 'training time per instance': end_instance - start_instance})
-                traj_loss.append(loss.detach())
+                traj_loss.append(loss.detach().cpu())
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
