@@ -294,6 +294,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             instance_loss = list()
             data = self.fetch_data(trajectory, False)
+            data = self._get_batched(data, self._batch_size)
             for graph, data_frame in data:
                 loss, pos_error = self._network.validation_step(graph, data_frame)
                 instance_loss.append([loss, pos_error])
