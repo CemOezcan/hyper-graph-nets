@@ -9,7 +9,7 @@ params:
     rollout_split: valid
     batch_size: 16
     epochs: 15
-    n_timesteps: 160
+    n_timesteps: 320
     trajectories: 1000
     mode: all
     prefetch_factor: 1
@@ -31,7 +31,7 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 1.0e-4
-    message_passing_steps: 5
+    message_passing_steps: 3
     rmp:
       num_clusters: 15
       frequency: 1
