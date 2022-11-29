@@ -121,7 +121,7 @@ class FlagModel(AbstractSystemModel):
                 features=edge_features,
                 receivers=receivers,
                 senders=senders
-            )
+            ), obstacle_nodes=None
         )
 
         return graph

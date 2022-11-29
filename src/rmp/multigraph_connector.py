@@ -72,7 +72,7 @@ class MultigraphConnector(AbstractConnector):
 
         return MultiGraphWithPos(node_features=[graph.node_features],
                                  edge_sets=edge_sets, target_feature=[graph.target_feature],
-                                 model_type=graph.model_type, node_dynamic=graph.node_dynamic)
+                                 model_type=graph.model_type, node_dynamic=graph.node_dynamic, obstacle_nodes=None)
 
     @staticmethod
     def _get_representatives(clusters: List[List], core_size: int) -> List[List]:

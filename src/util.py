@@ -13,7 +13,7 @@ MultiGraph = collections.namedtuple('MultiGraph', ['node_features', 'edge_sets']
 # TODO: Add obstacle nodes
 MultiGraphWithPos = collections.namedtuple('MultiGraph', ['node_features', 'edge_sets', 'target_feature',
                                                           'mesh_features', 'model_type', 'node_dynamic',
-                                                          'unnormalized_edges'])
+                                                          'unnormalized_edges', 'obstacle_nodes'])
 
 
 def detach(tensor: torch.Tensor) -> np.array:

@@ -180,22 +180,6 @@ class PlateModel(AbstractSystemModel):
         )
         node_features = torch.cat((one_hot_node_type, velocities), dim=-1)
 
-        max_node_dynamic = util.unsorted_segment_operation(
-            torch.norm(all_relative_world_pos, dim=-1),
-            receivers,
-            num_nodes,
-            operation='max'
-        ).to(device)
-
-        min_node_dynamic = util.unsorted_segment_operation(
-            torch.norm(all_relative_world_pos, dim=-1),
-            receivers,
-            num_nodes,
-            operation='min'
-        ).to(device)
-
-        node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)
-
         return MultiGraphWithPos(node_features=[self._node_normalizer(node_features, is_training)],
                                  edge_sets=[mesh_edges, world_edges],
                                  mesh_features=mesh_pos,
@@ -207,7 +191,8 @@ class PlateModel(AbstractSystemModel):
                                      receivers=receivers,
                                      senders=senders
                                  ),
-                                 node_dynamic=obstacle_nodes)
+                                 node_dynamic=None,
+                                 obstacle_nodes=obstacle_nodes)
 
     def expand_graph(self, graph: MultiGraphWithPos, step: int, num_steps: int, is_training: bool) -> MultiGraph:
         if self._balancer:

@@ -68,7 +68,7 @@ class RemoteMessagePassing:
         graph = graph._replace(node_features=graph.node_features[0])
 
         if self._clusters is None:
-            if graph.node_dynamic is not None:
+            if graph.obstacle_nodes is not None:
                 self.remove_obstacles(graph)
             else:
                 self._clusters = self._clustering_algorithm.run(graph)
@@ -77,7 +77,7 @@ class RemoteMessagePassing:
         return new_graph
 
     def remove_obstacles(self, graph):
-        indices = graph.node_dynamic.nonzero().squeeze()
+        indices = graph.obstacle_nodes.nonzero().squeeze()
         fst = indices[0]
         lst = indices[-1]
 
@@ -141,35 +141,3 @@ class RemoteMessagePassing:
         Visualize the clusters of the input graph.
         """
         self._clustering_algorithm.visualize_cluster(graph)
-
-    @staticmethod
-    def _graph_to_device(graph: MultiGraphWithPos, dev):
-        """
-        Send a graph to the given device
-
-        Parameters
-        ----------
-            graph : MultiGraphWithPos
-                The graph
-            dev :
-                The device
-
-        Returns
-        -------
-            MultiGraphWithPos
-                The graph on device dev
-
-        """
-        return MultiGraphWithPos(node_features=graph.node_features.to(dev),
-                                 edge_sets=[
-                                     EdgeSet(
-                                         name=e.name,
-                                         features=e.features.to(dev),
-                                         senders=e.senders.to(dev),
-                                         receivers=e.receivers.to(dev)
-                                     ) for e in graph.edge_sets
-                                 ],
-                                 target_feature=graph.target_feature.to(dev),
-                                 model_type=graph.model_type,
-                                 node_dynamic=graph.node_dynamic.to(dev)
-                                 )
