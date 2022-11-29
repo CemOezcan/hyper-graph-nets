@@ -49,6 +49,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._wandb_mode = config.get('logging').get('wandb_mode')
 
         self._trajectories = config.get('task').get('trajectories')
+        self._time_steps = config.get('task').get('n_timesteps')
         self._prefetch_factor = config.get('task').get('prefetch_factor')
 
         self._batch_size = config.get('task').get('batch_size')
@@ -137,6 +138,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             batches = self.fetch_data(trajectory, True)
             batches = self._get_batched(batches, self._batch_size)
             random.shuffle(batches)
+            traj_loss = list()
 
             for graph, data_frame in tqdm(batches, desc='Batches in trajectory', leave=False):
                 start_instance = time.time()
@@ -148,11 +150,12 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 self._optimizer.zero_grad()
 
                 end_instance = time.time()
-                wandb.log({'loss': loss, 'training time per instance': end_instance - start_instance})
+                wandb.log({'loss': loss.detach(), 'training time per instance': end_instance - start_instance})
+                traj_loss.append(loss.detach().cpu())
 
             end_trajectory = time.time()
             wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
-            wandb.log({'training time per trajectory': end_trajectory - start_trajectory}, commit=False)
+            wandb.log({'loss per trajectory': np.mean(traj_loss)}, commit=False)
 
     @staticmethod
     def _get_batched(data: List[Tuple[MultiGraph, Dict[str, Tensor]]], batch_size: int) -> List[Tuple[MultiGraph, Dict[str, Tensor]]]:
@@ -249,10 +252,11 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 The instances of the trajectory and their respective graph representations
         """
         graphs = []
-        graph_amt = len(trajectory)
         for i, data_frame in enumerate(trajectory):
+            if i >= self._time_steps:
+                break
             graph = self._network.build_graph(data_frame, is_training)
-            graph = self._network.expand_graph(graph, i, graph_amt, is_training)
+            graph = self._network.expand_graph(graph, i, self._time_steps, is_training)
             graphs.append(graph)
 
         return list(zip(graphs, trajectory))
@@ -289,6 +293,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
             instance_loss = list()
             data = self.fetch_data(trajectory, False)
+            data = self._get_batched(data, self._batch_size)
             for graph, data_frame in data:
                 loss, pos_error = self._network.validation_step(graph, data_frame)
                 instance_loss.append([loss, pos_error])
@@ -355,12 +360,10 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         """
         trajectories = []
         mse_losses = []
-        num_steps = None
-
         for i, trajectory in enumerate(ds_loader):
             if i >= rollouts:
                 break
-            prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=num_steps)
+            prediction_trajectory, mse_loss = self._network.rollout(trajectory, num_steps=self._time_steps)
             trajectories.append(prediction_trajectory)
             mse_losses.append(mse_loss.cpu())
 

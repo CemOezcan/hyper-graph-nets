@@ -91,8 +91,11 @@ class PlateModel(AbstractSystemModel):
         # Only obstacle nodes as senders and normal nodes as receivers
         # Remove all edges from non-obstacle nodes
         # TODO: Change radius?
-        # non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
-        # world_connection_matrix[non_obstacle_nodes, :] = torch.tensor(False, dtype=torch.bool, device=device)
+        non_obstacle_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.OBSTACLE.value], device=device))
+        mesh_connection_matrix = torch.where(world_distance_matrix < 0.006, True, False)
+        mesh_connection_matrix = mesh_connection_matrix.fill_diagonal_(False)
+        mesh_connection_matrix[senders, receivers] = torch.tensor(False, dtype=torch.bool, device=device)
+        world_connection_matrix[non_obstacle_nodes, :] = mesh_connection_matrix[non_obstacle_nodes, :]
 
         # Remove all edges to non-normal nodes
         non_normal_nodes = torch.ne(node_type[:, 0], torch.tensor([util.NodeType.NORMAL.value], device=device))
@@ -177,22 +180,6 @@ class PlateModel(AbstractSystemModel):
         )
         node_features = torch.cat((one_hot_node_type, velocities), dim=-1)
 
-        max_node_dynamic = util.unsorted_segment_operation(
-            torch.norm(all_relative_world_pos, dim=-1),
-            receivers,
-            num_nodes,
-            operation='max'
-        ).to(device)
-
-        min_node_dynamic = util.unsorted_segment_operation(
-            torch.norm(all_relative_world_pos, dim=-1),
-            receivers,
-            num_nodes,
-            operation='min'
-        ).to(device)
-
-        node_dynamic = self._node_dynamic_normalizer(max_node_dynamic - min_node_dynamic)
-
         return MultiGraphWithPos(node_features=[self._node_normalizer(node_features, is_training)],
                                  edge_sets=[mesh_edges, world_edges],
                                  mesh_features=mesh_pos,
@@ -204,7 +191,8 @@ class PlateModel(AbstractSystemModel):
                                      receivers=receivers,
                                      senders=senders
                                  ),
-                                 node_dynamic=node_dynamic)
+                                 node_dynamic=None,
+                                 obstacle_nodes=obstacle_nodes)
 
     def expand_graph(self, graph: MultiGraphWithPos, step: int, num_steps: int, is_training: bool) -> MultiGraph:
         if self._balancer:
@@ -285,7 +273,8 @@ class PlateModel(AbstractSystemModel):
         cur_velocities = []
         for step in range(num_steps):
             cur_pos,  pred_trajectory, cur_positions, cur_velocities = \
-                self._step_fn(initial_state, cur_pos, pred_trajectory, cur_positions, cur_velocities, target_pos[step], step, mask)
+                self._step_fn(initial_state, cur_pos, pred_trajectory, cur_positions,
+                              cur_velocities, target_pos[step], step, mask, num_steps)
 
         prediction, cur_positions, cur_velocities = \
             (torch.stack(pred_trajectory), torch.stack(cur_positions), torch.stack(cur_velocities))
@@ -318,13 +307,13 @@ class PlateModel(AbstractSystemModel):
         return traj_ops, mse_loss
 
     @torch.no_grad()
-    def _step_fn(self, initial_state, cur_pos, trajectory, cur_positions, cur_velocities, target_world_pos, step, mask):
+    def _step_fn(self, initial_state, cur_pos, trajectory, cur_positions, cur_velocities, target_world_pos, step, mask, num_steps):
         input = {**initial_state, 'world_pos': cur_pos, 'target|world_pos': target_world_pos}
         graph = self.build_graph(input, is_training=False)
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
 
-        graph = self.expand_graph(graph, step, 398, is_training=False)
+        graph = self.expand_graph(graph, step, num_steps, is_training=False)
 
         if self._rmp and not self._visualized:
             self._remote_graph.visualize_cluster(coordinates)

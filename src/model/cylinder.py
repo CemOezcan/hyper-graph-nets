@@ -102,7 +102,7 @@ class CylinderModel(AbstractSystemModel):
                                      receivers=receivers,
                                      senders=senders
                                  ),
-                                 node_dynamic=[])
+                                 node_dynamic=[], obstacle_nodes=None)
 
     def expand_graph(self, graph: MultiGraphWithPos, step: int, num_steps: int, is_training: bool) -> MultiGraph:
         if self._balancer:

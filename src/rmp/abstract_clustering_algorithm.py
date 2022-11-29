@@ -56,7 +56,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         raise NotImplementedError
 
-    def run(self, graph: MultiGraphWithPos) -> List[Tensor]:
+    def run(self, graph: MultiGraphWithPos, number=0, b4=True) -> List[Tensor]:
         """
         Run clustering algorithm given a multigraph or point cloud.
 
@@ -72,7 +72,7 @@ class AbstractClusteringAlgorithm(ABC):
 
         """
         labels = self._empty_cluster_handling(list(self._cluster(graph)))
-        self._labels = labels
+        self._labels = list([-1] * number) + labels if b4 else labels + list([-1] * number)
 
         if not self._sampling:
             return self._labels_to_indices(labels)

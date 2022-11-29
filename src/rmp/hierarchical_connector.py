@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 import scipy.spatial as ss
 import torch
+from matplotlib import pyplot as plt
 from torch import Tensor
 
 from src import util
@@ -20,7 +21,8 @@ class HierarchicalConnector(AbstractConnector):
 
     def initialize(self, intra, inter):
         super().initialize(intra, inter)
-        return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster', 'inter_cluster_world']
+        # TODO: fix
+        return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']#, 'inter_cluster_world']
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
@@ -82,24 +84,9 @@ class HierarchicalConnector(AbstractConnector):
 
         hyper_edges.append(world_edges_to_cluster)
 
-        # Index of the obstacle cluster
-        index = torch.argmax(
-            torch.sum(
-                torch.abs(
-                    graph.node_features[1][:, 3:]
-                ),
-                dim=1)
-        ) + num_nodes
-
         snd_to_mesh = torch.cat(snd_to_mesh, dim=0)
         rcv_to_mesh = torch.cat(rcv_to_mesh, dim=0)
         edges_to_mesh = self._intra_normalizer(torch.cat(edges_to_mesh, dim=0).to(device), is_training)
-
-        # remove intra cluster edges from hypernodes to obstacles
-        indices_mask = (snd_to_mesh != index).nonzero()
-        snd_to_mesh = snd_to_mesh[indices_mask].squeeze()
-        rcv_to_mesh = rcv_to_mesh[indices_mask].squeeze()
-        edges_to_mesh = edges_to_mesh[indices_mask].squeeze()
 
         world_edges_to_mesh = EdgeSet(
             name='intra_cluster_to_mesh',
@@ -115,22 +102,26 @@ class HierarchicalConnector(AbstractConnector):
         else:
             senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
 
-        # Remove inter cluster edges from and to the obstacle cluster
-        bool_mask = torch.logical_and(senders.ne(index), receivers.ne(index))
-        senders = senders[bool_mask].squeeze()
-        receivers = receivers[bool_mask].squeeze()
-        edge_features = edge_features[bool_mask].squeeze()
-
         world_edges = EdgeSet(
             name='inter_cluster',
             features=self._inter_normalizer(edge_features.to(device), is_training),
             senders=senders,
             receivers=receivers)
 
-        # Start:
-        # Add inter cluster edges only if world edges to the receiving cluster exist
         hyper_edges.append(world_edges)
 
+        # Expansion
+        edge_sets = graph.edge_sets
+        edge_sets.extend(hyper_edges)
+
+        return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
+
+    def world_hyer_edges(self, graph: MultiGraphWithPos, clusters, clustering_means, hyper_nodes, num_nodes,
+                         model_type, clustering_features, is_training):
+        # TODO: use and reimplement
+        index = 0
+        device_0 = 'cpu'
+        # Add inter cluster edges only if world edges to the receiving cluster exist
         world_edge_rec = list(filter(lambda x: x.name == 'world_edges', graph.edge_sets))[0].receivers
         colliding_hyper_nodes = list()
         for h, c in zip(hyper_nodes, clusters):
@@ -166,17 +157,15 @@ class HierarchicalConnector(AbstractConnector):
             senders=senders,
             receivers=receivers
         )
-        # End
-        hyper_edges.append(world_edges)
 
-        # Expansion
-        edge_sets = graph.edge_sets
-        edge_sets.extend(hyper_edges)
+        return world_edges
 
-        return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
 
     def _delaunay(self, clustering_features, num_nodes, model_type):
         _, points = torch.split(clustering_features[1], 3, dim=1)
+        # TODO: Nearest neighbor triangulation
+        points = points[:, :2]
+
         tri = ss.Delaunay(points)
         simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices]).to('cpu')
         a = util.triangles_to_edges(simplices)

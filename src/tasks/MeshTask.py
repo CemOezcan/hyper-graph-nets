@@ -53,6 +53,7 @@ class MeshTask(AbstractTask):
         self._num_test_rollouts = config.get('task').get('test').get('rollouts')
         self._num_n_step_rollouts = config.get('task').get('test').get('n_step_rollouts')
         self._n_steps = config.get('task').get('test').get('n_steps')
+        self.n_viz = self._config.get('task').get('validation').get('n_viz')
 
         self.train_loader = get_data(config=config)
         self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
@@ -155,6 +156,8 @@ class MeshTask(AbstractTask):
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
 
+        rollout_data = rollout_data[:self.n_viz]
+
         fig = plt.figure(figsize=figsize, dpi=dpi)
         if 'plate' in self._dataset_name:
             ax_origin = fig.add_subplot(121)
@@ -220,6 +223,8 @@ class MeshTask(AbstractTask):
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
+
+        rollout_data = rollout_data[:self.n_viz]
 
         fig = plt.figure(figsize=(19.2, 10.8))
         ax_origin = fig.add_subplot(121, projection='3d')
@@ -294,6 +299,8 @@ class MeshTask(AbstractTask):
 
         with open(rollouts, 'rb') as fp:
             rollout_data = pickle.load(fp)
+
+        rollout_data = rollout_data[:self.n_viz]
 
         fig = plt.figure(figsize=(19.2, 10.8))
         ax = fig.add_subplot(111, projection='3d')
