@@ -55,7 +55,24 @@ class MultigraphConnector(HierarchicalConnector):
             dim=1)
         intra_cluster_to_mesh = intra_cluster_to_mesh._replace(features=new_icm, name='mesh_edges')
 
-        graph = graph._replace(edge_sets=[mesh_edges, world_edges, inter_cluster, intra_cluster_to_cluster, intra_cluster_to_mesh])
+
+        mesh_edges = mesh_edges._replace(
+            senders=torch.cat(
+                (mesh_edges.senders, inter_cluster.senders, intra_cluster_to_cluster.senders, intra_cluster_to_mesh.senders),
+                dim=0
+            ),
+            receivers=torch.cat(
+                (mesh_edges.receivers, inter_cluster.receivers, intra_cluster_to_cluster.receivers, intra_cluster_to_mesh.receivers),
+                dim=0
+            ),
+            features=torch.cat(
+                (mesh_edges.features, inter_cluster.features, intra_cluster_to_cluster.features, intra_cluster_to_mesh.features),
+                dim=0
+            )
+        )
+
+
+        graph = graph._replace(edge_sets=[mesh_edges, world_edges])
         graph = graph._replace(node_features=[new_nf, new_hnf])
 
         return graph
