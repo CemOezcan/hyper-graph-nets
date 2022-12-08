@@ -9,7 +9,7 @@ params:
     rollout_split: valid
     batch_size: 16
     epochs: 15
-    n_timesteps: 320
+    n_timesteps: 160
     trajectories: 1000
     mode: all
     prefetch_factor: 1
@@ -21,7 +21,7 @@ params:
     validation:
       trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during training
-      n_viz: 5
+      n_viz: 10
   model:
     field: world_pos
     history: False
@@ -31,9 +31,9 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 1.0e-4
-    message_passing_steps: 3
+    message_passing_steps: 5
     rmp:
-      num_clusters: 15
+      num_clusters: 10
       frequency: 1
       clustering: none
       connector: none

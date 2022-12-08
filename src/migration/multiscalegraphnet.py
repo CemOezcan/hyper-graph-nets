@@ -1,7 +1,7 @@
 from typing import Callable, List
 
 import torch
-from torch import Tensor
+from torch import Tensor, nn
 
 from src.migration.graphnet import GraphNet
 from src.util import EdgeSet, MultiGraph
@@ -14,7 +14,7 @@ class MultiScaleGraphNet(GraphNet):
         super().__init__(model_fn, output_size, message_passing_aggregator, edge_sets)
 
         self.hyper_node_model_up = model_fn(output_size)
-        self.hyper_node_model_cross = model_fn(output_size)
+        self.hyper_node_models_cross = nn.ModuleList([model_fn(output_size) for _ in range(3)])
         self.node_model_down = model_fn(output_size)
 
     def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
@@ -37,13 +37,13 @@ class MultiScaleGraphNet(GraphNet):
         self._update_hyper_node_features(graph, [new_edge_sets['intra_cluster_to_cluster']], self.hyper_node_model_up)
 
         # 2, 3, 4
-        for _ in range(3):
+        for i in range(3):
             # update_edges(hyper)
             self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
             self.perform_edge_updates(graph, 'inter_cluster_world', new_edge_sets)
             temp_edge_sets = {'inter_cluster', 'inter_cluster_world'}.intersection(self.edge_models.keys())
             # update_nodes(hyper_nodes, hyper)
-            self._update_hyper_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets], self.hyper_node_model_cross)
+            self._update_hyper_node_features(graph, [new_edge_sets[x] for x in temp_edge_sets], self.hyper_node_models_cross[i])
 
         # update_edges(down)
         # TODO: Only geometric features for hypernodes?

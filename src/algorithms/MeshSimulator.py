@@ -367,6 +367,8 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             trajectories.append(prediction_trajectory)
             mse_losses.append(mse_loss.cpu())
 
+        rollout_hist = wandb.Histogram([x for x in torch.mean(torch.stack(mse_losses), dim=1)], num_bins=10)
+
         mse_means = torch.mean(torch.stack(mse_losses), dim=0)
         mse_stds = torch.std(torch.stack(mse_losses), dim=0)
 
@@ -383,7 +385,9 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         if logging:
             table = wandb.Table(dataframe=data_frame)
-            return {'rollout_loss': rollout_losses['mse_loss'][-1], f'{task_name}_rollout_losses': table}
+            return {'mean_rollout_loss': torch.mean(torch.tensor(rollout_losses['mse_loss']), dim=0),
+                    'rollout_loss': rollout_losses['mse_loss'][-1],
+                    f'{task_name}_rollout_losses': table, 'rollout_hist': rollout_hist}
         else:
             self._publish_csv(data_frame, f'rollout_losses', path)
 

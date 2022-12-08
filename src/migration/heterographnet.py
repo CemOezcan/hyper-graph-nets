@@ -14,8 +14,9 @@ class HeteroGraphNet(GraphNet):
         super().__init__(model_fn, output_size, message_passing_aggregator, edge_sets)
         self.hyper_node_model_cross = model_fn(output_size)
 
-    def _update_node_features(self, node_features: List[Tensor], edge_sets: List[EdgeSet]) -> List[Tensor]:
+    def _update_node_features(self, graph: MultiGraph, edge_sets: List[EdgeSet]):
         """Aggregrates edge features, and applies node function."""
+        node_features = graph.node_features
         hyper_node_offset = len(node_features[0])
         node_features = torch.cat(tuple(node_features), dim=0)
         num_nodes = node_features.shape[0]
@@ -28,7 +29,7 @@ class HeteroGraphNet(GraphNet):
         )
         updated_nodes = self.node_model_cross(features[:hyper_node_offset])
         updated_hyper_nodes = self.hyper_node_model_cross(features[hyper_node_offset:])
-
-        return [updated_nodes, updated_hyper_nodes]
+        graph.node_features[0] = torch.add(updated_nodes, graph.node_features[0])
+        graph.node_features[1] = torch.add(updated_hyper_nodes, graph.node_features[1])
 
 
