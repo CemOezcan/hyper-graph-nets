@@ -16,16 +16,24 @@ class Encoder(nn.Module):
 
         self.node_model = self._make_mlp(latent_size)
         self.edge_models = nn.ModuleDict({name: self._make_mlp(latent_size) for name in edge_sets})
+        self.hierarchical = hierarchical
 
         if hierarchical:
             self.hyper_node_model = self._make_mlp(latent_size)
 
     def forward(self, graph: MultiGraph) -> MultiGraph:
         node_latents = [self.node_model(graph.node_features[0])]
-        try:
-            node_latents.append(self.hyper_node_model(graph.node_features[1]))
-        except (IndexError, AttributeError):
-            pass
+        if self.hierarchical:
+            try:
+                node_latents.append(self.hyper_node_model(graph.node_features[1]))
+            except (IndexError, AttributeError):
+                pass
+        else:
+            try:
+                node_latents.append(self.node_model(graph.node_features[1]))
+            except (IndexError, AttributeError):
+                pass
+
 
         new_edges_sets = []
         for edge_set in graph.edge_sets:

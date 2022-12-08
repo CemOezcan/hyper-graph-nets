@@ -15,4 +15,4 @@ class MultiGraphNet(GraphNet):
 
     def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
         # Graph net with one-hot encoding
-        return
+        return super().forward(graph)
