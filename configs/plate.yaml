@@ -30,13 +30,13 @@ params:
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 5.0e-5
+    learning_rate: 1.0e-4
     message_passing_steps: 5
     rmp:
-      num_clusters: 11
+      num_clusters: 10
       frequency: 1
-      clustering: spectral
-      connector: hetero
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False

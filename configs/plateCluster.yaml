@@ -7,7 +7,7 @@ params:
     task: mesh
     dataset: deforming_plate
     rollout_split: valid
-    batch_size: 2
+    batch_size: 16
     epochs: 15
     n_timesteps: 160
     trajectories: 1000
@@ -30,13 +30,13 @@ params:
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 5.0e-5
+    learning_rate: 1.0e-4
     message_passing_steps: 5
     rmp:
       num_clusters: 11
       frequency: 1
-      clustering: none
-      connector: none
+      clustering: spectral
+      connector: hyper
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
