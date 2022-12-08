@@ -9,7 +9,7 @@ from util.Types import ConfigDict
 from util.Functions import get_from_nested_dict
 from os.path import dirname as up
 
-# TODO: Find a solution for this (incompatible with job.sh scripts where CONFIG_NAME is supposed to be set)
+# TODO: Find a solution for this (incompatible with job_flag.sh scripts where CONFIG_NAME is supposed to be set)
 ROOT_DIR = up(up(up(os.path.join(os.path.abspath(__file__)))))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')
 
