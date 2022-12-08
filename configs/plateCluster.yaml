@@ -28,12 +28,12 @@ params:
     size: 3
     noise: 0.003
     gamma: 1
-    scheduler_epoch: 11
+    scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
     message_passing_steps: 5
     rmp:
-      num_clusters: 9
+      num_clusters: 11
       frequency: 1
       clustering: none
       connector: none
