@@ -26,14 +26,14 @@ params:
     field: world_pos
     history: False
     size: 3
-    noise: 0.005
+    noise: 0.003
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
     message_passing_steps: 5
     rmp:
-      num_clusters: 10
+      num_clusters: 11
       frequency: 1
       clustering: spectral
       connector: hetero
