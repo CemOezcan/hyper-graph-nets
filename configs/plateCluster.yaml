@@ -28,7 +28,7 @@ params:
     size: 3
     noise: 0.003
     gamma: 1
-    scheduler_epoch: 10
+    scheduler_epoch: 11
     aggregation: pna
     learning_rate: 5.0e-5
     message_passing_steps: 5
