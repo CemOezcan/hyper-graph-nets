@@ -1,3 +1,4 @@
+import math
 from typing import List
 
 import numpy as np
@@ -19,7 +20,8 @@ class HierarchicalConnector(AbstractConnector):
         super().__init__()
         self._fully_connect = fully_connect
 
-    def initialize(self, intra, inter):
+    def initialize(self, intra, inter, noise_scale=0):
+        self.noise_scale = 0.005
         super().initialize(intra, inter)
         # TODO: fix
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']#, 'inter_cluster_world']
@@ -44,6 +46,10 @@ class HierarchicalConnector(AbstractConnector):
                 list(torch.mean(torch.index_select(input=node_feature, dim=0, index=cluster), dim=0)))
 
         clustering_means = torch.tensor(clustering_means).to(device_0)
+        zero_size = torch.zeros(clustering_means.size(), dtype=torch.float32).to(device)
+        noise = torch.normal(zero_size, std=self.noise_scale).to(device)
+        clustering_means += noise
+
         node_feature_means = torch.tensor(node_feature_means).to(device_0)
 
         graph = graph._replace(target_feature=[clustering_features, clustering_means])
