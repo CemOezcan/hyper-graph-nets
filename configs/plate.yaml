@@ -33,10 +33,10 @@ params:
     learning_rate: 1.0e-4
     message_passing_steps: 5
     rmp:
-      num_clusters: 10
+      num_clusters: 12
       frequency: 1
-      clustering: none
-      connector: none
+      clustering: spectral
+      connector: hetero
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
