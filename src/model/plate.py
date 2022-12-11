@@ -154,10 +154,10 @@ class PlateModel(AbstractSystemModel):
 
         mesh_edge_features = torch.cat(
             (
+                all_relative_world_pos,
+                torch.norm(all_relative_world_pos, dim=-1, keepdim=True),
                 relative_mesh_pos,
                 torch.norm(relative_mesh_pos, dim=-1, keepdim=True),
-                all_relative_world_pos,
-                torch.norm(all_relative_world_pos, dim=-1, keepdim=True)
             ),
             dim=-1
         )
