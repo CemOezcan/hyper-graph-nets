@@ -30,7 +30,7 @@ class PlateModel(AbstractSystemModel):
         self._mesh_edge_normalizer = Normalizer(size=8, name='mesh_edge_normalizer')
         self._world_edge_normalizer = Normalizer(size=4, name='world_edge_normalizer')
         self._intra_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
-        self._inter_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
+        self._inter_edge_normalizer = Normalizer(size=8, name='inter_edge_normalizer')
 
         self._model_type = 'plate'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
@@ -157,7 +157,7 @@ class PlateModel(AbstractSystemModel):
                 all_relative_world_pos,
                 torch.norm(all_relative_world_pos, dim=-1, keepdim=True),
                 relative_mesh_pos,
-                torch.norm(relative_mesh_pos, dim=-1, keepdim=True),
+                torch.norm(relative_mesh_pos, dim=-1, keepdim=True)
             ),
             dim=-1
         )
