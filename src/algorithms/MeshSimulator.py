@@ -55,7 +55,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._batch_size = config.get('task').get('batch_size')
         self._network = None
         self._optimizer = None
-        self._scheduler = None
         self._wandb_run = None
         self._wandb_url = None
         self._initialized = False
@@ -109,7 +108,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = get_model(task_information)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
-            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
@@ -509,9 +507,3 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
         with open(os.path.join(self._out_dir, f'{task_name}_rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
-
-    def lr_scheduler_step(self) -> None:
-        """
-        Make a learning rate scheduler step.
-        """
-        self._scheduler.step()
