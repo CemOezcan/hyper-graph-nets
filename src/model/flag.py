@@ -29,6 +29,7 @@ class FlagModel(AbstractSystemModel):
         self._mesh_edge_normalizer = Normalizer(size=7, name='mesh_edge_normalizer')
         self._intra_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
         self._inter_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
+        self._hyper_node_normalizer = Normalizer(size=8, name='inter_edge_normalizer')
 
         self._model_type = 'flag'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
@@ -49,7 +50,7 @@ class FlagModel(AbstractSystemModel):
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(
-                self._intra_edge_normalizer, self._inter_edge_normalizer)
+                self._intra_edge_normalizer, self._inter_edge_normalizer, self._hyper_node_normalizer)
 
         self.learned_model = MeshGraphNet(
             output_size=params.get('size'),

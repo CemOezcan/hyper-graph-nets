@@ -20,9 +20,9 @@ class HierarchicalConnector(AbstractConnector):
         super().__init__()
         self._fully_connect = fully_connect
 
-    def initialize(self, intra, inter, noise_scale=0):
+    def initialize(self, intra, inter, hyper, noise_scale=0):
         self.noise_scale = 0.005
-        super().initialize(intra, inter)
+        super().initialize(intra, inter, hyper)
         # TODO: fix
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']#, 'inter_cluster_world']
 
@@ -52,6 +52,23 @@ class HierarchicalConnector(AbstractConnector):
             clustering_means += noise
 
         node_feature_means = torch.tensor(node_feature_means).to(device_0)
+        spread_mesh = list()
+        spread_world = list()
+        for i in range(len(clustering_means)):
+            means_mesh = torch.tensor(clustering_means[i][-3:]).to(device_0).repeat(len(clusters[i]), 1)
+            points_mesh = torch.index_select(clustering_features[:, -3:], 0, clusters[i])
+
+            means_world = torch.tensor(clustering_means[i][:3]).to(device_0).repeat(len(clusters[i]), 1)
+            points_world = torch.index_select(clustering_features[:, :3], 0, clusters[i])
+
+            spread_mesh.append(max([torch.dist(m, p) for m, p in zip(means_mesh, points_mesh)]))
+            spread_world.append(max([torch.dist(m, p) for m, p in zip(means_world, points_world)]))
+
+        spread_mesh, spread_world = torch.tensor(spread_mesh).to(device_0), torch.tensor(spread_world).to(device_0)
+        cluster_sizes = torch.tensor([len(x) for x in clusters]).to(device_0)
+        feature_augmentation = torch.stack([cluster_sizes, spread_mesh, spread_world], dim=-1).to(device_0)
+        node_feature_means = torch.cat([node_feature_means, feature_augmentation], dim=-1).to(device_0)
+
 
         graph = graph._replace(target_feature=[clustering_features, clustering_means])
         graph = graph._replace(node_features=[node_feature, node_feature_means])
@@ -121,7 +138,7 @@ class HierarchicalConnector(AbstractConnector):
         edge_sets = graph.edge_sets
         edge_sets.extend(hyper_edges)
 
-        return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
+        return MultiGraph(node_features=[graph.node_features[0], self._hyper_normalizer(graph.node_features[1], is_training)], edge_sets=edge_sets)
 
     def world_hyer_edges(self, graph: MultiGraphWithPos, clusters, clustering_means, hyper_nodes, num_nodes,
                          model_type, clustering_features, is_training):

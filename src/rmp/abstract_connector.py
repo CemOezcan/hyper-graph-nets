@@ -20,13 +20,17 @@ class AbstractConnector(ABC):
         """
         self._intra_normalizer = None
         self._inter_normalizer = None
+        self._hyper_normalizer = None
 
-    def initialize(self, intra: Normalizer, inter: Normalizer) -> List:
+    def initialize(self, intra: Normalizer, inter: Normalizer, hyper: Normalizer) -> List:
         """
         Initialize normalizers after fetching the subclass according to the given configuration file
 
         Parameters
         ----------
+        hyper : Normalizer
+            Normalizer for hyper nodes
+
         intra : Normalizer
             Normalizer for intra cluster edges
 
@@ -41,6 +45,8 @@ class AbstractConnector(ABC):
         """
         self._intra_normalizer = intra
         self._inter_normalizer = inter
+        self._hyper_normalizer = hyper
+
         return list()
 
     @abstractmethod

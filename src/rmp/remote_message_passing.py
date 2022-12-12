@@ -30,12 +30,15 @@ class RemoteMessagePassing:
         self._node_connector = connector
         self._clusters = None
 
-    def initialize(self, intra: Normalizer, inter: Normalizer) -> List:
+    def initialize(self, intra: Normalizer, inter: Normalizer, hyper: Normalizer) -> List:
         """
         Initialize normalizers after fetching the subclass according to the given configuration file
 
         Parameters
         ----------
+        hyper : Normalizer
+            Normalizer for hyper nodes
+
         intra : Normalizer
             Normalizer for intra cluster edges
 
@@ -48,7 +51,7 @@ class RemoteMessagePassing:
                 An empty list
 
         """
-        return self._node_connector.initialize(intra, inter)
+        return self._node_connector.initialize(intra, inter, hyper)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """

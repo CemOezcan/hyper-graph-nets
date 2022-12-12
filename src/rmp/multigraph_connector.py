@@ -16,9 +16,9 @@ class MultigraphConnector(HierarchicalConnector):
     def __init__(self, fully_connect):
         super().__init__(fully_connect)
 
-    def initialize(self, intra, inter):
-        super().initialize(intra, inter)
-        # TODO: fix
+    def initialize(self, intra, inter, hyper, noise_scale=0):
+        self.noise_scale = 0.005
+        super().initialize(intra, inter, hyper)
         return []
 
     def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
