@@ -32,7 +32,7 @@ params:
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 5.0e-5
+    learning_rate: 3.0e-5
     message_passing_steps: 5
     rmp:
       num_clusters: 50
