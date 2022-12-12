@@ -245,12 +245,15 @@ class FlagModel(AbstractSystemModel):
         return cur_pos, next_pos, trajectory
 
     @torch.no_grad()
-    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
+    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int, num_timesteps=None) -> Tuple[Tensor, Tensor]:
         mse_losses = list()
-        for step in range(len(trajectory['world_pos']) - n_step):
+        last_losses = list()
+        num_timesteps = trajectory['cells'].shape[0] if num_timesteps is None else num_timesteps
+        for step in range(num_timesteps - n_step):
             # TODO: clusters/balancers are reset when computing n_step loss
             eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
             prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
             mse_losses.append(torch.mean(mse_loss).cpu())
+            last_losses.append(mse_loss.cpu()[-1])
 
-        return torch.mean(torch.stack(mse_losses))
+        return torch.mean(torch.stack(mse_losses)), torch.mean(torch.stack(last_losses))

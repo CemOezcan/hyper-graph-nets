@@ -157,7 +157,7 @@ class AbstractSystemModel(ABC, nn.Module):
 
     @abstractmethod
     @torch.no_grad()
-    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
+    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tuple[Tensor, Tensor]:
         """
         Predict the system state after n time steps. N step predictions are performed recursively within trajectories.
 

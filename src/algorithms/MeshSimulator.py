@@ -391,7 +391,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         else:
             self._publish_csv(data_frame, f'rollout_losses', path)
 
-    def n_step_evaluator(self, ds_loader: DataLoader, task_name: str, n_step_list=[60], n_traj=2) -> None:
+    def n_step_evaluator(self, ds_loader: DataLoader, task_name: str, n_steps=60, n_traj=2, logging=True) -> Optional[Dict]:
         """
         Predict the system state after n time steps. N step predictions are performed recursively within trajectories.
         Evaluate the predictions over the test data.
@@ -413,23 +413,29 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         """
         # Take n_traj trajectories from valid set for n_step loss calculation
         means = list()
-        stds = list()
-        for n_steps in n_step_list:
-            n_step_losses = list()
-            for i, trajectory in enumerate(ds_loader):
-                if i >= n_traj:
-                    break
-                loss = self._network.n_step_computation(trajectory, n_steps)
-                n_step_losses.append(loss)
+        lasts = list()
+        for i, trajectory in enumerate(ds_loader):
+            if i >= n_traj:
+                break
+            mean_loss, last_loss = self._network.n_step_computation(trajectory, n_steps, self._time_steps)
+            means.append(mean_loss)
+            lasts.append(last_loss)
 
-            means.append(torch.mean(torch.stack(n_step_losses)).item())
-            stds.append(torch.std(torch.stack(n_step_losses)).item())
+        means = torch.mean(torch.stack(means))
+        lasts = torch.mean(torch.stack(lasts))
 
         path = os.path.join(self._out_dir, f'{task_name}_n_step_losses.csv')
-        n_step_stats = {'n_step': n_step_list, 'mean': means, 'std': stds}
+        n_step_stats = {'n_step': [n_steps] * n_steps, 'mean': means, 'lasts': lasts}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(path)
-        self._publish_csv(data_frame, f'n_step_losses', path)
+
+        if logging:
+            table = wandb.Table(dataframe=data_frame)
+            return {f'mean_{n_steps}_loss': torch.mean(torch.tensor(means), dim=0),
+                    f'{n_steps}_loss': torch.mean(torch.tensor(lasts), dim=0),
+                    f'{task_name}_n_step_losses': table}
+        else:
+            self._publish_csv(data_frame, f'n_step_losses', path)
 
     @staticmethod
     def _publish_csv(data_frame: DataFrame, name: str, path: str) -> None:
