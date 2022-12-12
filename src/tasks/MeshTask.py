@@ -111,8 +111,8 @@ class MeshTask(AbstractTask):
             self._algorithm.log_epoch(data)
             self._current_epoch = e + 1
 
-            if e >= self._config.get('model').get('scheduler_epoch'):
-                self._algorithm.lr_scheduler_step()
+            #if e >= self._config.get('model').get('scheduler_epoch'):
+            #    self._algorithm.lr_scheduler_step()
 
     def get_scalars(self) -> None:
         """
