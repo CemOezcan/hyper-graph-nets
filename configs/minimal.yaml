@@ -34,6 +34,7 @@ params:
     message_passing_steps: 1
     rmp:
       num_clusters: 15
+      hyper_noise: 0.005
       frequency: 1
       clustering: spectral
       connector: hyper
