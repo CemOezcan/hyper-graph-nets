@@ -9,7 +9,7 @@ params:
     rollout_split: valid
     batch_size: 16
     epochs: 15
-    n_timesteps: 80
+    n_timesteps: 160
     trajectories: 100
     mode: all
     prefetch_factor: 1
@@ -33,12 +33,12 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 3
+    message_passing_steps: 5
     rmp:
       hyper_noise: 0.005
-      num_clusters: 30
+      num_clusters: 10
       frequency: 1
-      clustering: spectral
+      clustering: kmeans
       connector: hetero
       fully_connect: False
       intra_cluster_sampling:
