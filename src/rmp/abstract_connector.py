@@ -6,6 +6,7 @@ import torch
 
 from src.migration.normalizer import Normalizer
 from src.util import MultiGraphWithPos, MultiGraph
+from util.Types import ConfigDict
 
 
 class AbstractConnector(ABC):
@@ -13,7 +14,7 @@ class AbstractConnector(ABC):
     Abstract superclass for the expansion of the input graph with remote edges.
     """
 
-    def __init__(self):
+    def __init__(self, fully_connect, noise_scale):
         """
         Initializes the remote message passing strategy.
 
@@ -21,6 +22,8 @@ class AbstractConnector(ABC):
         self._intra_normalizer = None
         self._inter_normalizer = None
         self._hyper_normalizer = None
+        self._fully_connect = fully_connect
+        self._noise_scale = noise_scale
 
     def initialize(self, intra: Normalizer, inter: Normalizer, hyper: Normalizer) -> List:
         """

@@ -83,10 +83,11 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
 
 def get_connector(name: str, config) -> AbstractConnector:
     fully_connect = get_from_nested_dict(config, list_of_keys=["rmp", "fully_connect"], raise_error=True)
+    noise_scale = get_from_nested_dict(config, list_of_keys=["rmp", "hyper_noise"], raise_error=True)
     if name == "hyper" or name == "hetero" or name == "multiscale":
-        return HierarchicalConnector(fully_connect)
+        return HierarchicalConnector(fully_connect, noise_scale)
     elif name == "multi":
-        return MultigraphConnector(fully_connect)
+        return MultigraphConnector(fully_connect, noise_scale)
     elif name == "none":
         return None
     else:

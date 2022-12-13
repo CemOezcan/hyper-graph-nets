@@ -16,12 +16,10 @@ class HierarchicalConnector(AbstractConnector):
     """
     Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
     """
-    def __init__(self, fully_connect):
-        super().__init__()
-        self._fully_connect = fully_connect
+    def __init__(self, fully_connect, noise_scale):
+        super().__init__(fully_connect, noise_scale)
 
-    def initialize(self, intra, inter, hyper, noise_scale=0):
-        self.noise_scale = 0.005
+    def initialize(self, intra, inter, hyper):
         super().initialize(intra, inter, hyper)
         # TODO: fix
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']#, 'inter_cluster_world']
@@ -48,7 +46,7 @@ class HierarchicalConnector(AbstractConnector):
         clustering_means = torch.tensor(clustering_means).to(device_0)
         if is_training:
             zero_size = torch.zeros(clustering_means.size(), dtype=torch.float32).to(device_0)
-            noise = torch.normal(zero_size, std=self.noise_scale).to(device_0)
+            noise = torch.normal(zero_size, std=self._noise_scale).to(device_0)
             clustering_means += noise
 
         node_feature_means = torch.tensor(node_feature_means).to(device_0)
