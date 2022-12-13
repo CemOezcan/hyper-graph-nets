@@ -29,7 +29,7 @@ class CylinderModel(AbstractSystemModel):
         self._mesh_edge_normalizer = Normalizer(size=3, name='mesh_edge_normalizer')
         self._intra_edge_normalizer = Normalizer(size=7, name='intra_edge_normalizer')
         self._inter_edge_normalizer = Normalizer(size=7, name='inter_edge_normalizer')
-        self._hyper_node_normalizer = Normalizer(size=9, name='hyper_node_normalizer')
+        self._hyper_node_normalizer = Normalizer(size=3, name='hyper_node_normalizer')
 
         self._model_type = 'plate'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'

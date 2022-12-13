@@ -64,12 +64,13 @@ class HierarchicalConnector(AbstractConnector):
 
         spread_mesh, spread_world = torch.tensor(spread_mesh).to(device_0), torch.tensor(spread_world).to(device_0)
         cluster_sizes = torch.tensor([len(x) for x in clusters]).to(device_0)
-        feature_augmentation = torch.stack([cluster_sizes, spread_mesh, spread_world], dim=-1).to(device_0)
-        node_feature_means = torch.cat([node_feature_means, feature_augmentation], dim=-1).to(device_0)
+        feature_augmentation = torch.stack([cluster_sizes, spread_mesh, spread_world], dim=-1).to(device)
+        feature_augmentation = self._hyper_normalizer(feature_augmentation, is_training)
+        node_feature_means = torch.cat([node_feature_means.to(device), feature_augmentation.to(device)], dim=-1).to(device)
 
 
         graph = graph._replace(target_feature=[clustering_features, clustering_means])
-        graph = graph._replace(node_features=[node_feature, node_feature_means])
+        graph = graph._replace(node_features=[node_feature.to(device), node_feature_means])
 
         clustering_features = graph.target_feature
 
@@ -137,7 +138,7 @@ class HierarchicalConnector(AbstractConnector):
         edge_sets = graph.edge_sets
         edge_sets.extend(hyper_edges)
 
-        return MultiGraph(node_features=[graph.node_features[0].to(device), self._hyper_normalizer(graph.node_features[1].to(device), is_training)], edge_sets=edge_sets)
+        return MultiGraph(node_features=graph.node_features, edge_sets=edge_sets)
 
     def world_hyer_edges(self, graph: MultiGraphWithPos, clusters, clustering_means, hyper_nodes, num_nodes,
                          model_type, clustering_features, is_training):
