@@ -38,7 +38,7 @@ params:
       hyper_noise: 0.005
       num_clusters: 30
       frequency: 1
-      clustering: kmeans
+      clustering: spectral
       connector: hetero
       fully_connect: False
       intra_cluster_sampling:
