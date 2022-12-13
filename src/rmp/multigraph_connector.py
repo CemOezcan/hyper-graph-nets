@@ -21,8 +21,8 @@ class MultigraphConnector(HierarchicalConnector):
         super().initialize(intra, inter, hyper)
         return []
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
-        graph = super().run(graph, clusters, is_training)
+    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], neighbors: List[Tensor], is_training: bool) -> MultiGraph:
+        graph = super().run(graph, clusters, neighbors, is_training)
         nf, hnf = graph.node_features[0], graph.node_features[1]
         new_nf = torch.cat((nf, torch.tensor([[1, 0]] * len(nf))), dim=1)
         new_hnf = torch.cat((hnf, torch.tensor([[0, 1]] * len(hnf))), dim=1)

@@ -26,7 +26,7 @@ class HierarchicalConnector(AbstractConnector):
         # TODO: fix
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']#, 'inter_cluster_world']
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
+    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], neighbors: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
         clustering_features = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to(device_0)
         node_feature = graph.node_features.to(device_0)
@@ -124,7 +124,8 @@ class HierarchicalConnector(AbstractConnector):
         if self._fully_connect or clustering_means.shape[0] < 4:
             senders, receivers, edge_features = self._fully_connected(clustering_features, hyper_nodes, model_type)
         else:
-            senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
+            # senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
+            senders, receivers, edge_features = self._downscale_triangulation(clustering_features, neighbors, model_type)
 
         world_edges = EdgeSet(
             name='inter_cluster',
@@ -194,6 +195,12 @@ class HierarchicalConnector(AbstractConnector):
         simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices]).to('cpu')
         a = util.triangles_to_edges(simplices)
         return self._get_subgraph(model_type, clustering_features, a['senders'], a['receivers'])
+
+    def _downscale_triangulation(self, clustering_features, neighbors, model_type):
+        num_nodes = len(clustering_features[0])
+        edges = torch.stack(neighbors) + torch.tensor(num_nodes).repeat(len(neighbors), 2)
+        senders, receivers = torch.split(edges, 1, dim=1)
+        return self._get_subgraph(model_type, clustering_features, senders.squeeze(), receivers.squeeze())
 
     def _fully_connected(self, clustering_features, hyper_nodes, model_type):
         edges = torch.combinations(hyper_nodes, with_replacement=True).to('cpu')

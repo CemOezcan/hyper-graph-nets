@@ -75,8 +75,8 @@ class RemoteMessagePassing:
                 self.remove_obstacles(graph)
             else:
                 self._clusters = self._clustering_algorithm.run(graph)
-
-        new_graph = self._node_connector.run(graph, self._clusters, is_training)
+        self._neighbors = self._clustering_algorithm.neigboring_clusters
+        new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
         return new_graph
 
     def remove_obstacles(self, graph):

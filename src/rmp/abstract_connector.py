@@ -50,7 +50,7 @@ class AbstractConnector(ABC):
         return list()
 
     @abstractmethod
-    def run(self, graph: MultiGraph, clusters: List[List[int]], is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraph, clusters: List[Tensor], neighbors: List[Tensor], is_training: bool) -> MultiGraphWithPos:
         """
         Adds remote edges to the input graph.
 
@@ -59,8 +59,11 @@ class AbstractConnector(ABC):
             graph : MultiGraph
                 Input graph
 
-            clusters : List[List[int]]
+            clusters : List[Tensor]
                 Clustering of the graph
+
+            neighbors : List[Tensor]
+                Neighboring clusters
 
             is_training: bool
                 Training or test sample

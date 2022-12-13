@@ -71,8 +71,10 @@ class AbstractClusteringAlgorithm(ABC):
                 Clustering as a list
 
         """
+        # TODO: Reliability?
         labels = self._empty_cluster_handling(list(self._cluster(graph)))
         self._labels = list([-1] * number) + labels if b4 else labels + list([-1] * number)
+        self.neigboring_clusters = self.get_neigbors(graph, self._labels)
 
         if not self._sampling:
             return self._labels_to_indices(labels)
@@ -118,6 +120,30 @@ class AbstractClusteringAlgorithm(ABC):
                 indices[labels[i]].append(i)
 
         return [torch.tensor(x) for x in indices]
+
+    def get_neigbors(self, graph, labels):
+        edge_set = [x for x in graph.edge_sets if x.name == 'mesh_edges']
+        # for the sender and receiver of the edge set, find the corresponding label
+        sender_labels = [labels[x] for x in edge_set[0].senders]
+        receiver_labels = [labels[x] for x in edge_set[0].receivers]
+
+        # combine senders, receivers, sender_labels, receiver_labels into a tensor of tuples
+        # (sender, receiver, sender_label, receiver_label)
+        edge_set_tensor = torch.stack(
+            (
+                torch.tensor(edge_set[0].senders).to('cpu'),
+                torch.tensor(edge_set[0].receivers).to('cpu'),
+                torch.tensor(sender_labels),
+                torch.tensor(receiver_labels)
+            ),
+            dim=1)
+
+        # find all elements of edge_set_tensor that have a different sender_label and receiver_label
+        edges_different_clusters = torch.nonzero(torch.abs(edge_set_tensor[:, 2] - edge_set_tensor[:, 3]) > 0).squeeze()
+        result = [tuple(set(x.tolist())) for x in torch.index_select(edge_set_tensor, 0, edges_different_clusters)[:, -2:]]
+        result = list(set(result))
+        return [torch.tensor(x) for x in result]
+
 
     def spotter(self, graph: MultiGraphWithPos, labels: List[int], alpha: float, threshold: int) -> List[List[int]]:
         '''Given a graph with edges, traverse all edges and find vertices that are connected to each other, but belong to different clusters'''
