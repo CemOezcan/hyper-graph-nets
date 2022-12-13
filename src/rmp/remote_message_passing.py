@@ -87,6 +87,8 @@ class RemoteMessagePassing:
         if fst == 0:
             # include [lst + 1, -1]
             new_nodes = graph.node_features[lst + 1:]
+            new_target = graph.target_feature[lst + 1:]
+            new_mesh = graph.mesh_features[lst + 1:]
             edges = graph.unnormalized_edges
             s, r, f = edges.senders, edges.receivers, edges.features
             s_mask = torch.gt(s, lst)
@@ -101,13 +103,15 @@ class RemoteMessagePassing:
                                 receivers=new_r,
                                 senders=new_s)
 
-            new_graph = graph._replace(node_features=new_nodes, unnormalized_edges=new_edges)
+            new_graph = graph._replace(node_features=new_nodes, target_feature=new_target, mesh_features=new_mesh, unnormalized_edges=new_edges)
             offset = lst + 1
             b4 = True
 
         else:
             # include [0, fst - 1]
             new_nodes = graph.node_features[:fst]
+            new_target = graph.target_feature[:fst]
+            new_mesh = graph.mesh_features[:fst]
             edges = graph.unnormalized_edges
             s, r, f = edges.senders, edges.receivers, edges.features
             s_mask = torch.lt(s, fst)
@@ -119,7 +123,7 @@ class RemoteMessagePassing:
                                 receivers=r[mask],
                                 senders=s[mask])
 
-            new_graph = graph._replace(node_features=new_nodes, unnormalized_edges=new_edges)
+            new_graph = graph._replace(node_features=new_nodes, target_feature=new_target, mesh_features=new_mesh, unnormalized_edges=new_edges)
 
             offset = lst - fst + 1
             b4 = False
