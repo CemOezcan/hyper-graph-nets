@@ -139,7 +139,7 @@ class HierarchicalConnector(AbstractConnector):
         edge_sets = graph.edge_sets
         edge_sets.extend(hyper_edges)
 
-        return MultiGraph(node_features=[graph.node_features[0], self._hyper_normalizer(graph.node_features[1], is_training)], edge_sets=edge_sets)
+        return MultiGraph(node_features=[graph.node_features[0].to(device), self._hyper_normalizer(graph.node_features[1].to(device), is_training)], edge_sets=edge_sets)
 
     def world_hyer_edges(self, graph: MultiGraphWithPos, clusters, clustering_means, hyper_nodes, num_nodes,
                          model_type, clustering_features, is_training):
