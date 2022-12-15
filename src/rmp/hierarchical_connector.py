@@ -16,8 +16,8 @@ class HierarchicalConnector(AbstractConnector):
     """
     Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
     """
-    def __init__(self, fully_connect, noise_scale):
-        super().__init__(fully_connect, noise_scale)
+    def __init__(self, fully_connect, noise_scale, hyper_node_features):
+        super().__init__(fully_connect, noise_scale, hyper_node_features)
 
     def initialize(self, intra, inter, hyper):
         super().initialize(intra, inter, hyper)
@@ -50,27 +50,29 @@ class HierarchicalConnector(AbstractConnector):
             clustering_means += noise
 
         node_feature_means = torch.tensor(node_feature_means).to(device_0)
-        spread_mesh = list()
-        spread_world = list()
-        for i in range(len(clustering_means)):
-            means_mesh = torch.tensor(clustering_means[i][-3:]).to(device_0).repeat(len(clusters[i]), 1)
-            points_mesh = torch.index_select(clustering_features[:, -3:], 0, clusters[i])
+        if self._hyper_node_features:
+            spread_mesh = list()
+            spread_world = list()
+            for i in range(len(clustering_means)):
+                means_mesh = torch.tensor(clustering_means[i][-3:]).to(device_0).repeat(len(clusters[i]), 1)
+                points_mesh = torch.index_select(clustering_features[:, -3:], 0, clusters[i])
 
-            means_world = torch.tensor(clustering_means[i][:3]).to(device_0).repeat(len(clusters[i]), 1)
-            points_world = torch.index_select(clustering_features[:, :3], 0, clusters[i])
+                means_world = torch.tensor(clustering_means[i][:3]).to(device_0).repeat(len(clusters[i]), 1)
+                points_world = torch.index_select(clustering_features[:, :3], 0, clusters[i])
 
-            spread_mesh.append(max([torch.dist(m, p) for m, p in zip(means_mesh, points_mesh)]))
-            spread_world.append(max([torch.dist(m, p) for m, p in zip(means_world, points_world)]))
+                spread_mesh.append(max([torch.dist(m, p) for m, p in zip(means_mesh, points_mesh)]))
+                spread_world.append(max([torch.dist(m, p) for m, p in zip(means_world, points_world)]))
 
-        spread_mesh, spread_world = torch.tensor(spread_mesh).to(device_0), torch.tensor(spread_world).to(device_0)
-        cluster_sizes = torch.tensor([len(x) for x in clusters]).to(device_0)
-        feature_augmentation = torch.stack([cluster_sizes, spread_mesh, spread_world], dim=-1).to(device)
-        feature_augmentation = self._hyper_normalizer(feature_augmentation, is_training)
-        node_feature_means = torch.cat([node_feature_means.to(device), feature_augmentation.to(device)], dim=-1).to(device)
+            spread_mesh, spread_world = torch.tensor(spread_mesh).to(device_0), torch.tensor(spread_world).to(device_0)
+            cluster_sizes = torch.tensor([len(x) for x in clusters]).to(device_0)
+            feature_augmentation = torch.stack([cluster_sizes, spread_mesh, spread_world], dim=-1).to(device)
+            feature_augmentation = self._hyper_normalizer(feature_augmentation, is_training)
+            node_feature_means = torch.cat([node_feature_means.to(device), feature_augmentation.to(device)], dim=-1).to(device)
+            node_feature = node_feature.to(device)
 
 
         graph = graph._replace(target_feature=[clustering_features, clustering_means])
-        graph = graph._replace(node_features=[node_feature.to(device), node_feature_means])
+        graph = graph._replace(node_features=[node_feature, node_feature_means])
 
         clustering_features = graph.target_feature
 

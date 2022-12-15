@@ -13,8 +13,8 @@ class MultigraphConnector(HierarchicalConnector):
     Naive remote message passing with fully connected clusters.
     """
 
-    def __init__(self, fully_connect, noise_scale):
-        super().__init__(fully_connect, noise_scale)
+    def __init__(self, fully_connect, noise_scale, hyper_node_features):
+        super().__init__(fully_connect, noise_scale, hyper_node_features)
 
     def initialize(self, intra, inter, hyper):
         super().initialize(intra, inter, hyper)

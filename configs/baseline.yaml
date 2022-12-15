@@ -36,6 +36,7 @@ params:
     message_passing_steps: 3
     rmp:
       hyper_noise: 0.003
+      hyper_node_features: True
       num_clusters: 69
       frequency: 1
       clustering: none

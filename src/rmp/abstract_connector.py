@@ -14,7 +14,7 @@ class AbstractConnector(ABC):
     Abstract superclass for the expansion of the input graph with remote edges.
     """
 
-    def __init__(self, fully_connect, noise_scale):
+    def __init__(self, fully_connect, noise_scale, hyper_node_features):
         """
         Initializes the remote message passing strategy.
 
@@ -24,6 +24,7 @@ class AbstractConnector(ABC):
         self._hyper_normalizer = None
         self._fully_connect = fully_connect
         self._noise_scale = noise_scale
+        self._hyper_node_features = hyper_node_features
 
     def initialize(self, intra: Normalizer, inter: Normalizer, hyper: Normalizer) -> List:
         """
