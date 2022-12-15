@@ -60,8 +60,8 @@ class HierarchicalConnector(AbstractConnector):
                 means_world = torch.tensor(clustering_means[i][:3]).to(device_0).repeat(len(clusters[i]), 1)
                 points_world = torch.index_select(clustering_features[:, :3], 0, clusters[i])
 
-                spread_mesh.append(max([torch.dist(m, p) for m, p in zip(means_mesh, points_mesh)]))
-                spread_world.append(max([torch.dist(m, p) for m, p in zip(means_world, points_world)]))
+                spread_mesh.append(torch.max(torch.sqrt((means_mesh - points_mesh).pow(2).sum(1))))
+                spread_world.append(torch.max(torch.sqrt((means_world - points_world).pow(2).sum(1))))
 
             spread_mesh, spread_world = torch.tensor(spread_mesh).to(device_0), torch.tensor(spread_world).to(device_0)
             cluster_sizes = torch.tensor([len(x) for x in clusters]).to(device_0)
