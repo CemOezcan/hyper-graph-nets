@@ -5,8 +5,6 @@ import torch
 import torch_scatter
 import yaml
 import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -135,7 +133,11 @@ def unsorted_segment_operation(data, segment_ids, num_segments, operation):
     result = result.type(data.dtype)
     return result
 
-# Defining a Class
+
+#import networkx as nx
+#import matplotlib.pyplot as plt
+
+"""# Defining a Class
 class GraphVisualization:
 
     def __init__(self):
@@ -177,6 +179,6 @@ class GraphVisualization:
 # for i in range(len(neighbors)):
 #     G.addEdge(int(senders[i]), int(receivers[i]))
 #
-# G.visualize()
+# G.visualize()"""
 
 
