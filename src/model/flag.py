@@ -85,9 +85,9 @@ class FlagModel(AbstractSystemModel):
         edge_features = torch.cat(
             (
                 relative_world_pos,
-                torch.norm(relative_world_pos, dim=-1, keepdim=True),
+                torch.sqrt(relative_world_pos.pow(2).sum(-1, keepdim=True)),
                 relative_mesh_pos,
-                torch.norm(relative_mesh_pos, dim=-1, keepdim=True)
+                torch.sqrt(relative_mesh_pos.pow(2).sum(-1, keepdim=True))
             ), dim=-1
         )
 
@@ -100,13 +100,13 @@ class FlagModel(AbstractSystemModel):
 
         num_nodes = node_type.shape[0]
         max_node_dynamic = util.unsorted_segment_operation(
-            torch.norm(relative_world_pos, dim=-1), receivers,
+            torch.sqrt(relative_world_pos.pow(2).sum(-1)), receivers,
             num_nodes,
             operation='max'
         ).to(device)
 
         min_node_dynamic = util.unsorted_segment_operation(
-            torch.norm(relative_world_pos, dim=-1),
+            torch.sqrt(relative_world_pos.pow(2).sum(-1)),
             receivers,
             num_nodes,
             operation='min'

@@ -1,6 +1,8 @@
 import math
 from typing import Dict, Tuple
 
+from profilehooks import profile
+
 import src.rmp.get_rmp as rmp
 import torch
 import torch.nn.functional as F
@@ -64,6 +66,7 @@ class PlateModel(AbstractSystemModel):
             edge_sets=self._edge_sets
         ).to(device)
 
+    @profile
     def build_graph(self, inputs: Dict, is_training: bool) -> MultiGraphWithPos:
         """Builds input graph."""
         world_pos = inputs['world_pos']
@@ -133,7 +136,7 @@ class PlateModel(AbstractSystemModel):
         # TODO: Implement remaining methods
         # TODO: Implement plotting
         world_edge_features = torch.cat(
-            (relative_world_pos, torch.norm(relative_world_pos, dim=-1, keepdim=True)),
+            (relative_world_pos, torch.sqrt(relative_world_pos.pow(2).sum(-1, keepdim=True))),
             dim=-1
         )
 
@@ -156,9 +159,9 @@ class PlateModel(AbstractSystemModel):
         mesh_edge_features = torch.cat(
             (
                 all_relative_world_pos,
-                torch.norm(all_relative_world_pos, dim=-1, keepdim=True),
+                torch.sqrt(all_relative_world_pos.pow(2).sum(-1, keepdim=True)),
                 relative_mesh_pos,
-                torch.norm(relative_mesh_pos, dim=-1, keepdim=True)
+                torch.sqrt(relative_mesh_pos.pow(2).sum(-1, keepdim=True))
             ),
             dim=-1
         )

@@ -84,7 +84,7 @@ class CylinderModel(AbstractSystemModel):
                              torch.index_select(mesh_pos, 0, receivers))
         edge_features = torch.cat([
             relative_mesh_pos,
-            torch.norm(relative_mesh_pos, dim=-1, keepdim=True)], dim=-1)
+            torch.sqrt(relative_mesh_pos.pow(2).sum(-1, keepdim=True))], dim=-1)
 
         mesh_edges = EdgeSet(
             name='mesh_edges',
