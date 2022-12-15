@@ -55,7 +55,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         self._batch_size = config.get('task').get('batch_size')
         self._network = None
         self._optimizer = None
-        self._scheduler = None
         self._wandb_run = None
         self._wandb_url = None
         self._initialized = False
@@ -109,7 +108,6 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             self._batch_size = task_information.get('task').get('batch_size')
             self._network = get_model(task_information)
             self._optimizer = optim.Adam(self._network.parameters(), lr=self._learning_rate)
-            self._scheduler = torch.optim.lr_scheduler.ExponentialLR(self._optimizer, self._gamma, last_epoch=-1)
             self._initialized = True
 
     def fit_iteration(self, train_dataloader: DataLoader) -> None:
@@ -391,7 +389,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         else:
             self._publish_csv(data_frame, f'rollout_losses', path)
 
-    def n_step_evaluator(self, ds_loader: DataLoader, task_name: str, n_step_list=[60], n_traj=2) -> None:
+    def n_step_evaluator(self, ds_loader: DataLoader, task_name: str, n_steps=60, n_traj=2, logging=True) -> Optional[Dict]:
         """
         Predict the system state after n time steps. N step predictions are performed recursively within trajectories.
         Evaluate the predictions over the test data.
@@ -413,23 +411,29 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         """
         # Take n_traj trajectories from valid set for n_step loss calculation
         means = list()
-        stds = list()
-        for n_steps in n_step_list:
-            n_step_losses = list()
-            for i, trajectory in enumerate(ds_loader):
-                if i >= n_traj:
-                    break
-                loss = self._network.n_step_computation(trajectory, n_steps)
-                n_step_losses.append(loss)
+        lasts = list()
+        for i, trajectory in enumerate(ds_loader):
+            if i >= n_traj:
+                break
+            mean_loss, last_loss = self._network.n_step_computation(trajectory, n_steps, self._time_steps)
+            means.append(mean_loss)
+            lasts.append(last_loss)
 
-            means.append(torch.mean(torch.stack(n_step_losses)).item())
-            stds.append(torch.std(torch.stack(n_step_losses)).item())
+        means = torch.mean(torch.stack(means))
+        lasts = torch.mean(torch.stack(lasts))
 
         path = os.path.join(self._out_dir, f'{task_name}_n_step_losses.csv')
-        n_step_stats = {'n_step': n_step_list, 'mean': means, 'std': stds}
+        n_step_stats = {'n_step': [n_steps] * n_steps, 'mean': means, 'lasts': lasts}
         data_frame = pd.DataFrame.from_dict(n_step_stats)
         data_frame.to_csv(path)
-        self._publish_csv(data_frame, f'n_step_losses', path)
+
+        if logging:
+            table = wandb.Table(dataframe=data_frame)
+            return {f'mean_{n_steps}_loss': torch.mean(torch.tensor(means), dim=0),
+                    f'{n_steps}_loss': torch.mean(torch.tensor(lasts), dim=0),
+                    f'{task_name}_n_step_losses': table}
+        else:
+            self._publish_csv(data_frame, f'n_step_losses', path)
 
     @staticmethod
     def _publish_csv(data_frame: DataFrame, name: str, path: str) -> None:
@@ -503,9 +507,3 @@ class MeshSimulator(AbstractIterativeAlgorithm):
         rollouts = [{key: value.to('cpu') for key, value in x.items()} for x in rollouts]
         with open(os.path.join(self._out_dir, f'{task_name}_rollouts.pkl'), 'wb') as file:
             pickle.dump(rollouts, file)
-
-    def lr_scheduler_step(self) -> None:
-        """
-        Make a learning rate scheduler step.
-        """
-        self._scheduler.step()

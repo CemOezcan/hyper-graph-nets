@@ -48,6 +48,8 @@ class MeshTask(AbstractTask):
 
         self._num_val_trajectories = config.get('task').get('validation').get('trajectories')
         self._num_val_rollouts = self._config.get('task').get('validation').get('rollouts')
+        self._num_val_n_step_rollouts = self._config.get('task').get('validation').get('n_step_rollouts')
+        self._val_n_steps = self._config.get('task').get('validation').get('n_steps')
 
         self._num_test_trajectories = config.get('task').get('test').get('trajectories')
         self._num_test_rollouts = config.get('task').get('test').get('rollouts')
@@ -56,7 +58,7 @@ class MeshTask(AbstractTask):
         self.n_viz = self._config.get('task').get('validation').get('n_viz')
 
         self.train_loader = get_data(config=config)
-        self._test_loader = get_data(config=config, split='test', split_and_preprocess=False)
+        self._test_loader = get_data(config=config, split='valid', split_and_preprocess=False)
         self._valid_loader = get_data(config=config, split='valid')
 
         cluster = get_from_nested_dict(config, ['model', 'rmp', 'clustering'])
@@ -98,18 +100,16 @@ class MeshTask(AbstractTask):
             self._algorithm.fit_iteration(train_dataloader=self.train_loader)
             one_step = self._algorithm.one_step_evaluator(self._valid_loader, self._num_val_trajectories, task_name)
             rollout = self._algorithm.rollout_evaluator(self._test_loader, self._num_val_rollouts, task_name)
+            n_step = self._algorithm.n_step_evaluator(self._test_loader, task_name, n_steps=self._val_n_steps, n_traj=self._num_val_n_step_rollouts)
 
             dir_dict = self.select_plotting(task_name)
 
             animation = {f"video_{key}": wandb.Video(value, fps=5, format="gif") for key, value in dir_dict.items()}
-            data = {k: v for dictionary in [one_step, rollout, animation] for k, v in dictionary.items()}
+            data = {k: v for dictionary in [one_step, rollout, n_step, animation] for k, v in dictionary.items()}
             data['epoch'] = e + 1
             self._algorithm.save(task_name)
             self._algorithm.log_epoch(data)
             self._current_epoch = e + 1
-
-            if e >= self._config.get('model').get('scheduler_epoch'):
-                self._algorithm.lr_scheduler_step()
 
     def get_scalars(self) -> None:
         """
@@ -124,7 +124,7 @@ class MeshTask(AbstractTask):
 
         self._algorithm.one_step_evaluator(self._valid_loader, self._num_test_trajectories, task_name, logging=False)
         self._algorithm.rollout_evaluator(self._test_loader, self._num_test_rollouts, task_name, logging=False)
-        self._algorithm.n_step_evaluator(self._test_loader, task_name, n_step_list=[self._n_steps], n_traj=self._num_n_step_rollouts)
+        self._algorithm.n_step_evaluator(self._test_loader, task_name, n_steps=self._n_steps, n_traj=self._num_n_step_rollouts, logging=False)
 
         self.select_plotting(task_name)
 

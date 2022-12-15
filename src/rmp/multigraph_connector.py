@@ -13,16 +13,15 @@ class MultigraphConnector(HierarchicalConnector):
     Naive remote message passing with fully connected clusters.
     """
 
-    def __init__(self, fully_connect):
-        super().__init__(fully_connect)
+    def __init__(self, fully_connect, noise_scale, hyper_node_features):
+        super().__init__(fully_connect, noise_scale, hyper_node_features)
 
-    def initialize(self, intra, inter):
-        super().initialize(intra, inter)
-        # TODO: fix
+    def initialize(self, intra, inter, hyper):
+        super().initialize(intra, inter, hyper)
         return []
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
-        graph = super().run(graph, clusters, is_training)
+    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], neighbors: List[Tensor], is_training: bool) -> MultiGraph:
+        graph = super().run(graph, clusters, neighbors, is_training)
         nf, hnf = graph.node_features[0], graph.node_features[1]
         new_nf = torch.cat((nf, torch.tensor([[1, 0]] * len(nf))), dim=1)
         new_hnf = torch.cat((hnf, torch.tensor([[0, 1]] * len(hnf))), dim=1)

@@ -44,7 +44,7 @@ class SpectralClustering(AbstractClusteringAlgorithm):
             zip(
                 mesh_edges.senders.to('cpu').numpy(),
                 mesh_edges.receivers.to('cpu').numpy(),
-                [1 / math.sqrt(f[3] ** 2 + f[6] ** 2) for f in mesh_edges.features]
+                [1 / math.sqrt(f[3] ** 2 + f[-1] ** 2) for f in mesh_edges.features]
             )
         )
 

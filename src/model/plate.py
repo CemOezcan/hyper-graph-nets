@@ -30,7 +30,8 @@ class PlateModel(AbstractSystemModel):
         self._mesh_edge_normalizer = Normalizer(size=8, name='mesh_edge_normalizer')
         self._world_edge_normalizer = Normalizer(size=4, name='world_edge_normalizer')
         self._intra_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
-        self._inter_edge_normalizer = Normalizer(size=8, name='intra_edge_normalizer')
+        self._inter_edge_normalizer = Normalizer(size=8, name='inter_edge_normalizer')
+        self._hyper_node_normalizer = Normalizer(size=3, name='hyper_node_normalizer')
 
         self._model_type = 'plate'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
@@ -51,7 +52,7 @@ class PlateModel(AbstractSystemModel):
         if self._rmp:
             self._remote_graph = rmp.get_rmp(params)
             self._edge_sets += self._remote_graph.initialize(
-                self._intra_edge_normalizer, self._inter_edge_normalizer)
+                self._intra_edge_normalizer, self._inter_edge_normalizer, self._hyper_node_normalizer)
 
         self.learned_model = MeshGraphNet(
             output_size=params.get('size'),
@@ -154,10 +155,10 @@ class PlateModel(AbstractSystemModel):
 
         mesh_edge_features = torch.cat(
             (
-                relative_mesh_pos,
-                torch.norm(relative_mesh_pos, dim=-1, keepdim=True),
                 all_relative_world_pos,
-                torch.norm(all_relative_world_pos, dim=-1, keepdim=True)
+                torch.norm(all_relative_world_pos, dim=-1, keepdim=True),
+                relative_mesh_pos,
+                torch.norm(relative_mesh_pos, dim=-1, keepdim=True)
             ),
             dim=-1
         )
@@ -330,12 +331,15 @@ class PlateModel(AbstractSystemModel):
         return next_pos, trajectory, cur_positions, cur_velocities
 
     @torch.no_grad()
-    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int) -> Tensor:
+    def n_step_computation(self, trajectory: Dict[str, Tensor], n_step: int, num_timesteps=None) -> Tuple[Tensor, Tensor]:
         mse_losses = list()
-        for step in range(len(trajectory['world_pos']) - n_step):
+        last_losses = list()
+        num_timesteps = trajectory['cells'].shape[0] if num_timesteps is None else num_timesteps
+        for step in range(num_timesteps - n_step):
             # TODO: clusters/balancers are reset when computing n_step loss
             eval_traj = {k: v[step: step + n_step + 1] for k, v in trajectory.items()}
             prediction_trajectory, mse_loss = self.rollout(eval_traj, n_step + 1)
             mse_losses.append(torch.mean(mse_loss).cpu())
+            last_losses.append(mse_loss.cpu()[-1])
 
-        return torch.mean(torch.stack(mse_losses))
+        return torch.mean(torch.stack(mse_losses)), torch.mean(torch.stack(last_losses))

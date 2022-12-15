@@ -6,6 +6,7 @@ import torch
 
 from src.migration.normalizer import Normalizer
 from src.util import MultiGraphWithPos, MultiGraph
+from util.Types import ConfigDict
 
 
 class AbstractConnector(ABC):
@@ -13,20 +14,27 @@ class AbstractConnector(ABC):
     Abstract superclass for the expansion of the input graph with remote edges.
     """
 
-    def __init__(self):
+    def __init__(self, fully_connect, noise_scale, hyper_node_features):
         """
         Initializes the remote message passing strategy.
 
         """
         self._intra_normalizer = None
         self._inter_normalizer = None
+        self._hyper_normalizer = None
+        self._fully_connect = fully_connect
+        self._noise_scale = noise_scale
+        self._hyper_node_features = hyper_node_features
 
-    def initialize(self, intra: Normalizer, inter: Normalizer) -> List:
+    def initialize(self, intra: Normalizer, inter: Normalizer, hyper: Normalizer) -> List:
         """
         Initialize normalizers after fetching the subclass according to the given configuration file
 
         Parameters
         ----------
+        hyper : Normalizer
+            Normalizer for hyper nodes
+
         intra : Normalizer
             Normalizer for intra cluster edges
 
@@ -41,10 +49,12 @@ class AbstractConnector(ABC):
         """
         self._intra_normalizer = intra
         self._inter_normalizer = inter
+        self._hyper_normalizer = hyper
+
         return list()
 
     @abstractmethod
-    def run(self, graph: MultiGraph, clusters: List[List[int]], is_training: bool) -> MultiGraphWithPos:
+    def run(self, graph: MultiGraph, clusters: List[Tensor], neighbors: List[Tensor], is_training: bool) -> MultiGraphWithPos:
         """
         Adds remote edges to the input graph.
 
@@ -53,8 +63,11 @@ class AbstractConnector(ABC):
             graph : MultiGraph
                 Input graph
 
-            clusters : List[List[int]]
+            clusters : List[Tensor]
                 Clustering of the graph
+
+            neighbors : List[Tensor]
+                Neighboring clusters
 
             is_training: bool
                 Training or test sample

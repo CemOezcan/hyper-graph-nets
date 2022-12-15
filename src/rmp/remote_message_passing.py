@@ -30,12 +30,15 @@ class RemoteMessagePassing:
         self._node_connector = connector
         self._clusters = None
 
-    def initialize(self, intra: Normalizer, inter: Normalizer) -> List:
+    def initialize(self, intra: Normalizer, inter: Normalizer, hyper: Normalizer) -> List:
         """
         Initialize normalizers after fetching the subclass according to the given configuration file
 
         Parameters
         ----------
+        hyper : Normalizer
+            Normalizer for hyper nodes
+
         intra : Normalizer
             Normalizer for intra cluster edges
 
@@ -48,7 +51,7 @@ class RemoteMessagePassing:
                 An empty list
 
         """
-        return self._node_connector.initialize(intra, inter)
+        return self._node_connector.initialize(intra, inter, hyper)
 
     def create_graph(self, graph: MultiGraphWithPos, is_training: bool) -> MultiGraph:
         """
@@ -72,8 +75,8 @@ class RemoteMessagePassing:
                 self.remove_obstacles(graph)
             else:
                 self._clusters = self._clustering_algorithm.run(graph)
-
-        new_graph = self._node_connector.run(graph, self._clusters, is_training)
+        self._neighbors = self._clustering_algorithm.neigboring_clusters
+        new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
         return new_graph
 
     def remove_obstacles(self, graph):
@@ -84,6 +87,8 @@ class RemoteMessagePassing:
         if fst == 0:
             # include [lst + 1, -1]
             new_nodes = graph.node_features[lst + 1:]
+            new_target = graph.target_feature[lst + 1:]
+            new_mesh = graph.mesh_features[lst + 1:]
             edges = graph.unnormalized_edges
             s, r, f = edges.senders, edges.receivers, edges.features
             s_mask = torch.gt(s, lst)
@@ -98,13 +103,15 @@ class RemoteMessagePassing:
                                 receivers=new_r,
                                 senders=new_s)
 
-            new_graph = graph._replace(node_features=new_nodes, unnormalized_edges=new_edges)
+            new_graph = graph._replace(node_features=new_nodes, target_feature=new_target, mesh_features=new_mesh, unnormalized_edges=new_edges)
             offset = lst + 1
             b4 = True
 
         else:
             # include [0, fst - 1]
             new_nodes = graph.node_features[:fst]
+            new_target = graph.target_feature[:fst]
+            new_mesh = graph.mesh_features[:fst]
             edges = graph.unnormalized_edges
             s, r, f = edges.senders, edges.receivers, edges.features
             s_mask = torch.lt(s, fst)
@@ -116,7 +123,7 @@ class RemoteMessagePassing:
                                 receivers=r[mask],
                                 senders=s[mask])
 
-            new_graph = graph._replace(node_features=new_nodes, unnormalized_edges=new_edges)
+            new_graph = graph._replace(node_features=new_nodes, target_feature=new_target, mesh_features=new_mesh, unnormalized_edges=new_edges)
 
             offset = lst - fst + 1
             b4 = False

@@ -5,35 +5,37 @@ params:
   retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
   task:
     task: mesh
-    dataset: flag_minimal
+    dataset: deforming_plate
     rollout_split: valid
-    batch_size: 1
-    epochs: 1
-    n_timesteps: 10
-    trajectories: 1
+    batch_size: 16
+    epochs: 15
+    n_timesteps: 160
+    trajectories: 1000
     mode: all
     prefetch_factor: 1
     test:
-      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during evaluation
-      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
+      rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
       n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
       n_steps: 60
     validation:
-      trajectories: 1 # Number of trajectories that are going to be used to compute the validation loss during training
-      rollouts: 1 # Number of trajectories that are going to be used to compute the rollout loss during training
+      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during training
+      n_steps: 10
+      n_step_rollouts: 10
       n_viz: 5
   model:
     field: world_pos
-    history: True
+    history: False
     size: 3
-    noise: 0.003 # 0.001
-    gamma: 0.9
+    noise: 0.005
+    gamma: 1
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 1.0e-4
-    message_passing_steps: 1
+    learning_rate: 3.0e-5
+    message_passing_steps: 5
     rmp:
-      num_clusters: 15
+      num_clusters: 50
       hyper_noise: 0.005
       hyper_node_features: True
       frequency: 1

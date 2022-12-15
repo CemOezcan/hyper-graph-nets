@@ -1,3 +1,4 @@
+import math
 from typing import List
 
 import numpy as np
@@ -15,16 +16,15 @@ class HierarchicalConnector(AbstractConnector):
     """
     Implementation of a hierarchical remote message passing strategy for hierarchical graph neural networks.
     """
-    def __init__(self, fully_connect):
-        super().__init__()
-        self._fully_connect = fully_connect
+    def __init__(self, fully_connect, noise_scale, hyper_node_features):
+        super().__init__(fully_connect, noise_scale, hyper_node_features)
 
-    def initialize(self, intra, inter):
-        super().initialize(intra, inter)
+    def initialize(self, intra, inter, hyper):
+        super().initialize(intra, inter, hyper)
         # TODO: fix
         return ['intra_cluster_to_mesh', 'intra_cluster_to_cluster', 'inter_cluster']#, 'inter_cluster_world']
 
-    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], is_training: bool) -> MultiGraph:
+    def run(self, graph: MultiGraphWithPos, clusters: List[Tensor], neighbors: List[Tensor], is_training: bool) -> MultiGraph:
         device_0 = 'cpu'
         clustering_features = torch.cat((graph.target_feature, graph.mesh_features), dim=1).to(device_0)
         node_feature = graph.node_features.to(device_0)
@@ -44,7 +44,32 @@ class HierarchicalConnector(AbstractConnector):
                 list(torch.mean(torch.index_select(input=node_feature, dim=0, index=cluster), dim=0)))
 
         clustering_means = torch.tensor(clustering_means).to(device_0)
+        if is_training and self._noise_scale is not None:
+            zero_size = torch.zeros(clustering_means.size(), dtype=torch.float32).to(device_0)
+            noise = torch.normal(zero_size, std=self._noise_scale).to(device_0)
+            clustering_means += noise
+
         node_feature_means = torch.tensor(node_feature_means).to(device_0)
+        if self._hyper_node_features:
+            spread_mesh = list()
+            spread_world = list()
+            for i in range(len(clustering_means)):
+                means_mesh = torch.tensor(clustering_means[i][-3:]).to(device_0).repeat(len(clusters[i]), 1)
+                points_mesh = torch.index_select(clustering_features[:, -3:], 0, clusters[i])
+
+                means_world = torch.tensor(clustering_means[i][:3]).to(device_0).repeat(len(clusters[i]), 1)
+                points_world = torch.index_select(clustering_features[:, :3], 0, clusters[i])
+
+                spread_mesh.append(max([torch.dist(m, p) for m, p in zip(means_mesh, points_mesh)]))
+                spread_world.append(max([torch.dist(m, p) for m, p in zip(means_world, points_world)]))
+
+            spread_mesh, spread_world = torch.tensor(spread_mesh).to(device_0), torch.tensor(spread_world).to(device_0)
+            cluster_sizes = torch.tensor([len(x) for x in clusters]).to(device_0)
+            feature_augmentation = torch.stack([cluster_sizes, spread_mesh, spread_world], dim=-1).to(device)
+            feature_augmentation = self._hyper_normalizer(feature_augmentation, is_training)
+            node_feature_means = torch.cat([node_feature_means.to(device), feature_augmentation.to(device)], dim=-1).to(device)
+            node_feature = node_feature.to(device)
+
 
         graph = graph._replace(target_feature=[clustering_features, clustering_means])
         graph = graph._replace(node_features=[node_feature, node_feature_means])
@@ -100,7 +125,8 @@ class HierarchicalConnector(AbstractConnector):
         if self._fully_connect or clustering_means.shape[0] < 4:
             senders, receivers, edge_features = self._fully_connected(clustering_features, hyper_nodes, model_type)
         else:
-            senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
+            # senders, receivers, edge_features = self._delaunay(clustering_features, num_nodes, model_type)
+            senders, receivers, edge_features = self._downscale_triangulation(clustering_features, neighbors, model_type)
 
         world_edges = EdgeSet(
             name='inter_cluster',
@@ -170,6 +196,12 @@ class HierarchicalConnector(AbstractConnector):
         simplices = torch.tensor([list(map(lambda x: x + num_nodes, simplex)) for simplex in tri.simplices]).to('cpu')
         a = util.triangles_to_edges(simplices)
         return self._get_subgraph(model_type, clustering_features, a['senders'], a['receivers'])
+
+    def _downscale_triangulation(self, clustering_features, neighbors, model_type):
+        num_nodes = len(clustering_features[0])
+        edges = torch.stack(neighbors) + torch.tensor(num_nodes).repeat(len(neighbors), 2)
+        senders, receivers = torch.split(edges, 1, dim=1)
+        return self._get_subgraph(model_type, clustering_features, senders.squeeze(), receivers.squeeze())
 
     def _fully_connected(self, clustering_features, hyper_nodes, model_type):
         edges = torch.combinations(hyper_nodes, with_replacement=True).to('cpu')

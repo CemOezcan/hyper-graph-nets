@@ -4,6 +4,7 @@ Utility class to select a remote message passing strategy based on a given confi
 from src.rmp.gaussian_mixture import GaussianMixtureClustering
 from src.rmp.hdbscan import HDBSCAN
 from src.rmp.hierarchical_connector import HierarchicalConnector
+from src.rmp.k_means_clustering import KMeansClustering
 from src.rmp.multigraph_connector import MultigraphConnector
 from src.rmp.random_clustering import RandomClustering
 from src.rmp.spectral_clustering import SpectralClustering
@@ -72,6 +73,8 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
         return SpectralClustering(num_clusters, sampling, alpha, spotter_threshold)
     elif name == "gmm":
         return GaussianMixtureClustering(num_clusters, sampling, alpha, spotter_threshold)
+    elif name == 'kmeans' or name == 'k-means':
+        return KMeansClustering(num_clusters, sampling, alpha, spotter_threshold)
     elif name == "none":
         return None
     else:
@@ -80,10 +83,14 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
 
 def get_connector(name: str, config) -> AbstractConnector:
     fully_connect = get_from_nested_dict(config, list_of_keys=["rmp", "fully_connect"], raise_error=True)
+    noise_scale = get_from_nested_dict(config, list_of_keys=["rmp", "hyper_noise"], raise_error=True)
+    hyper_node_features = get_from_nested_dict(config, list_of_keys=["rmp", "hyper_node_features"], raise_error=True)
+    noise_scale = None if noise_scale == 'none' else noise_scale
+
     if name == "hyper" or name == "hetero" or name == "multiscale":
-        return HierarchicalConnector(fully_connect)
+        return HierarchicalConnector(fully_connect, noise_scale, hyper_node_features)
     elif name == "multi":
-        return MultigraphConnector(fully_connect)
+        return MultigraphConnector(fully_connect, noise_scale, hyper_node_features)
     elif name == "none":
         return None
     else:

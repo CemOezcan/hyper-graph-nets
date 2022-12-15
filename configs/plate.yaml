@@ -21,22 +21,26 @@ params:
     validation:
       trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during training
       rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during training
-      n_viz: 10
+      n_steps: 10
+      n_step_rollouts: 10
+      n_viz: 5
   model:
     field: world_pos
     history: False
     size: 3
-    noise: 0.003
+    noise: 0.004
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
-    learning_rate: 1.0e-4
+    learning_rate: 5.0e-5
     message_passing_steps: 5
     rmp:
-      num_clusters: 10
+      num_clusters: 32
+      hyper_noise: 0.003
+      hyper_node_features: True
       frequency: 1
-      clustering: none
-      connector: none
+      clustering: kmeans
+      connector: hetero
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
