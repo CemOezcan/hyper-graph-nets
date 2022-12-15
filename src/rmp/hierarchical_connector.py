@@ -44,7 +44,7 @@ class HierarchicalConnector(AbstractConnector):
                 list(torch.mean(torch.index_select(input=node_feature, dim=0, index=cluster), dim=0)))
 
         clustering_means = torch.tensor(clustering_means).to(device_0)
-        if is_training:
+        if is_training and self._noise_scale is not None:
             zero_size = torch.zeros(clustering_means.size(), dtype=torch.float32).to(device_0)
             noise = torch.normal(zero_size, std=self._noise_scale).to(device_0)
             clustering_means += noise
