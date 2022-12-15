@@ -83,9 +83,9 @@ class AbstractConnector(ABC):
     @staticmethod
     def _get_subgraph(model_type: str, target_feature: List[Tensor], senders_list: Tensor, receivers_list: Tensor) \
             -> Tuple[Tensor, Tensor, Tensor]:
-        target_feature = torch.cat(tuple(map(lambda x: x.clone().detach(), target_feature)), dim=0)
-        senders = torch.cat((senders_list.clone().detach(), receivers_list.clone().detach()), dim=0)
-        receivers = torch.cat((receivers_list.clone().detach(), senders_list.clone().detach()), dim=0)
+        target_feature = torch.cat([x.detach() for x in target_feature], dim=0)
+        senders = torch.cat((senders_list.detach(), receivers_list.detach()), dim=0)
+        receivers = torch.cat((receivers_list.detach(), senders_list.detach()), dim=0)
 
         # TODO: Make model independent
         if model_type == 'flag' or model_type == 'plate':
@@ -93,7 +93,7 @@ class AbstractConnector(ABC):
                                        torch.index_select(input=target_feature, dim=0, index=receivers))
             world, mesh = torch.split(relative_target_feature, 3, dim=1)
             edge_features = torch.cat(
-                (world, torch.norm(world, dim=-1, keepdim=True), mesh, torch.norm(mesh, dim=-1, keepdim=True)),
+                (world, torch.sqrt(world.pow(2).sum(-1, keepdim=True)), mesh, torch.sqrt(mesh.pow(2).sum(-1, keepdim=True))),
                 dim=-1)
         else:
             raise Exception("Model type is not specified in RippleNodeConnector.")
