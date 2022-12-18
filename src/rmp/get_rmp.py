@@ -91,7 +91,7 @@ def get_connector(name: str, config) -> AbstractConnector:
         return HierarchicalConnector(fully_connect, noise_scale, hyper_node_features)
     elif name == "multi":
         return MultigraphConnector(fully_connect, noise_scale, hyper_node_features)
-    elif name == "none":
+    elif name == "none" or name == 'repeated':
         return None
     else:
         raise NotImplementedError("Implement your connectors here!")
