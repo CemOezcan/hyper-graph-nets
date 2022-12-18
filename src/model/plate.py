@@ -1,8 +1,6 @@
 import math
 from typing import Dict, Tuple
 
-from profilehooks import profile
-
 import src.rmp.get_rmp as rmp
 import torch
 import torch.nn.functional as F
@@ -37,7 +35,9 @@ class PlateModel(AbstractSystemModel):
 
         self._model_type = 'plate'
         self._rmp = params.get('rmp').get('clustering') != 'none' and params.get('rmp').get('connector') != 'none'
-        self._architecture = params.get('rmp').get('connector') if self._rmp else 'none'
+        self._architecture = params.get('rmp').get('connector')
+        if not self._rmp and self._architecture != 'repeated':
+            self._architecture = 'none'
         self._multi = params.get('rmp').get('connector') == 'multigraph' and self._rmp
         self._balancer = params.get('graph_balancer').get('algorithm') != 'none'
         self.message_passing_steps = params.get('message_passing_steps')
@@ -66,7 +66,6 @@ class PlateModel(AbstractSystemModel):
             edge_sets=self._edge_sets
         ).to(device)
 
-    @profile
     def build_graph(self, inputs: Dict, is_training: bool) -> MultiGraphWithPos:
         """Builds input graph."""
         world_pos = inputs['world_pos']

@@ -17,6 +17,6 @@ class RepeatedGraphNet(GraphNet):
 
     def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
         for _ in range(self.repetitions):
-            graph = self(graph)
+            graph = super().forward(graph)
 
         return graph

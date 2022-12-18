@@ -39,7 +39,7 @@ params:
       hyper_noise: none
       hyper_node_features: False
       frequency: 1
-      clustering: kmeans
+      clustering: none
       connector: repeated
       fully_connect: False
       intra_cluster_sampling:
