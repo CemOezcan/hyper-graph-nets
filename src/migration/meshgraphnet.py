@@ -14,6 +14,7 @@ from src.migration.multigraphnet import MultiGraphNet
 from src.migration.multiscalegraphnet import MultiScaleGraphNet
 from src.migration.processor import Processor
 from src.migration.decoder import Decoder
+from src.migration.repeatedgraphnet import RepeatedGraphNet
 from src.util import device, MultiGraph
 
 
@@ -82,6 +83,8 @@ class MeshGraphNet(nn.Module):
             return HeteroGraphNet, True
         elif architecture == 'multi':
             return MultiGraphNet, False
+        elif architecture == 'repeated':
+            return RepeatedGraphNet, False
         else:
             return GraphNet, False
 

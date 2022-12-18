@@ -33,14 +33,14 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 3
+    message_passing_steps: 5
     rmp:
-      hyper_noise: 0.003
-      hyper_node_features: True
-      num_clusters: 69
+      num_clusters: 30
+      hyper_noise: none
+      hyper_node_features: False
       frequency: 1
       clustering: none
-      connector: none
+      connector: repeated
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
