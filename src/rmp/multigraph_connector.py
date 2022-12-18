@@ -33,24 +33,24 @@ class MultigraphConnector(HierarchicalConnector):
         intra_cluster_to_mesh = self.get_edges(graph, 'intra_cluster_to_mesh')
 
         new_me = torch.cat(
-            (mesh_edges.features, torch.tensor([[1, 0, 0, 0]] * len(mesh_edges.features))),
+            (mesh_edges.features, torch.tensor([[1, 0, 0, 0]] * len(mesh_edges.features)).to(device)),
             dim=1)
         mesh_edges = mesh_edges._replace(features=new_me, name='mesh_edges')
 
         new_ic = torch.cat(
-            (inter_cluster.features, torch.tensor([[0, 1, 0, 0]] * len(inter_cluster.features))),
+            (inter_cluster.features, torch.tensor([[0, 1, 0, 0]] * len(inter_cluster.features)).to(device)),
             dim=1)
         inter_cluster = inter_cluster._replace(features=new_ic, name='mesh_edges')
 
         new_icc = torch.cat(
             (intra_cluster_to_cluster.features,
-             torch.tensor([[0, 0, 1, 0]] * len(intra_cluster_to_cluster.features))),
+             torch.tensor([[0, 0, 1, 0]] * len(intra_cluster_to_cluster.features)).to(device)),
             dim=1)
         intra_cluster_to_cluster = intra_cluster_to_cluster._replace(features=new_icc, name='mesh_edges')
 
         new_icm = torch.cat(
             (intra_cluster_to_mesh.features,
-             torch.tensor([[0, 0, 0, 1]] * len(intra_cluster_to_mesh.features))),
+             torch.tensor([[0, 0, 0, 1]] * len(intra_cluster_to_mesh.features)).to(device)),
             dim=1)
         intra_cluster_to_mesh = intra_cluster_to_mesh._replace(features=new_icm, name='mesh_edges')
 
