@@ -57,15 +57,24 @@ class MultigraphConnector(HierarchicalConnector):
 
         mesh_edges = mesh_edges._replace(
             senders=torch.cat(
-                (mesh_edges.senders, inter_cluster.senders, intra_cluster_to_cluster.senders, intra_cluster_to_mesh.senders),
+                (mesh_edges.senders.to(device),
+                 inter_cluster.senders.to(device),
+                 intra_cluster_to_cluster.senders.to(device),
+                 intra_cluster_to_mesh.senders.to(device)),
                 dim=0
             ),
             receivers=torch.cat(
-                (mesh_edges.receivers, inter_cluster.receivers, intra_cluster_to_cluster.receivers, intra_cluster_to_mesh.receivers),
+                (mesh_edges.receivers.to(device),
+                 inter_cluster.receivers.to(device),
+                 intra_cluster_to_cluster.receivers.to(device),
+                 intra_cluster_to_mesh.receivers.to(device)),
                 dim=0
             ),
             features=torch.cat(
-                (mesh_edges.features, inter_cluster.features, intra_cluster_to_cluster.features, intra_cluster_to_mesh.features),
+                (mesh_edges.features.to(device),
+                 inter_cluster.features.to(device),
+                 intra_cluster_to_cluster.features.to(device),
+                 intra_cluster_to_mesh.features.to(device)),
                 dim=0
             )
         )
