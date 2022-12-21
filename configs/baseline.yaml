@@ -36,11 +36,11 @@ params:
     message_passing_steps: 5
     rmp:
       num_clusters: 30
-      hyper_noise: none
+      hyper_noise: 0.003
       hyper_node_features: False
       frequency: 1
-      clustering: none
-      connector: repeated
+      clustering: kmeans
+      connector: hetero
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
