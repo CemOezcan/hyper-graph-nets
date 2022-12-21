@@ -1,4 +1,4 @@
 #!/bin/bash
 
-source ./venv/bin/activate
+source ./venv_dummy/bin/activate
 srun python main.py "plate"
