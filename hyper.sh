@@ -1,4 +1,4 @@
 #!/bin/bash
 
-source ./venv_dummy/bin/activate
+source ./venv/bin/activate
 srun python main.py "hyper"
