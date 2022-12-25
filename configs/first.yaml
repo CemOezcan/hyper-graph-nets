@@ -1,0 +1,65 @@
+name: "DEFAULT"   # MUST BE DEFAULT
+import_path: "default.yaml"
+
+params:
+  retrain: False # Start training a new model if True. Continue training the most recent version of the model if False.
+  task:
+    task: mesh
+    dataset: deforming_plate
+    rollout_split: valid
+    batch_size: 16
+    epochs: 15
+    n_timesteps: 160
+    trajectories: 1000
+    mode: all
+    prefetch_factor: 1
+    test:
+      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during evaluation
+      rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during evaluation
+      n_step_rollouts: 1 # Number of trajectories that are going to be used to compute the n_step_loss during evaluation
+      n_steps: 60
+    validation:
+      trajectories: 100 # Number of trajectories that are going to be used to compute the validation loss during training
+      rollouts: 100 # Number of trajectories that are going to be used to compute the rollout loss during training
+      n_steps: 10
+      n_step_rollouts: 10
+      n_viz: 5
+  model:
+    field: world_pos
+    history: False
+    size: 3
+    noise: 0.003
+    gamma: 1
+    scheduler_epoch: 10
+    aggregation: pna
+    learning_rate: 5.0e-5
+    message_passing_steps: 5
+    rmp:
+      num_clusters: 10
+      hyper_noise: none
+      hyper_node_features: False
+      frequency: 1
+      clustering: none
+      connector: none
+      fully_connect: False
+      intra_cluster_sampling:
+        enabled: False
+        alpha: 0.1
+        spotter_threshold: 0
+      hdbscan:
+        max_cluster_size: 50
+        min_cluster_size: 20
+        min_samples: 1
+        spotter_threshold: 0.9
+    graph_balancer:
+      algorithm: none
+      frequency: 1
+      remove_edges: True
+      ricci:
+        loops: 150
+        tau: 150
+      random:
+        edge_amount: 100
+  logging:
+    wandb_mode: online
+  random_seed: 0
