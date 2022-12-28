@@ -28,7 +28,7 @@ params:
     field: world_pos
     history: False
     size: 3
-    noise: 0.005
+    noise: 0.003
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
@@ -36,7 +36,7 @@ params:
     message_passing_steps: 5
     rmp:
       num_clusters: 15
-      hyper_noise: 0.007
+      hyper_noise: none
       hyper_node_features: False
       frequency: 1
       clustering: kmeans
