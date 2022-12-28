@@ -30,12 +30,12 @@ params:
     size: 3
     noise: 0.005
     gamma: 1
-    scheduler_epoch: 16
+    scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
     message_passing_steps: 5
     rmp:
-      num_clusters: 31
+      num_clusters: 16
       hyper_noise: 0.01
       hyper_node_features: False
       frequency: 1
