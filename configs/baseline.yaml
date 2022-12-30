@@ -28,7 +28,7 @@ params:
     field: world_pos
     history: False
     size: 3
-    noise: 0.003
+    noise: 0.005
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
