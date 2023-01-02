@@ -35,12 +35,12 @@ params:
     learning_rate: 5.0e-5
     message_passing_steps: 5
     rmp:
-      num_clusters: 5
+      num_clusters: 15
       hyper_noise: 0.007
       hyper_node_features: False
       frequency: 1
       clustering: kmeans
-      connector: hetero
+      connector: multi
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
