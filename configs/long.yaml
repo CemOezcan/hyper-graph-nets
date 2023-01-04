@@ -8,7 +8,7 @@ params:
     dataset: deforming_plate
     rollout_split: valid
     batch_size: 16
-    epochs: 15
+    epochs: 30
     n_timesteps: 160
     trajectories: 1000
     mode: all
@@ -39,8 +39,8 @@ params:
       hyper_noise: 0.007
       hyper_node_features: False
       frequency: 1
-      clustering: kmeans
-      connector: multi
+      clustering: k-means
+      connector: hetero
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
