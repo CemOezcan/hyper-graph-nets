@@ -8,8 +8,8 @@ params:
     dataset: deforming_plate
     rollout_split: valid
     batch_size: 16
-    epochs: 30
-    n_timesteps: 160
+    epochs: 15
+    n_timesteps: 320
     trajectories: 1000
     mode: all
     prefetch_factor: 1

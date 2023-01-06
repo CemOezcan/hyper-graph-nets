@@ -8,8 +8,8 @@ params:
     dataset: deforming_plate
     rollout_split: valid
     batch_size: 16
-    epochs: 30
-    n_timesteps: 160
+    epochs: 15
+    n_timesteps: 320
     trajectories: 1000
     mode: all
     prefetch_factor: 1
@@ -33,14 +33,14 @@ params:
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
-    message_passing_steps: 5
+    message_passing_steps: 7
     rmp:
-      num_clusters: 15
-      hyper_noise: 0.007
+      num_clusters: 10
+      hyper_noise: none
       hyper_node_features: False
       frequency: 1
-      clustering: gmm
-      connector: hetero
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
