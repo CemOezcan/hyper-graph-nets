@@ -6,7 +6,7 @@ from src.migration.normalizer import Normalizer
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.rmp.abstract_connector import AbstractConnector
 from src.util import MultiGraphWithPos, EdgeSet, MultiGraph, device
-
+from src.rmp.coarser_mesh import CoarserClustering
 
 class RemoteMessagePassing:
     """
@@ -70,13 +70,18 @@ class RemoteMessagePassing:
         """
         graph = graph._replace(node_features=graph.node_features[0])
 
-        if self._clusters is None:
-            if graph.obstacle_nodes is not None:
-                self.remove_obstacles(graph)
-            else:
-                self._clusters = self._clustering_algorithm.run(graph)
-        self._neighbors = self._clustering_algorithm.neigboring_clusters
-        new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
+        if type(self._clustering_algorithm) == CoarserClustering:
+            self._clusters = self._clustering_algorithm.run(graph)
+            new_graph = self._node_connector.run(graph, self._clusters, [self._clustering_algorithm.represented_nodes, self._clustering_algorithm.representing_nodes], is_training)
+        else:
+            if self._clusters is None:
+                print(type(self._clustering_algorithm))
+                if graph.obstacle_nodes is not None:
+                    self.remove_obstacles(graph)
+                else:
+                    self._clusters = self._clustering_algorithm.run(graph)
+            self._neighbors = self._clustering_algorithm.neigboring_clusters
+            new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
         return new_graph
 
     def remove_obstacles(self, graph):

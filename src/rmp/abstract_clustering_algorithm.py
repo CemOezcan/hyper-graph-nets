@@ -85,6 +85,8 @@ class AbstractClusteringAlgorithm(ABC):
         return self._combine_samples(spotter, exemplars, top_k)
 
     def visualize_cluster(self, coordinates):
+        if self._labels is None:
+            return
         palette = [[e * 255 for e in x] for x in sns.color_palette(cc.glasbey, len(set(self._labels)))]
         coordinates = [np.concatenate([c, palette[l]]) for c, l in zip(coordinates, self._labels)]
         # TODO: Fix wandb bug by relocating logging functions
