@@ -12,6 +12,8 @@ from util.Types import *
 from src.rmp.remote_message_passing import RemoteMessagePassing
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.rmp.abstract_connector import AbstractConnector
+from src.rmp.multi_scale_connector import MultiScaleConnector
+from src.rmp.coarser_mesh import CoarserClustering
 
 from util.Functions import get_from_nested_dict
 
@@ -75,6 +77,8 @@ def get_clustering_algorithm(name: str, config) -> AbstractClusteringAlgorithm:
         return GaussianMixtureClustering(num_clusters, sampling, alpha, spotter_threshold)
     elif name == 'kmeans' or name == 'k-means':
         return KMeansClustering(num_clusters, sampling, alpha, spotter_threshold)
+    elif name == 'downsampling':
+        return CoarserClustering(2)
     elif name == "none":
         return None
     else:
@@ -87,11 +91,13 @@ def get_connector(name: str, config) -> AbstractConnector:
     hyper_node_features = get_from_nested_dict(config, list_of_keys=["rmp", "hyper_node_features"], raise_error=True)
     noise_scale = None if noise_scale == 'none' else noise_scale
 
-    if name == "hyper" or name == "hetero" or name == "multiscale":
+    if name == "hyper" or name == "hetero":
         return HierarchicalConnector(fully_connect, noise_scale, hyper_node_features)
     elif name == "multi":
         return MultigraphConnector(fully_connect, noise_scale, hyper_node_features)
-    elif name == "none" or name == 'repeated':
+    elif name == "multiscale":
+        return MultiScaleConnector(fully_connect, noise_scale, hyper_node_features)
+    elif name == "none":
         return None
     else:
         raise NotImplementedError("Implement your connectors here!")
