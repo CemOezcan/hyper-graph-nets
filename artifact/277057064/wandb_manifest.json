@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "storagePolicy": "wandb-storage-policy-v1",
+    "storagePolicyConfig": {
+        "storageLayout": "V2"
+    },
+    "contents": {
+        "15_cluster-none_connector-none_balancer-none_mp-1_epoch-final_rollout_losses.csv": {
+            "digest": "GONQN6uK7HhP9heEx0jQrQ==",
+            "birthArtifactID": "QXJ0aWZhY3Q6Mjc3MDU3MDY0",
+            "size": 9594
+        },
+        "rollout_losses_table.table.json": {
+            "digest": "Sjei/bFu2ajTeBtd6qbllA==",
+            "ref": "wandb-artifact://41727469666163743a323737303536393838/rollout_losses.table.json",
+            "size": 0
+        }
+    }
+}

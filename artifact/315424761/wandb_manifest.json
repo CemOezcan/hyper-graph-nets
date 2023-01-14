@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "storagePolicy": "wandb-storage-policy-v1",
+    "storagePolicyConfig": {
+        "storageLayout": "V2"
+    },
+    "contents": {
+        "32_cluster:none_connector:multiscale_balancer:none_mp:1_epoch:2_one_step.table.json": {
+            "digest": "V1TH7xj6p8vS7oxv8hwryA==",
+            "birthArtifactID": "QXJ0aWZhY3Q6MzE1NDI0NzYx",
+            "size": 698
+        }
+    }
+}

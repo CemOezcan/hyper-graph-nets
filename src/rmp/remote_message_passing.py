@@ -7,6 +7,7 @@ from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.rmp.abstract_connector import AbstractConnector
 from src.util import MultiGraphWithPos, EdgeSet, MultiGraph, device
 from src.rmp.coarser_mesh import CoarserClustering
+from profilehooks import profile
 
 class RemoteMessagePassing:
     """
@@ -71,8 +72,17 @@ class RemoteMessagePassing:
         graph = graph._replace(node_features=graph.node_features[0])
 
         if type(self._clustering_algorithm) == CoarserClustering:
-            self._clusters = self._clustering_algorithm.run(graph)
-            new_graph = self._node_connector.run(graph, self._clusters, [self._clustering_algorithm.represented_nodes, self._clustering_algorithm.representing_nodes], is_training)
+            if self._clusters is None:
+                self._clusters = self._clustering_algorithm.run(graph)
+            self._neighbors = [
+                self._clustering_algorithm.represented_nodes,
+                self._clustering_algorithm.representing_nodes,
+                self._clustering_algorithm.mesh_edge_senders,
+                self._clustering_algorithm.mesh_edge_receivers,
+                self._clustering_algorithm.world_edge_senders,
+                self._clustering_algorithm.world_edge_receivers
+            ]
+            new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
         else:
             if self._clusters is None:
                 print(type(self._clustering_algorithm))
