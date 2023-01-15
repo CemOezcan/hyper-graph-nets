@@ -8,6 +8,9 @@ meta.json
 *.pkl
 *.pyc
 /wandb
+/media
+/.dae
+/artifact
 *.csv
 *.pth
 *.gif
