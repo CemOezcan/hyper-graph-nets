@@ -14,7 +14,7 @@ class MultiScaleGraphNet(GraphNet):
         super().__init__(model_fn, output_size, message_passing_aggregator, edge_sets)
 
         self.hyper_node_model_up = model_fn(output_size)
-        self.hyper_node_models_cross = nn.ModuleList([model_fn(output_size) for _ in range(3)])
+        self.hyper_node_models_cross = nn.ModuleList([model_fn(output_size) for _ in range(11)])
         self.node_model_down = model_fn(output_size)
 
     def forward(self, graph: MultiGraph, mask=None) -> MultiGraph:
@@ -37,7 +37,7 @@ class MultiScaleGraphNet(GraphNet):
         self._update_hyper_node_features(graph, [new_edge_sets['intra_cluster_to_cluster']], self.hyper_node_model_up)
 
         # 2, 3, 4
-        for i in range(3):
+        for i in range(11):
             # update_edges(hyper)
             self.perform_edge_updates(graph, 'inter_cluster', new_edge_sets)
             self.perform_edge_updates(graph, 'inter_cluster_world', new_edge_sets)
