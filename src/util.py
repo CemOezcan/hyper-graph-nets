@@ -113,23 +113,42 @@ def unsorted_segment_operation(data, segment_ids, num_segments, operation):
 
     shape = [num_segments] + list(data.shape[1:])
     result = torch.zeros(*shape).to(device)
-    if operation == 'sum':
-        result = torch_scatter.scatter_add(
-            data.float(), segment_ids, dim=0, dim_size=num_segments)
-    elif operation == 'max':
-        result, _ = torch_scatter.scatter_max(
-            data.float(), segment_ids, dim=0, dim_size=num_segments)
-    elif operation == 'mean':
-        result = torch_scatter.scatter_mean(
-            data.float(), segment_ids, dim=0, dim_size=num_segments)
-    elif operation == 'min':
-        result, _ = torch_scatter.scatter_min(
-            data.float(), segment_ids, dim=0, dim_size=num_segments)
-    elif operation == 'std':
-        result = torch_scatter.scatter_std(
-            data.float(), segment_ids, out=result, dim=0, dim_size=num_segments)
-    else:
-        raise Exception('Invalid operation type!')
+    try:
+        if operation == 'sum':
+            result = torch_scatter.scatter_add(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'max':
+            result, _ = torch_scatter.scatter_max(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'mean':
+            result = torch_scatter.scatter_mean(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'min':
+            result, _ = torch_scatter.scatter_min(
+                data.float(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'std':
+            result = torch_scatter.scatter_std(
+                data.float(), segment_ids, out=result, dim=0, dim_size=num_segments)
+        else:
+            raise Exception('Invalid operation type!')
+    except RuntimeError:
+        if operation == 'sum':
+            result = torch_scatter.scatter_add(
+                data.long(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'max':
+            result, _ = torch_scatter.scatter_max(
+                data.long(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'mean':
+            result = torch_scatter.scatter_mean(
+                data.long(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'min':
+            result, _ = torch_scatter.scatter_min(
+                data.long(), segment_ids, dim=0, dim_size=num_segments)
+        elif operation == 'std':
+            result = torch_scatter.scatter_std(
+                data.long(), segment_ids, out=result, dim=0, dim_size=num_segments)
+        else:
+            raise Exception('Invalid operation type!')
     result = result.type(data.dtype)
     return result
 
