@@ -87,6 +87,7 @@ class CoarserClustering(AbstractClusteringAlgorithm):
         self.mesh_edge_senders = mesh_merged[:, 0]
         self.mesh_edge_receivers = mesh_merged[:, 1]
         
+        print(len(self.world_edge_senders_list))
         world_merged = torch.unique(
             torch.stack((
                 torch.tensor(self.world_edge_senders_list, dtype=torch.int64),
