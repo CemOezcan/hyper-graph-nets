@@ -39,8 +39,8 @@ params:
       hyper_noise: 0.003
       hyper_node_features: False
       frequency: 1
-      clustering: downsampling
-      connector: multiscale
+      clustering: kmeans
+      connector: hetero
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
