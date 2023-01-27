@@ -142,6 +142,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 start_instance = time.time()
 
                 loss = self._network.training_step(graph, data_frame)
+                print(loss)
                 loss.backward()
 
                 self._optimizer.step()
