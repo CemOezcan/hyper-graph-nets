@@ -71,7 +71,7 @@ class RemoteMessagePassing:
                 The input graph with additional edges for remote message passing
 
         """
-        print("trajectory index: {}, step: {}".format(trajectory_index, step))
+        # print("trajectory index: {}, step: {}".format(trajectory_index, step))
         graph = graph._replace(node_features=graph.node_features[0])
 
         if type(self._clustering_algorithm) == CoarserClustering:
