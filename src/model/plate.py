@@ -199,7 +199,7 @@ class PlateModel(AbstractSystemModel):
                                  node_dynamic=None,
                                  obstacle_nodes=obstacle_nodes)
 
-    def expand_graph(self, graph: MultiGraphWithPos, step: int, num_steps: int, is_training: bool) -> MultiGraph:
+    def expand_graph(self, graph: MultiGraphWithPos, trajectory_index: int, step: int, num_steps: int, is_training: bool) -> MultiGraph:
         if self._balancer:
             if step % math.ceil(num_steps / self._balance_frequency) == 0:
                 self._graph_balancer.reset_balancer()
@@ -208,7 +208,7 @@ class PlateModel(AbstractSystemModel):
         if self._rmp:
             if step % math.ceil(num_steps / self._rmp_frequency) == 0:
                 self._remote_graph.reset_clusters()
-            graph = self._remote_graph.create_graph(graph, is_training)
+            graph = self._remote_graph.create_graph(graph, trajectory_index, step, is_training)
 
         return graph
 
@@ -318,7 +318,7 @@ class PlateModel(AbstractSystemModel):
         if not self._visualized:
             coordinates = graph.target_feature.cpu().detach().numpy()
 
-        graph = self.expand_graph(graph, step, num_steps, is_training=False)
+        graph = self.expand_graph(graph, 0, step, num_steps, is_training=False)
 
         if self._rmp and not self._visualized:
             self._remote_graph.visualize_cluster(coordinates)

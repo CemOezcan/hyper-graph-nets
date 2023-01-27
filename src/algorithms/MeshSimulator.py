@@ -133,7 +133,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 break
 
             start_trajectory = time.time()
-            batches = self.fetch_data(trajectory, True)
+            batches = self.fetch_data(trajectory, i, True)
             batches = self._get_batched(batches, self._batch_size)
             random.shuffle(batches)
             traj_loss = list()
@@ -233,7 +233,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
 
         return batched_data
 
-    def fetch_data(self, trajectory: List[Dict[str, Tensor]], is_training: bool) -> List[Tuple[MultiGraph, Dict[str, Tensor]]]:
+    def fetch_data(self, trajectory: List[Dict[str, Tensor]], trajectory_index: int, is_training: bool) -> List[Tuple[MultiGraph, Dict[str, Tensor]]]:
         """
         Transform an entire trajectory of system states into a trajectory of graphs.
 
@@ -254,7 +254,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
             if i >= self._time_steps:
                 break
             graph = self._network.build_graph(data_frame, is_training)
-            graph = self._network.expand_graph(graph, i, self._time_steps, is_training)
+            graph = self._network.expand_graph(graph, trajectory_index, i, self._time_steps, is_training)
             graphs.append(graph)
 
         return list(zip(graphs, trajectory))
@@ -290,7 +290,7 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 break
 
             instance_loss = list()
-            data = self.fetch_data(trajectory, False)
+            data = self.fetch_data(trajectory, i, False)
             data = self._get_batched(data, self._batch_size)
             for graph, data_frame in data:
                 loss, pos_error = self._network.validation_step(graph, data_frame)
