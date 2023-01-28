@@ -28,7 +28,7 @@ params:
     field: world_pos
     history: False
     size: 3
-    noise: 0.005
+    noise: 0.003
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
@@ -39,8 +39,8 @@ params:
       hyper_noise: 0.003
       hyper_node_features: False
       frequency: 1
-      clustering: kmeans
-      connector: hetero
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False
