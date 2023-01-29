@@ -77,55 +77,66 @@ class RemoteMessagePassing:
         graph = graph._replace(node_features=graph.node_features[0])
 
         if type(self._clustering_algorithm) == CoarserClustering:
-            if is_training and trajectory_index % 10 == 0 and step == 0:
-                filename = 'data/deforming_plate/preprocessed/{}.obj'.format(int(trajectory_index / 10))
-                if os.path.exists(filename):
-                    try:
-                        filehandler = open(filename, 'rb')
-                        unpickler = pickle.Unpickler(filehandler)
-                        # if file is not empty scores will be equal
-                        # to the value unpickled
-                        self._connected_graphs = unpickler.load()
-                    except:
-                        self._connected_graphs = []
-                else:
-                    self._connected_graphs = []
-
-            trajectory_index = trajectory_index % 10
-            if is_training and len(self._connected_graphs) > trajectory_index and len(self._connected_graphs[trajectory_index]) > step:
-                new_graph_cpu = self._connected_graphs[trajectory_index][step]
-                edge_sets = []
-                for i in range(len(new_graph_cpu.edge_sets)):
-                    edge_set = new_graph_cpu.edge_sets[i]
-                    edge_sets.append(EdgeSet(edge_set.name, edge_set.features.to(src.util.device), edge_set.senders.to(src.util.device), edge_set.receivers.to(src.util.device)))
-                node_features = []
-                for i in range(len(new_graph_cpu.node_features)):
-                    node_features.append(new_graph_cpu.node_features[i].to(src.util.device))
-                new_graph = MultiGraph(node_features=node_features, edge_sets=edge_sets)
-            else:
-                if self._clusters is None:
-                    self._clusters = self._clustering_algorithm.run(graph)
-                self._neighbors = [
-                    self._clustering_algorithm.represented_nodes,
-                    self._clustering_algorithm.representing_nodes,
-                    self._clustering_algorithm.mesh_edge_senders,
-                    self._clustering_algorithm.mesh_edge_receivers,
-                    self._clustering_algorithm.world_edge_senders,
-                    self._clustering_algorithm.world_edge_receivers
-                ]
-                new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
-                if is_training:
-                    if len(self._connected_graphs) <= trajectory_index:
-                        self._connected_graphs.append([])
-                    edge_sets = []
-                    for i in range(len(new_graph.edge_sets)):
-                        edge_set = new_graph.edge_sets[i]
-                        edge_sets.append(EdgeSet(edge_set.name, edge_set.features.to('cpu'), edge_set.senders.to('cpu'), edge_set.receivers.to('cpu')))
-                    node_features = []
-                    for i in range(len(new_graph.node_features)):
-                        node_features.append(new_graph.node_features[i].to('cpu'))
-                    new_graph_cpu = MultiGraph(node_features=node_features, edge_sets=edge_sets)
-                    self._connected_graphs[trajectory_index].append(new_graph_cpu)
+            # if is_training and trajectory_index % 10 == 0 and step == 0:
+            #     filename = 'data/deforming_plate/preprocessed/{}.obj'.format(int(trajectory_index / 10))
+            #     if os.path.exists(filename):
+            #         try:
+            #             filehandler = open(filename, 'rb')
+            #             unpickler = pickle.Unpickler(filehandler)
+            #             # if file is not empty scores will be equal
+            #             # to the value unpickled
+            #             self._connected_graphs = unpickler.load()
+            #         except:
+            #             self._connected_graphs = []
+            #     else:
+            #         self._connected_graphs = []
+            #
+            # trajectory_index = trajectory_index % 10
+            # if is_training and len(self._connected_graphs) > trajectory_index and len(self._connected_graphs[trajectory_index]) > step:
+            #     new_graph_cpu = self._connected_graphs[trajectory_index][step]
+            #     edge_sets = []
+            #     for i in range(len(new_graph_cpu.edge_sets)):
+            #         edge_set = new_graph_cpu.edge_sets[i]
+            #         edge_sets.append(EdgeSet(edge_set.name, edge_set.features.to(src.util.device), edge_set.senders.to(src.util.device), edge_set.receivers.to(src.util.device)))
+            #     node_features = []
+            #     for i in range(len(new_graph_cpu.node_features)):
+            #         node_features.append(new_graph_cpu.node_features[i].to(src.util.device))
+            #     new_graph = MultiGraph(node_features=node_features, edge_sets=edge_sets)
+            # else:
+            #     if self._clusters is None:
+            #         self._clusters = self._clustering_algorithm.run(graph)
+            #     self._neighbors = [
+            #         self._clustering_algorithm.represented_nodes,
+            #         self._clustering_algorithm.representing_nodes,
+            #         self._clustering_algorithm.mesh_edge_senders,
+            #         self._clustering_algorithm.mesh_edge_receivers,
+            #         self._clustering_algorithm.world_edge_senders,
+            #         self._clustering_algorithm.world_edge_receivers
+            #     ]
+            #     new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
+            #     if is_training:
+            #         if len(self._connected_graphs) <= trajectory_index:
+            #             self._connected_graphs.append([])
+            #         edge_sets = []
+            #         for i in range(len(new_graph.edge_sets)):
+            #             edge_set = new_graph.edge_sets[i]
+            #             edge_sets.append(EdgeSet(edge_set.name, edge_set.features.to('cpu'), edge_set.senders.to('cpu'), edge_set.receivers.to('cpu')))
+            #         node_features = []
+            #         for i in range(len(new_graph.node_features)):
+            #             node_features.append(new_graph.node_features[i].to('cpu'))
+            #         new_graph_cpu = MultiGraph(node_features=node_features, edge_sets=edge_sets)
+            #         self._connected_graphs[trajectory_index].append(new_graph_cpu)
+            if self._clusters is None:
+                self._clusters = self._clustering_algorithm.run(graph)
+            self._neighbors = [
+                self._clustering_algorithm.represented_nodes,
+                self._clustering_algorithm.representing_nodes,
+                self._clustering_algorithm.mesh_edge_senders,
+                self._clustering_algorithm.mesh_edge_receivers,
+                self._clustering_algorithm.world_edge_senders,
+                self._clustering_algorithm.world_edge_receivers
+            ]
+            new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
             torch.cuda.empty_cache()
         else:
             if self._clusters is None:

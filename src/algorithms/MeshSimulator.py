@@ -133,14 +133,14 @@ class MeshSimulator(AbstractIterativeAlgorithm):
                 break
 
             start_trajectory = time.time()
-            trajectory_index = i + 1
+            # trajectory_index = i + 1
             batches = self.fetch_data(trajectory, i, True)
-            if trajectory_index % 10 == 0:
-                connected_graphs = self._network._remote_graph._connected_graphs
-                filename = 'data/deforming_plate/preprocessed/{}.obj'.format(int(i/10))
-                filehandler = open(filename, 'wb')
-                pickle.dump(connected_graphs, filehandler, pickle.HIGHEST_PROTOCOL)
-                self._network._remote_graph._connected_graphs = []
+            # if trajectory_index % 10 == 0:
+            #     connected_graphs = self._network._remote_graph._connected_graphs
+            #     filename = 'data/deforming_plate/preprocessed/{}.obj'.format(int(i/10))
+            #     filehandler = open(filename, 'wb')
+            #     pickle.dump(connected_graphs, filehandler, pickle.HIGHEST_PROTOCOL)
+            #     self._network._remote_graph._connected_graphs = []
             batches = self._get_batched(batches, self._batch_size)
             random.shuffle(batches)
             traj_loss = list()
