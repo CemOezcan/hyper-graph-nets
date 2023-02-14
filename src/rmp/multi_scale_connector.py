@@ -58,8 +58,37 @@ class MultiScaleConnector(AbstractConnector):
         mesh_x_norm = la.norm(mesh_x, dim=1).reshape((mesh_x.shape[0], 1))
         mesh_edge_features = torch.cat((mesh_u, mesh_u_norm, mesh_x, mesh_x_norm), 1)
 
-        low_world_senders = neighbors[4]
-        low_world_receivers = neighbors[5]
+        # add world edges
+        high_world_edge_senders = graph.edge_sets[1].senders.to(device)
+        high_world_edge_receivers = graph.edge_sets[1].receivers.to(device)
+
+        world_edge_senders_list = []
+        world_edge_receivers_list = []
+        for node_index in range(high_world_edge_senders.shape[0]):
+            senders_indices = (represented_nodes == high_world_edge_senders[node_index]).nonzero(
+                as_tuple=False).squeeze()
+            senders = torch.unique(representing_nodes[senders_indices].squeeze())
+            receivers_indices = (represented_nodes == high_world_edge_receivers[node_index]).nonzero(
+                as_tuple=False).squeeze()
+            receivers = torch.unique(representing_nodes[receivers_indices].squeeze())
+            for sender_index in range(senders.shape[0]):
+                for receiver_index in range(receivers.shape[0]):
+                    sender = senders[sender_index].item()
+                    receiver = receivers[receiver_index].item()
+                    world_edge_senders_list.append(sender)
+                    world_edge_receivers_list.append(receiver)
+
+        low_world_senders = torch.tensor([])
+        low_world_receivers = torch.tensor([])
+
+        if len(world_edge_senders_list) != 0:
+            world_merged = torch.unique(
+                torch.stack((
+                    torch.tensor(world_edge_senders_list, dtype=torch.int64),
+                    torch.tensor(world_edge_receivers_list, dtype=torch.int64)), 1), dim=0)
+            low_world_senders = world_merged[:, 0]
+            low_world_receivers = world_merged[:, 1]
+
         world_x = target_features[low_world_receivers] - target_features[low_world_senders]
         world_x_norm = la.norm(world_x, dim=1).reshape((world_x.shape[0], 1))
         world_edge_features = torch.cat((world_x, world_x_norm), 1)

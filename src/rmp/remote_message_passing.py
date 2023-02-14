@@ -132,9 +132,9 @@ class RemoteMessagePassing:
                 self._clustering_algorithm.represented_nodes,
                 self._clustering_algorithm.representing_nodes,
                 self._clustering_algorithm.mesh_edge_senders,
-                self._clustering_algorithm.mesh_edge_receivers,
-                self._clustering_algorithm.world_edge_senders,
-                self._clustering_algorithm.world_edge_receivers
+                self._clustering_algorithm.mesh_edge_receivers
+                # self._clustering_algorithm.world_edge_senders,
+                # self._clustering_algorithm.world_edge_receivers
             ]
             new_graph = self._node_connector.run(graph, self._clusters, self._neighbors, is_training)
             torch.cuda.empty_cache()

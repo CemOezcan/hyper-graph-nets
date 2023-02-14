@@ -1,14 +1,14 @@
 import math
 from typing import List
 
-import numpy as np
-import sklearn
+# import numpy as np
+# import sklearn
 from src.rmp.abstract_clustering_algorithm import AbstractClusteringAlgorithm
 from src.util import MultiGraphWithPos
-from src.util import EdgeSet
+# from src.util import EdgeSet
 import torch
-import numpy as np
-from torch import linalg as la
+# import numpy as np
+# from torch import linalg as la
 
 
 class CoarserClustering(AbstractClusteringAlgorithm):
@@ -74,42 +74,18 @@ class CoarserClustering(AbstractClusteringAlgorithm):
         obstacle = self._cluster_subgraph(graph, torch.tensor([first_obstacle_node_index], dtype=torch.int64), depth)
 
         prcessed_mesh_nodes = torch.unique(self.represented_nodes.to(device).squeeze())
-        if prcessed_mesh_nodes.shape[0] != (mesh_nodes.shape[0] + obstacle_nodes.shape[0]):
-            print("aaaaaaaaa")
-
-        # add world edges
-        represented_nodes = self.represented_nodes.to(device)
-        high_world_edge_senders = graph.edge_sets[1].senders.to(device)
-        high_world_edge_receivers = graph.edge_sets[1].receivers.to(device)
-
-        for node_index in range(high_world_edge_senders.shape[0]):
-            senders_indices = (represented_nodes == high_world_edge_senders[node_index]).nonzero(as_tuple=False).squeeze()
-            senders = torch.unique(self.representing_nodes[senders_indices].squeeze())
-            receivers_indices = (represented_nodes == high_world_edge_receivers[node_index]).nonzero(as_tuple=False).squeeze()
-            receivers = torch.unique(self.representing_nodes[receivers_indices].squeeze())
-            for sender_index in range(senders.shape[0]):
-                for receiver_index in range(receivers.shape[0]):
-                    sender = senders[sender_index].item()
-                    receiver = receivers[receiver_index].item()
-                    self.world_edge_senders_list.append(sender)
-                    self.world_edge_receivers_list.append(receiver)
+        # if prcessed_mesh_nodes.shape[0] != (mesh_nodes.shape[0] + obstacle_nodes.shape[0]):
+        #     print("aaaaaaaaa")
 
         mesh_merged = torch.unique(
             torch.stack((
-                torch.tensor(self.mesh_edge_senders_list, dtype = torch.int64),
-                torch.tensor(self.mesh_edge_receivers_list, dtype = torch.int64)), 1), dim=0)
+                torch.tensor(self.mesh_edge_senders_list, dtype=torch.int64),
+                torch.tensor(self.mesh_edge_receivers_list, dtype=torch.int64)), 1), dim=0)
         self.mesh_edge_senders = mesh_merged[:, 0]
         self.mesh_edge_receivers = mesh_merged[:, 1]
 
-        if len(self.world_edge_senders_list) != 0 :
-            world_merged = torch.unique(
-                torch.stack((
-                    torch.tensor(self.world_edge_senders_list, dtype=torch.int64),
-                    torch.tensor(self.world_edge_receivers_list, dtype=torch.int64)), 1), dim=0)
-            self.world_edge_senders = world_merged[:, 0]
-            self.world_edge_receivers = world_merged[:, 1]
-        else:
-            print("bbbbbbbb")
+        # else:
+        #     print("bbbbbbbb")
         return self.nodes_count
 
 
