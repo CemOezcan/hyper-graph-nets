@@ -62,8 +62,9 @@ class MultiScaleConnector(AbstractConnector):
         high_world_edge_senders = graph.edge_sets[1].senders.to(device)
         high_world_edge_receivers = graph.edge_sets[1].receivers.to(device)
 
-        world_edge_senders_list = []
-        world_edge_receivers_list = []
+        low_world_senders = torch.tensor([], dtype=torch.int64)
+        low_world_receivers = torch.tensor([], dtype=torch.int64)
+
         for node_index in range(high_world_edge_senders.shape[0]):
             senders_indices = (represented_nodes == high_world_edge_senders[node_index]).nonzero(
                 as_tuple=False).squeeze()
@@ -71,23 +72,16 @@ class MultiScaleConnector(AbstractConnector):
             receivers_indices = (represented_nodes == high_world_edge_receivers[node_index]).nonzero(
                 as_tuple=False).squeeze()
             receivers = torch.unique(representing_nodes[receivers_indices].squeeze())
-            for sender_index in range(senders.shape[0]):
-                for receiver_index in range(receivers.shape[0]):
-                    sender = senders[sender_index].item()
-                    receiver = receivers[receiver_index].item()
-                    world_edge_senders_list.append(sender)
-                    world_edge_receivers_list.append(receiver)
 
-        low_world_senders = torch.tensor([])
-        low_world_receivers = torch.tensor([])
+            repeated_senders = senders.repeat(receivers.shape[0], 1).T.reshape(receivers.shape[0] * senders.shape[0])
+            low_world_senders = torch.cat((low_world_senders, repeated_senders))
+            repeated_receivers = receivers.repeat(senders.shape[0])
+            low_world_receivers = torch.cat((low_world_receivers, repeated_receivers))
 
-        if len(world_edge_senders_list) != 0:
-            world_merged = torch.unique(
-                torch.stack((
-                    torch.tensor(world_edge_senders_list, dtype=torch.int64),
-                    torch.tensor(world_edge_receivers_list, dtype=torch.int64)), 1), dim=0)
-            low_world_senders = world_merged[:, 0]
-            low_world_receivers = world_merged[:, 1]
+        world_merged = torch.unique(
+            torch.stack((low_world_senders, low_world_receivers), 1), dim=0)
+        low_world_senders = world_merged[:, 0]
+        low_world_receivers = world_merged[:, 1]
 
         world_x = target_features[low_world_receivers] - target_features[low_world_senders]
         world_x_norm = la.norm(world_x, dim=1).reshape((world_x.shape[0], 1))
