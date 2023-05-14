@@ -4,13 +4,13 @@ mesh-based pyhsics simulators.
 
 ## Results
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="550" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="550" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="500" height="290" />
 </p>
 
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_base.gif" width="550" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="550" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/pate_base.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="500" height="290" />
 </p>
 
 ## Setting up the environment
