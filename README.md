@@ -2,6 +2,9 @@
 Implementation of different graph neural network architectures for estimating 
 mesh-based pyhsics simulators.
 
+## Results
+![Alt Text](https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif)
+
 ## Setting up the environment
 This project uses [PyPI](https://pypi.org/) for handling packages
 and dependencies. To get started, we recommend creating a new virtual environment and installing the required 
