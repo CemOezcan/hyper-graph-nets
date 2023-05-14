@@ -1,16 +1,28 @@
 # HyperGraphNet
-Implementation of different graph neural network architectures for estimating 
-mesh-based pyhsics simulators.
+Learned physics simulators utilizing Graph Neural Networks (GNNs) achieve faster inference times and have enhanced generalization capabilities when compared to classical physics simulators. However, the ability of GNNs to capture long-range dependencies is limited by a constant number of GNN layers (or message passing layers). To overcome this issue, we designed HyperGraphNets, a framework for GNNs that uses remote message passing to facilitate modeling long-range dependencies.
 
-## Results
+This repository contains the implementation of multiple learned physics simulators utilizing different GNN architectures.
+
+## Simulations
+The following simulations and error curves illustrate the enhanced remote message passing capabilities of HyperGraphNets (left) in comparison to the baseline, MeshGraphNets (right).
+
+### Flag Simple
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="500" height="290" />
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="500" height="290" />
+</p>
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_rollout.png" width="500" height="290" />
+
+
+### Deforming Plate
+<p float="middle">
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/pate_base.gif" width="500" height="290" />
 </p>
 
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/pate_base.gif" width="500" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plot_10.png" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_rollout.png" width="500" height="290" />
 </p>
 
 ## Setting up the environment
