@@ -8,23 +8,23 @@ The following simulations and error curves illustrate the enhanced remote messag
 
 ### Deforming Plate
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="500" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/pate_base.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="266" height="150" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/pate_base.gif" width="266" height="150" />
 </p>
 
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_10.png" width="500" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_rollout.png" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_10.png" width="266" height="150" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_rollout.png" width="266" height="150" />
 </p>
 (MP denotes the number of message passing layers)
 
 
 ### Flag Simple
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="500" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="266" height="150" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="266" height="150" />
 </p>
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_rollout.png" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_rollout.png" width="266" height="150" />
 (MP denotes the number of message passing layers)
 
 
