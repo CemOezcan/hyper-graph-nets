@@ -6,14 +6,6 @@ This repository contains the implementation of multiple learned physics simulato
 ## Simulations
 The following simulations and error curves illustrate the enhanced remote message passing capabilities of HyperGraphNets (left) in comparison to the baseline, MeshGraphNets (right).
 
-### Flag Simple
-<p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="500" height="290" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="500" height="290" />
-</p>
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_rollout.png" width="500" height="290" />
-
-
 ### Deforming Plate
 <p float="middle">
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="500" height="290" />
@@ -21,9 +13,20 @@ The following simulations and error curves illustrate the enhanced remote messag
 </p>
 
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plot_10.png" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_10.png" width="500" height="290" />
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_rollout.png" width="500" height="290" />
 </p>
+(MP denotes the number of message passing layers)
+
+
+### Flag Simple
+<p float="middle">
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="500" height="290" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="500" height="290" />
+</p>
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_rollout.png" width="500" height="290" />
+(MP denotes the number of message passing layers)
+
 
 ## Setting up the environment
 This project uses [PyPI](https://pypi.org/) for handling packages
