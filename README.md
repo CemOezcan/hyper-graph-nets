@@ -3,11 +3,15 @@ Implementation of different graph neural network architectures for estimating
 mesh-based pyhsics simulators.
 
 ## Results
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="400" height="400" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="400" height="400" />
+<p float="left">
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="710" height="400" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_spectral.gif" width="710" height="400" />
+</p>
 
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_base.gif" width="400" height="400" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="400" height="400" />
+<p float="left">
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_base.gif" width="710" height="400" />
+<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_hgn.gif" width="710" height="400" />
+</p>
 
 ## Setting up the environment
 This project uses [PyPI](https://pypi.org/) for handling packages
