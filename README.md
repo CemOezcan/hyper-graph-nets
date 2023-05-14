@@ -1,7 +1,7 @@
 # HyperGraphNet
 Learned physics simulators utilizing Graph Neural Networks (GNNs) achieve faster inference times and have enhanced generalization capabilities when compared to classical physics simulators. However, the ability of GNNs to capture long-range dependencies is limited by a constant number of GNN layers (or message passing layers). To overcome this issue, we designed HyperGraphNets, a framework for GNNs that uses remote message passing to facilitate modeling long-range dependencies.
 
-This repository contains the implementation of multiple learned physics simulators utilizing different GNN architectures.
+This repository contains the implementation of multiple GNN architectures as learned physics simulators.
 
 ## Simulations
 The following simulations and error curves illustrate the enhanced remote message passing capabilities of HyperGraphNets (left) in comparison to the baseline, MeshGraphNets (right).
