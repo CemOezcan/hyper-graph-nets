@@ -3,7 +3,7 @@ Learned physics simulators utilizing Graph Neural Networks (GNNs) achieve faster
 
 This repository contains the implementation of multiple GNN architectures as learned physics simulators.
 
-## Simulations
+## Examples
 The following simulations and error curves illustrate the enhanced remote message passing capabilities of HyperGraphNets (left) in comparison to the baseline, MeshGraphNets (right). MP denotes the number of message passing layers.
 
 ### Deforming Plate
