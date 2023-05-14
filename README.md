@@ -4,7 +4,7 @@ Learned physics simulators utilizing Graph Neural Networks (GNNs) achieve faster
 This repository contains the implementation of multiple GNN architectures as learned physics simulators.
 
 ## Simulations
-The following simulations and error curves illustrate the enhanced remote message passing capabilities of HyperGraphNets (left) in comparison to the baseline, MeshGraphNets (right).
+The following simulations and error curves illustrate the enhanced remote message passing capabilities of HyperGraphNets (left) in comparison to the baseline, MeshGraphNets (right). MP denotes the number of message passing layers.
 
 ### Deforming Plate
 <p float="middle">
@@ -16,7 +16,6 @@ The following simulations and error curves illustrate the enhanced remote messag
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_10.png" width="400" height="225" />
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/plate_rollout.png" width="400" height="225" />
 </p>
-(MP denotes the number of message passing layers)
 
 
 ### Flag Simple
@@ -25,7 +24,6 @@ The following simulations and error curves illustrate the enhanced remote messag
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_base.gif" width="400" height="225" />
 </p>
 <img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/demo/flag_rollout.png" width="400" height="225" />
-(MP denotes the number of message passing layers)
 
 
 ## Setting up the environment
