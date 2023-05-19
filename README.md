@@ -8,22 +8,22 @@ The following simulations and error curves illustrate the enhanced remote messag
 
 ### Deforming Plate
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/plate_hgn.gif" width="400" height="225" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/pate_base.gif" width="400" height="225" />
+<img src="demo/flag_base.gif" width="400" height="225" />
+<img src="demo/pate_base.gif" width="400" height="225" />
 </p>
 
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/plate_10.png" width="400" height="225" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/plate_rollout.png" width="400" height="225" />
+<img src="demo/plate_10.png" width="400" height="225" />
+<img src="demo/plate_rollout.png" width="400" height="225" />
 </p>
 
 
 ### Flag Simple
 <p float="middle">
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/flag_spectral.gif" width="400" height="225" />
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/flag_base.gif" width="400" height="225" />
+<img src="demo/flag_spectral.gif" width="400" height="225" />
+<img src="demo/flag_base.gif" width="400" height="225" />
 </p>
-<img src="https://github.com/CemOezcan/hyper-graph-nets/blob/demo/flag_rollout.png" width="400" height="225" />
+<img src="demo/flag_rollout.png" width="400" height="225" />
 
 
 ## Setting up the environment
