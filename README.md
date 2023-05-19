@@ -8,7 +8,7 @@ The following simulations and error curves illustrate the enhanced remote messag
 
 ### Deforming Plate
 <p float="middle">
-<img src="demo/flag_base.gif" width="400" height="225" />
+<img src="demo/plate_hgn.gif" width="400" height="225" />
 <img src="demo/pate_base.gif" width="400" height="225" />
 </p>
 
