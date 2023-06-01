@@ -28,19 +28,19 @@ params:
     field: world_pos
     history: False
     size: 3
-    noise: 0.005
+    noise: 0.003
     gamma: 1
     scheduler_epoch: 10
     aggregation: pna
     learning_rate: 5.0e-5
     message_passing_steps: 5
     rmp:
-      num_clusters: 30
-      hyper_noise: 0.003
+      num_clusters: 15
+      hyper_noise: none
       hyper_node_features: False
       frequency: 1
-      clustering: spectral
-      connector: hetero
+      clustering: none
+      connector: none
       fully_connect: False
       intra_cluster_sampling:
         enabled: False

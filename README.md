@@ -38,10 +38,10 @@ This requires logging in to [W&B](https://wandb.ai) via `wandb login`
 
 ## Downloading datasets
 Download a dataset to its respective sub folder within the data directory `./data`. 
-Let's consider the `flag_minimal` dataset: 
-* Download the data set via `bash download.sh flag_simple data/flag_minimal`
-* Move the contents of the downloaded `data/flag_minimal/flag_minimal` directory into `data/flag_minimal/input`
-* In `data/flag_minimal/input`, execute `python -m tfrecord.tools.tfrecord2idx <file>.tfrecord <file>.idx` 
+Let's consider the `deforming_plate` dataset: 
+* Download the data set via `bash download.sh deforming_plate data/deforming_plate`
+* Move the contents of the downloaded `data/deforming_plate/deforming_plate` directory into `data/deforming_plate/input`
+* In `data/deforming_plate/input`, execute `python -m tfrecord.tools.tfrecord2idx <file>.tfrecord <file>.idx` 
 for `train.tfrecord`, `test.tfrecord` and `valid.tfrecord` respectively.
 
 ## Creating an experiment
